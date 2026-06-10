@@ -1,4 +1,9 @@
-from fastapi import FastAPI, APIRouter
+"""
+CityQuest backend — gamified worldwide city guide.
+- No-auth, device-id based user progress.
+- Seeds 4 cities (Gaziantep deep; Istanbul, Paris, Rome lighter) on startup.
+"""
+from fastapi import FastAPI, APIRouter, HTTPException, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,53 +11,439 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime
-
+from datetime import datetime, timezone
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / ".env")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ["DB_NAME"]]
 
-# Create the main app without a prefix
-app = FastAPI()
-
-# Create a router with the /api prefix
+app = FastAPI(title="CityQuest API")
 api_router = APIRouter(prefix="/api")
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+# ---------------- Models ----------------
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class City(BaseModel):
+    id: str
+    name: str
+    country: str
+    country_code: str
+    tagline: str
+    description: str
+    hero_image: str
+    lat: float
+    lng: float
+    poi_count: int = 0
+    quest_count: int = 0
 
-# Add your routes to the router instead of directly to app
+class POI(BaseModel):
+    id: str
+    city_id: str
+    name: str
+    category: str  # landmark | museum | historic | must-see | restaurant
+    description: str
+    image: str
+    lat: float
+    lng: float
+    rating: float = 4.5
+    xp_reward: int = 50
+
+class TriviaQuestion(BaseModel):
+    question: str
+    options: List[str]
+    correct_index: int
+
+class Quest(BaseModel):
+    id: str
+    city_id: str
+    title: str
+    description: str
+    difficulty: str  # easy | medium | hard
+    category: str  # landmark | museum | historic | must-see | food
+    xp_reward: int
+    poi_ids: List[str] = []
+    cover_image: str
+    estimated_minutes: int = 60
+    badge_name: Optional[str] = None
+    trivia: Optional[TriviaQuestion] = None
+
+class CheckInPayload(BaseModel):
+    device_id: str
+    quest_id: str
+    poi_id: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    trivia_answer_index: Optional[int] = None
+    display_name: Optional[str] = None
+
+class CheckInResult(BaseModel):
+    success: bool
+    xp_earned: int
+    total_xp: int
+    level: int
+    level_title: str
+    leveled_up: bool
+    quest_completed: bool
+    badge_unlocked: Optional[str] = None
+    message: str
+
+# ---------------- Level system ----------------
+
+LEVEL_TIERS = [
+    (0,    1, "Newcomer"),
+    (150,  2, "Curious Traveller"),
+    (400,  3, "Bazaar Explorer"),
+    (800,  4, "City Wanderer"),
+    (1400, 5, "Antep Devotee"),
+    (2200, 6, "Master Voyager"),
+    (3200, 7, "Legend of CityQuest"),
+]
+
+def get_level(xp: int) -> Dict[str, Any]:
+    current = LEVEL_TIERS[0]
+    nxt = None
+    for tier in LEVEL_TIERS:
+        if xp >= tier[0]:
+            current = tier
+        else:
+            nxt = tier
+            break
+    next_xp = nxt[0] if nxt else current[0]
+    return {
+        "level": current[1],
+        "title": current[2],
+        "xp": xp,
+        "current_threshold": current[0],
+        "next_threshold": next_xp,
+        "progress": 1.0 if not nxt else round((xp - current[0]) / max(1, (next_xp - current[0])), 3),
+    }
+
+# ---------------- Seed Data ----------------
+
+def _id() -> str:
+    return str(uuid.uuid4())
+
+def build_seed() -> Dict[str, Any]:
+    # Gaziantep POIs
+    gaz = "gaziantep"
+    ist = "istanbul"
+    par = "paris"
+    rom = "rome"
+
+    cities = [
+        {
+            "id": gaz, "name": "Gaziantep", "country": "Türkiye", "country_code": "TR",
+            "tagline": "Cradle of gastronomy & ancient mosaics",
+            "description": "A southeastern Anatolian city where Roman mosaics, Ottoman bazaars, and the world's finest baklava converge.",
+            "hero_image": "https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxHYXppYW50ZXAlMjBaZXVnbWElMjBtdXNldW0lMjBtb3NhaWN8ZW58MHx8fHwxNzgxMTExOTE0fDA&ixlib=rb-4.1.0&q=85",
+            "lat": 37.0660, "lng": 37.3833,
+        },
+        {
+            "id": ist, "name": "Istanbul", "country": "Türkiye", "country_code": "TR",
+            "tagline": "Where two continents meet",
+            "description": "Byzantine domes, Ottoman palaces, and the Bosphorus at sunset.",
+            "hero_image": "https://images.unsplash.com/photo-1582631608254-f75fdf938e19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwxfHxJc3RhbmJ1bCUyMEhhZ2lhJTIwU29waGlhJTIwb3IlMjBHYWxhdGElMjB0b3dlcnxlbnwwfHx8fDE3ODExMTE5MTR8MA&ixlib=rb-4.1.0&q=85",
+            "lat": 41.0082, "lng": 28.9784,
+        },
+        {
+            "id": par, "name": "Paris", "country": "France", "country_code": "FR",
+            "tagline": "The city of light",
+            "description": "Belle Époque boulevards, world-class museums, and cafés that perfected the art of slowing down.",
+            "hero_image": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxQYXJpcyUyMEVpZmZlbCUyMHRvd2VyJTIwc3Vuc2V0fGVufDB8fHx8MTc4MTExMTkxNHww&ixlib=rb-4.1.0&q=85",
+            "lat": 48.8566, "lng": 2.3522,
+        },
+        {
+            "id": rom, "name": "Rome", "country": "Italy", "country_code": "IT",
+            "tagline": "The eternal city",
+            "description": "Ancient ruins, baroque squares, and pasta that has been perfected over two millennia.",
+            "hero_image": "https://images.unsplash.com/photo-1552832230-c0197dd311b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwxfHxSb21lJTIwQ29sb3NzZXVtJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc4MTExMTkxNHww&ixlib=rb-4.1.0&q=85",
+            "lat": 41.9028, "lng": 12.4964,
+        },
+    ]
+
+    pois = []
+    # Gaziantep
+    pois += [
+        {"id":"poi-gaz-1","city_id":gaz,"name":"Zeugma Mosaic Museum","category":"museum",
+         "description":"Home to the iconic 'Gypsy Girl' mosaic and the world's largest collection of Roman mosaics.",
+         "image":"https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?w=800&q=80","lat":37.0734,"lng":37.3818,"rating":4.8,"xp_reward":90},
+        {"id":"poi-gaz-2","city_id":gaz,"name":"Gaziantep Castle","category":"historic",
+         "description":"A Roman-era hilltop fortress overlooking the old city, rebuilt after the 2023 earthquake.",
+         "image":"https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80","lat":37.0644,"lng":37.3822,"rating":4.5,"xp_reward":60},
+        {"id":"poi-gaz-3","city_id":gaz,"name":"Bakırcılar Çarşısı (Coppersmith Bazaar)","category":"must-see",
+         "description":"Centuries-old covered bazaar where copper artisans still hammer trays and pots by hand.",
+         "image":"https://images.unsplash.com/photo-1555992828-35627f3eea4d?w=800&q=80","lat":37.0639,"lng":37.3791,"rating":4.7,"xp_reward":55},
+        {"id":"poi-gaz-4","city_id":gaz,"name":"Şirvani Mosque","category":"historic",
+         "description":"15th-century mosque with intricate mihrab carvings and serene courtyard.",
+         "image":"https://images.unsplash.com/photo-1591019479261-1a103585c559?w=800&q=80","lat":37.0631,"lng":37.3808,"rating":4.4,"xp_reward":45},
+        {"id":"poi-gaz-5","city_id":gaz,"name":"Emine Göğüş Cuisine Museum","category":"museum",
+         "description":"A culinary museum dedicated to the UNESCO-recognized Gaziantep gastronomy heritage.",
+         "image":"https://images.unsplash.com/photo-1567521464027-f127ff144326?w=800&q=80","lat":37.0648,"lng":37.3805,"rating":4.6,"xp_reward":70},
+        {"id":"poi-gaz-6","city_id":gaz,"name":"İmam Çağdaş Restaurant","category":"restaurant",
+         "description":"Legendary kebab and baklava house operating since 1887 in the old bazaar.",
+         "image":"https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=800&q=80","lat":37.0641,"lng":37.3795,"rating":4.9,"xp_reward":60},
+        {"id":"poi-gaz-7","city_id":gaz,"name":"Tahmis Coffee House","category":"restaurant",
+         "description":"Historic 17th-century coffee house serving menengiç coffee in a stone-vaulted hall.",
+         "image":"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80","lat":37.0640,"lng":37.3799,"rating":4.7,"xp_reward":45},
+    ]
+    # Istanbul
+    pois += [
+        {"id":"poi-ist-1","city_id":ist,"name":"Hagia Sophia","category":"landmark",
+         "description":"A 1,500-year-old marvel that has been church, mosque, museum, and mosque again.","image":"https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800&q=80","lat":41.0086,"lng":28.9802,"rating":4.9,"xp_reward":90},
+        {"id":"poi-ist-2","city_id":ist,"name":"Topkapı Palace","category":"museum",
+         "description":"The opulent primary residence of the Ottoman sultans for 400 years.","image":"https://images.unsplash.com/photo-1604941908760-bf9d3a3f6df5?w=800&q=80","lat":41.0115,"lng":28.9833,"rating":4.7,"xp_reward":80},
+        {"id":"poi-ist-3","city_id":ist,"name":"Grand Bazaar","category":"must-see",
+         "description":"One of the world's oldest and largest covered markets, with 4,000 shops across 61 streets.","image":"https://images.unsplash.com/photo-1545569310-49edaae3fd9d?w=800&q=80","lat":41.0106,"lng":28.9681,"rating":4.6,"xp_reward":55},
+        {"id":"poi-ist-4","city_id":ist,"name":"Karaköy Lokantası","category":"restaurant",
+         "description":"Beloved meyhane serving modern Istanbul mezze in turquoise-tiled rooms.","image":"https://images.unsplash.com/photo-1574484284002-952d92456975?w=800&q=80","lat":41.0258,"lng":28.9744,"rating":4.7,"xp_reward":50},
+    ]
+    # Paris
+    pois += [
+        {"id":"poi-par-1","city_id":par,"name":"Eiffel Tower","category":"landmark",
+         "description":"The 330m wrought-iron icon that defined Paris's skyline in 1889.","image":"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80","lat":48.8584,"lng":2.2945,"rating":4.8,"xp_reward":85},
+        {"id":"poi-par-2","city_id":par,"name":"Louvre Museum","category":"museum",
+         "description":"The world's most-visited museum, home to the Mona Lisa and Venus de Milo.","image":"https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80","lat":48.8606,"lng":2.3376,"rating":4.8,"xp_reward":90},
+        {"id":"poi-par-3","city_id":par,"name":"Notre-Dame Cathedral","category":"historic",
+         "description":"Gothic masterpiece on Île de la Cité, recently reopened after restoration.","image":"https://images.unsplash.com/photo-1478391679764-b2d8b3cd1e94?w=800&q=80","lat":48.8530,"lng":2.3499,"rating":4.7,"xp_reward":70},
+        {"id":"poi-par-4","city_id":par,"name":"Le Comptoir du Relais","category":"restaurant",
+         "description":"Yves Camdeborde's tiny Saint-Germain bistro reinvented French comfort cooking.","image":"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&q=80","lat":48.8531,"lng":2.3387,"rating":4.6,"xp_reward":55},
+    ]
+    # Rome
+    pois += [
+        {"id":"poi-rom-1","city_id":rom,"name":"Colosseum","category":"landmark",
+         "description":"The largest ancient amphitheatre ever built, AD 80, seating 50,000 spectators.","image":"https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80","lat":41.8902,"lng":12.4922,"rating":4.9,"xp_reward":90},
+        {"id":"poi-rom-2","city_id":rom,"name":"Roman Forum","category":"historic",
+         "description":"The political and commercial heart of ancient Rome for over a thousand years.","image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","lat":41.8925,"lng":12.4853,"rating":4.7,"xp_reward":75},
+        {"id":"poi-rom-3","city_id":rom,"name":"Vatican Museums","category":"museum",
+         "description":"7km of galleries culminating in Michelangelo's Sistine Chapel ceiling.","image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","lat":41.9065,"lng":12.4536,"rating":4.8,"xp_reward":85},
+        {"id":"poi-rom-4","city_id":rom,"name":"Roscioli","category":"restaurant",
+         "description":"Salumeria, bakery, and trattoria serving the city's definitive cacio e pepe.","image":"https://images.unsplash.com/photo-1662197480393-2a82030b7b83?w=800&q=80","lat":41.8956,"lng":12.4747,"rating":4.7,"xp_reward":55},
+    ]
+
+    # Quests
+    quests = [
+        # Gaziantep
+        {"id":"q-gaz-1","city_id":gaz,"title":"Mosaic Hunter","description":"Visit the Zeugma Mosaic Museum and find the Gypsy Girl.",
+         "difficulty":"easy","category":"museum","xp_reward":75,"poi_ids":["poi-gaz-1"],
+         "cover_image":"https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?w=800&q=80","estimated_minutes":60,"badge_name":"Mosaic Eye",
+         "trivia":{"question":"Which iconic mosaic is displayed at the Zeugma Museum?","options":["Gypsy Girl","Alexander Mosaic","Bird & Snake","Hercules"],"correct_index":0}},
+        {"id":"q-gaz-2","city_id":gaz,"title":"Baklava Master","description":"Taste authentic Antep baklava at İmam Çağdaş.",
+         "difficulty":"easy","category":"food","xp_reward":60,"poi_ids":["poi-gaz-6"],
+         "cover_image":"https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=800&q=80","estimated_minutes":30,"badge_name":"Baklava Master",
+         "trivia":{"question":"Which nut traditionally fills Antep baklava?","options":["Walnut","Almond","Antep Pistachio","Hazelnut"],"correct_index":2}},
+        {"id":"q-gaz-3","city_id":gaz,"title":"Coppersmith Wanderer","description":"Explore the Bakırcılar Bazaar and observe artisans at work.",
+         "difficulty":"medium","category":"must-see","xp_reward":100,"poi_ids":["poi-gaz-3","poi-gaz-7"],
+         "cover_image":"https://images.unsplash.com/photo-1555992828-35627f3eea4d?w=800&q=80","estimated_minutes":90,"badge_name":"Bazaar Explorer",
+         "trivia":{"question":"What metal is the bazaar famous for?","options":["Silver","Copper","Bronze","Gold"],"correct_index":1}},
+        {"id":"q-gaz-4","city_id":gaz,"title":"Castle of Antep","description":"Climb the Gaziantep Castle and discover its Roman roots.",
+         "difficulty":"medium","category":"historic","xp_reward":90,"poi_ids":["poi-gaz-2"],
+         "cover_image":"https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80","estimated_minutes":75,"badge_name":"Castle Climber",
+         "trivia":{"question":"Which empire originally built Gaziantep Castle?","options":["Ottoman","Hittite","Roman","Byzantine"],"correct_index":2}},
+        {"id":"q-gaz-5","city_id":gaz,"title":"Antep Heritage Trail","description":"Complete a full circuit of the old city's historic mosques and museums.",
+         "difficulty":"hard","category":"historic","xp_reward":150,"poi_ids":["poi-gaz-4","poi-gaz-5","poi-gaz-2"],
+         "cover_image":"https://images.unsplash.com/photo-1591019479261-1a103585c559?w=800&q=80","estimated_minutes":180,"badge_name":"Heritage Guardian",
+         "trivia":{"question":"Which UNESCO designation does Gaziantep hold?","options":["Music","Gastronomy","Architecture","Crafts"],"correct_index":1}},
+        # Istanbul
+        {"id":"q-ist-1","city_id":ist,"title":"Domes of the Old City","description":"Stand inside Hagia Sophia and admire the 6th-century dome.",
+         "difficulty":"easy","category":"landmark","xp_reward":75,"poi_ids":["poi-ist-1"],
+         "cover_image":"https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800&q=80","estimated_minutes":60,"badge_name":"Dome Gazer",
+         "trivia":{"question":"In what year was Hagia Sophia completed?","options":["537 AD","850 AD","1204 AD","1453 AD"],"correct_index":0}},
+        {"id":"q-ist-2","city_id":ist,"title":"Sultan's Palace","description":"Walk the corridors of Topkapı and view the Imperial Treasury.",
+         "difficulty":"medium","category":"museum","xp_reward":100,"poi_ids":["poi-ist-2"],
+         "cover_image":"https://images.unsplash.com/photo-1604941908760-bf9d3a3f6df5?w=800&q=80","estimated_minutes":120,"badge_name":"Imperial Visitor",
+         "trivia":{"question":"How many sultans ruled from Topkapı Palace?","options":["12","18","25","31"],"correct_index":2}},
+        {"id":"q-ist-3","city_id":ist,"title":"Bazaar Bargainer","description":"Navigate the Grand Bazaar and try a Turkish coffee.",
+         "difficulty":"hard","category":"must-see","xp_reward":140,"poi_ids":["poi-ist-3","poi-ist-4"],
+         "cover_image":"https://images.unsplash.com/photo-1545569310-49edaae3fd9d?w=800&q=80","estimated_minutes":150,"badge_name":"Master Bargainer",
+         "trivia":{"question":"How many shops does the Grand Bazaar host?","options":["~1,200","~2,500","~4,000","~6,000"],"correct_index":2}},
+        # Paris
+        {"id":"q-par-1","city_id":par,"title":"Iron Lady","description":"Stand at the foot of the Eiffel Tower at golden hour.",
+         "difficulty":"easy","category":"landmark","xp_reward":75,"poi_ids":["poi-par-1"],
+         "cover_image":"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80","estimated_minutes":45,"badge_name":"Iron Lady",
+         "trivia":{"question":"In what year was the Eiffel Tower completed?","options":["1855","1889","1901","1925"],"correct_index":1}},
+        {"id":"q-par-2","city_id":par,"title":"Louvre Marathon","description":"Find the Mona Lisa, Venus de Milo, and Winged Victory.",
+         "difficulty":"hard","category":"museum","xp_reward":150,"poi_ids":["poi-par-2"],
+         "cover_image":"https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80","estimated_minutes":240,"badge_name":"Louvre Scholar",
+         "trivia":{"question":"Who painted the Mona Lisa?","options":["Raphael","Michelangelo","Da Vinci","Botticelli"],"correct_index":2}},
+        {"id":"q-par-3","city_id":par,"title":"Bistro Hunter","description":"Dine at Le Comptoir du Relais.",
+         "difficulty":"medium","category":"food","xp_reward":95,"poi_ids":["poi-par-4"],
+         "cover_image":"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&q=80","estimated_minutes":90,"badge_name":"Bistro Hunter",
+         "trivia":{"question":"In which arrondissement is Saint-Germain-des-Prés?","options":["3rd","6th","10th","18th"],"correct_index":1}},
+        # Rome
+        {"id":"q-rom-1","city_id":rom,"title":"Gladiator's Arena","description":"Step inside the Colosseum and walk the arena floor.",
+         "difficulty":"easy","category":"landmark","xp_reward":80,"poi_ids":["poi-rom-1"],
+         "cover_image":"https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80","estimated_minutes":60,"badge_name":"Gladiator",
+         "trivia":{"question":"How many spectators did the Colosseum hold?","options":["10,000","25,000","50,000","100,000"],"correct_index":2}},
+        {"id":"q-rom-2","city_id":rom,"title":"Forum to Palatine","description":"Cross the Roman Forum and ascend Palatine Hill.",
+         "difficulty":"medium","category":"historic","xp_reward":105,"poi_ids":["poi-rom-2"],
+         "cover_image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","estimated_minutes":120,"badge_name":"Forum Walker",
+         "trivia":{"question":"Which hill is considered Rome's birthplace?","options":["Aventine","Capitoline","Palatine","Esquiline"],"correct_index":2}},
+        {"id":"q-rom-3","city_id":rom,"title":"Sistine Pilgrim","description":"View Michelangelo's frescoes at the Vatican.",
+         "difficulty":"hard","category":"museum","xp_reward":145,"poi_ids":["poi-rom-3"],
+         "cover_image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","estimated_minutes":180,"badge_name":"Sistine Pilgrim",
+         "trivia":{"question":"How long did Michelangelo take to paint the Sistine ceiling?","options":["1 year","4 years","9 years","15 years"],"correct_index":1}},
+    ]
+
+    return {"cities": cities, "pois": pois, "quests": quests}
+
+async def seed_if_empty():
+    count = await db.cities.count_documents({})
+    if count > 0:
+        logger.info(f"DB already seeded: {count} cities")
+        return
+    seed = build_seed()
+    if seed["cities"]:
+        await db.cities.insert_many([dict(c) for c in seed["cities"]])
+    if seed["pois"]:
+        await db.pois.insert_many([dict(p) for p in seed["pois"]])
+    if seed["quests"]:
+        await db.quests.insert_many([dict(q) for q in seed["quests"]])
+    # Update counts
+    for c in seed["cities"]:
+        poi_count = await db.pois.count_documents({"city_id": c["id"]})
+        quest_count = await db.quests.count_documents({"city_id": c["id"]})
+        await db.cities.update_one({"id": c["id"]}, {"$set": {"poi_count": poi_count, "quest_count": quest_count}})
+    logger.info("Seed complete.")
+
+# ---------------- Routes ----------------
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"app": "CityQuest", "status": "ok"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+@api_router.get("/cities", response_model=List[City])
+async def list_cities():
+    docs = await db.cities.find({}, {"_id": 0}).to_list(100)
+    return [City(**d) for d in docs]
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+@api_router.get("/cities/{city_id}", response_model=City)
+async def get_city(city_id: str):
+    doc = await db.cities.find_one({"id": city_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "City not found")
+    return City(**doc)
 
-# Include the router in the main app
+@api_router.get("/cities/{city_id}/pois", response_model=List[POI])
+async def list_pois(city_id: str, category: Optional[str] = Query(None)):
+    q: Dict[str, Any] = {"city_id": city_id}
+    if category and category != "all":
+        q["category"] = category
+    docs = await db.pois.find(q, {"_id": 0}).to_list(500)
+    return [POI(**d) for d in docs]
+
+@api_router.get("/cities/{city_id}/food", response_model=List[POI])
+async def list_food(city_id: str):
+    docs = await db.pois.find({"city_id": city_id, "category": "restaurant"}, {"_id": 0}).to_list(200)
+    return [POI(**d) for d in docs]
+
+@api_router.get("/cities/{city_id}/quests", response_model=List[Quest])
+async def list_quests(city_id: str, difficulty: Optional[str] = Query(None)):
+    q: Dict[str, Any] = {"city_id": city_id}
+    if difficulty and difficulty != "all":
+        q["difficulty"] = difficulty
+    docs = await db.quests.find(q, {"_id": 0}).to_list(500)
+    return [Quest(**d) for d in docs]
+
+@api_router.get("/quests/{quest_id}", response_model=Quest)
+async def get_quest(quest_id: str):
+    doc = await db.quests.find_one({"id": quest_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Quest not found")
+    return Quest(**doc)
+
+@api_router.get("/progress/{device_id}")
+async def get_progress(device_id: str):
+    doc = await db.progress.find_one({"device_id": device_id}, {"_id": 0})
+    if not doc:
+        empty = {
+            "device_id": device_id, "display_name": "Traveler",
+            "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
+        }
+        empty.update(get_level(0))
+        return empty
+    doc.update(get_level(doc.get("xp", 0)))
+    return doc
+
+@api_router.post("/progress/check-in", response_model=CheckInResult)
+async def check_in(payload: CheckInPayload):
+    quest = await db.quests.find_one({"id": payload.quest_id}, {"_id": 0})
+    if not quest:
+        raise HTTPException(404, "Quest not found")
+
+    user = await db.progress.find_one({"device_id": payload.device_id}, {"_id": 0}) or {
+        "device_id": payload.device_id,
+        "display_name": payload.display_name or "Traveler",
+        "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
+    }
+
+    if payload.quest_id in user["completed_quests"]:
+        lvl = get_level(user["xp"])
+        return CheckInResult(success=False, xp_earned=0, total_xp=user["xp"],
+                             level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+                             quest_completed=True, message="Quest already completed.")
+
+    # Trivia check (optional)
+    trivia_correct = True
+    if quest.get("trivia") and payload.trivia_answer_index is not None:
+        trivia_correct = payload.trivia_answer_index == quest["trivia"]["correct_index"]
+
+    if not trivia_correct:
+        lvl = get_level(user["xp"])
+        return CheckInResult(success=False, xp_earned=0, total_xp=user["xp"],
+                             level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+                             quest_completed=False, message="Incorrect trivia answer. Try again!")
+
+    prev_level = get_level(user["xp"])["level"]
+    xp_earned = int(quest.get("xp_reward", 50))
+    user["xp"] = user.get("xp", 0) + xp_earned
+    user["completed_quests"].append(payload.quest_id)
+    if quest.get("badge_name") and quest["badge_name"] not in user["badges"]:
+        user["badges"].append(quest["badge_name"])
+    user["check_ins"].append({
+        "quest_id": payload.quest_id, "poi_id": payload.poi_id,
+        "lat": payload.lat, "lng": payload.lng,
+        "at": datetime.now(timezone.utc).isoformat(),
+    })
+    if payload.display_name:
+        user["display_name"] = payload.display_name
+    user["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+
+    new_lvl = get_level(user["xp"])
+    return CheckInResult(
+        success=True, xp_earned=xp_earned, total_xp=user["xp"],
+        level=new_lvl["level"], level_title=new_lvl["title"],
+        leveled_up=new_lvl["level"] > prev_level,
+        quest_completed=True,
+        badge_unlocked=quest.get("badge_name"),
+        message=f"+{xp_earned} XP — {quest['title']} complete!",
+    )
+
+@api_router.get("/leaderboard")
+async def leaderboard():
+    docs = await db.progress.find({}, {"_id": 0}).sort("xp", -1).limit(50).to_list(50)
+    out = []
+    for d in docs:
+        lvl = get_level(d.get("xp", 0))
+        out.append({
+            "device_id": d.get("device_id"),
+            "display_name": d.get("display_name", "Traveler"),
+            "xp": d.get("xp", 0),
+            "level": lvl["level"],
+            "title": lvl["title"],
+            "badges": len(d.get("badges", [])),
+            "quests": len(d.get("completed_quests", [])),
+        })
+    return out
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -63,12 +454,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+@app.on_event("startup")
+async def on_startup():
+    await seed_if_empty()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

@@ -1,0 +1,57 @@
+{
+  "summary": "Tested CityQuest MVP — backend 19/19 pytest tests PASS (100%). Frontend mobile UI flows largely working: Explore screen + category chip filter, city picker (Gaziantep→Rome switch reflects in header), Quest difficulty filter + tap into detail, Skip-GPS fallback, trivia incorrect path (shows 'Try Again'), trivia correct path (Quest Complete + XP + badge), Profile name edit persists, Food search filter works (2 cards → 1 on 'baklava'), Leaderboard renders sorted. CRITICAL issue: Map tab shows 'React Native WebView does not support this platform.' in web preview — react-native-webview has no web fallback. Minor: React Native Web deprecation warnings ('shadow*' style props, props.pointerEvents).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "MapScreen (app/(tabs)/map.tsx)",
+        "issue": "react-native-webview is not supported on web. Map shows the literal text 'React Native WebView does not support this platform.' Need a Platform.OS === 'web' branch that renders the same Leaflet HTML inside an <iframe srcDoc={html}> so the web preview works. Native (Expo Go/native build) is fine. Reference: /app/frontend/app/(tabs)/map.tsx:83",
+        "testID": "map-screen",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Quest Detail (after Skip GPS)",
+        "issues": [
+          "When the result card is shown (success or fail), the bottom action bar still contains the 'Skip GPS — Continue' button alongside 'Done'/'Try again'. This is confusing post-result; Skip GPS should be hidden once result is shown. Reference: /app/frontend/app/quest/[id].tsx around the bottom action bar."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "react-native style props",
+        "issue": "Deprecation warnings in console: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' and 'props.pointerEvents is deprecated. Use style.pointerEvents.' Likely in components using shadowColor/shadowOpacity/shadowRadius (e.g., card styles). Reference: search /app/frontend for shadowColor / shadowOpacity / pointerEvents."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_cityquest.py",
+    "/app/test_reports/pytest/cityquest_results.xml"
+  ],
+  "action_items": [
+    "Add Platform.OS === 'web' branch in app/(tabs)/map.tsx that renders <iframe srcDoc={html} style={{flex:1,border:0}} /> instead of <WebView />. This is the only blocking issue.",
+    "Hide the 'Skip GPS — Continue' button once the result card is shown in quest/[id].tsx (conditional on !result).",
+    "Migrate shadowColor/shadowOpacity/shadowRadius/shadowOffset to boxShadow (or use elevation cross-platform) and move pointerEvents from prop to style to silence deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py is well-structured and uses {'_id': 0} projections — no ObjectId leakage.",
+    "Check-in idempotency, level-up flag, badge unlock, and persistence all behave correctly under tests.",
+    "Map screen relies on react-native-webview which has no web implementation; should be platform-branched.",
+    "_layout in (tabs) uses tabBarButtonTestID (good) — works in Expo Router v3+.",
+    "No deprecated expo-av / expo-barcode-scanner / expo-background-fetch usage found."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cityquest.py (new pytest suite, 19 tests, all pass)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "~85% (map broken on web only)"},
+  "seed_data_creation": "No manual seeding. Backend auto-seeds 4 cities / 19 POIs / 14 quests on startup. Test runs created 3 progress docs (TEST_* device_ids) which are visible in the leaderboard with display_name 'Traveler'. Safe to ignore or clean up later.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend URL: https://local-explorer-game.preview.emergentagent.com. All /api/* endpoints work. Pytest suite at /app/backend/tests/test_cityquest.py is the regression set (19 tests, ~1.7s). For UI: use viewport 390x844 and testIDs listed in the screens (tab-explore, tab-map, tab-quest, tab-food, tab-profile, explore-screen, explore-chip-{cat}, city-picker-button, city-option-{id}, quest-screen, quest-chip-{diff}, quest-card-{id}, quest-detail, quest-start-btn, quest-skip-gps, trivia-card, trivia-option-{i}, quest-submit-trivia, result-card, food-screen, food-card-{id}, map-screen, profile-screen, profile-name-edit/input/save). The map web fallback (iframe srcDoc) is the only known blocker. Trivia correct indices verified: q-gaz-1=0, q-gaz-2=2, q-gaz-3=1, q-rom-1=2.",
+  "rca_of_issue": "MapScreen RCA: react-native-webview package only ships native (iOS/Android) implementations. On react-native-web, it falls back to a stub that renders the text 'React Native WebView does not support this platform.' Fix is to detect Platform.OS === 'web' and render an <iframe srcDoc={html} /> with the same Leaflet HTML (or use react-native-web-webview shim). Reproduction: open the deployed web preview, tap the Map tab — the leaflet map never loads and the platform-not-supported message is visible."
+}
