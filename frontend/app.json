@@ -9,14 +9,27 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Capture photos for your CityQuest postcards",
+        "NSPhotoLibraryUsageDescription": "Select travel photos for your postcards",
+        "NSPhotoLibraryAddUsageDescription": "Save your CityQuest postcards to your gallery",
+        "NSLocationWhenInUseUsageDescription": "Verify your quest check-ins by location"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -34,7 +47,21 @@
           "backgroundColor": "#000"
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Select travel photos for your CityQuest postcards",
+          "cameraPermission": "Capture photos for your CityQuest postcards"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Save your CityQuest postcards to your gallery",
+          "savePhotosPermission": "Save your CityQuest postcards to your gallery"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

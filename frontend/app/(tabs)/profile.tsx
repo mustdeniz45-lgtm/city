@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, TextInput } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, TextInput } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { api, type LeaderEntry, type Progress } from "@/src/api";
 import { useApp, getDisplayName, setDisplayName } from "@/src/store";
+import { listPostcards, removePostcard, type Postcard } from "@/src/postcards";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { deviceId, progressVersion } = useApp();
   const [progress, setProgress] = useState<Progress | null>(null);
   const [board, setBoard] = useState<LeaderEntry[]>([]);
+  const [postcards, setPostcards] = useState<Postcard[]>([]);
   const [name, setName] = useState("Traveler");
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -18,8 +21,13 @@ export default function ProfileScreen() {
   const load = useCallback(async () => {
     if (!deviceId) return;
     try {
-      const [p, b, n] = await Promise.all([api.progress(deviceId), api.leaderboard(), getDisplayName()]);
-      setProgress(p); setBoard(b); setName(n);
+      const [p, b, n, pc] = await Promise.all([
+        api.progress(deviceId),
+        api.leaderboard(),
+        getDisplayName(),
+        listPostcards(),
+      ]);
+      setProgress(p); setBoard(b); setName(n); setPostcards(pc);
     } catch (e) { console.warn(e); }
     finally { setRefreshing(false); }
   }, [deviceId]);
@@ -30,6 +38,13 @@ export default function ProfileScreen() {
   const onSaveName = async () => {
     await setDisplayName(name.trim() || "Traveler");
     setEditing(false);
+  };
+
+  const onDeletePostcard = (id: string) => {
+    Alert.alert("Delete postcard?", "This will remove the postcard from your Profile.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => setPostcards(await removePostcard(id)) },
+    ]);
   };
 
   return (
@@ -82,6 +97,48 @@ export default function ProfileScreen() {
         <StatBox value={`${progress?.badges.length ?? 0}`} label="Badges" />
         <StatBox value={`${progress?.xp ?? 0}`} label="Total XP" />
       </View>
+
+      <Section title="Postcards" testIdSuffix="postcards">
+        <View style={styles.postcardWrap}>
+          <Pressable
+            style={styles.createCard}
+            onPress={() => router.push("/collage")}
+            testID="create-postcard-btn"
+          >
+            <View style={styles.createIcon}>
+              <Ionicons name="add" size={28} color="#FFF" />
+            </View>
+            <Text style={styles.createTitle}>Create postcard</Text>
+            <Text style={styles.createSub}>Photo + frame · shareable</Text>
+          </Pressable>
+          {postcards.length === 0 ? (
+            <View style={styles.postcardEmpty}>
+              <Ionicons name="image-outline" size={26} color={colors.muted} />
+              <Text style={styles.emptyText}>{"Tap \u201cCreate postcard\u201d to make your first shareable memory."}</Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.postcardRow}>
+              {postcards.map((pc) => (
+                <Pressable
+                  key={pc.id}
+                  style={styles.postcardThumb}
+                  onLongPress={() => onDeletePostcard(pc.id)}
+                  testID={`postcard-${pc.id}`}
+                >
+                  <Image source={pc.uri} style={styles.postcardImg} contentFit="cover" />
+                  <View style={styles.postcardOverlay}>
+                    <Text style={styles.postcardCity} numberOfLines={1}>{pc.city}</Text>
+                    <Text style={styles.postcardFrame}>{pc.frame.toUpperCase()}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+          {postcards.length > 0 && (
+            <Text style={styles.tipText}>Long-press a postcard to delete.</Text>
+          )}
+        </View>
+      </Section>
 
       <Section title="Badges" testIdSuffix="badges">
         {progress && progress.badges.length > 0 ? (
@@ -179,4 +236,19 @@ const styles = StyleSheet.create({
   boardMeta: { color: colors.muted, fontSize: 11, marginTop: 2 },
   boardXp: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
   boardXpText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
+
+  // Postcards
+  postcardWrap: { gap: spacing.md },
+  createCard: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, alignItems: "center", borderStyle: "dashed", ...shadow.pill },
+  createIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
+  createTitle: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface },
+  createSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  postcardEmpty: { alignItems: "center", paddingVertical: spacing.md, gap: 6 },
+  postcardRow: { gap: spacing.md, paddingVertical: 4, paddingRight: spacing.lg },
+  postcardThumb: { width: 130, height: 170, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border, ...shadow.card },
+  postcardImg: { width: "100%", height: "100%" },
+  postcardOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.55)", padding: 6 },
+  postcardCity: { color: "#FFF", fontFamily: fonts.display, fontSize: 13 },
+  postcardFrame: { color: colors.brandSecondary, fontSize: 8, fontWeight: "800", letterSpacing: 1.5, marginTop: 1 },
+  tipText: { fontSize: 11, color: colors.muted, fontStyle: "italic" },
 });

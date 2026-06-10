@@ -16,7 +16,8 @@ A worldwide gamified city guide that turns sightseeing into an XP-earning quest.
 - **Quest**: difficulty chips (All / Easy / Med / Hard), tactile cover cards, completion badges
 - **Quest Detail**: hero + GPS check-in (expo-location) + optional trivia + XP/level-up/badge result card
 - **Food**: searchable restaurant list with rating + XP
-- **Profile**: editable name, avatar, XP bar, 7-tier level system (Newcomer → Legend of CityQuest), badges grid, leaderboard
+- **Profile**: editable name, avatar, XP bar, 7-tier level system (Newcomer → Legend of CityQuest), badges grid, leaderboard, **Postcards gallery** (long-press to delete)
+- **Postcard Maker** (`/collage`): take photo OR pick from library → 4 frames (Postcard / Polaroid / Magazine / XP Card) → optional caption → save to device gallery + share via system sheet to IG / TikTok / X / WhatsApp. Camera + media-library permissions handled progressively with Settings fallback. Captures use `react-native-view-shot`.
 - **No auth** — device_id stored in AsyncStorage; progress persisted server-side and globally ranked
 
 ## Backend Endpoints (all `/api/*`)

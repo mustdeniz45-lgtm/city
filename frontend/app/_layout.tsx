@@ -44,6 +44,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="quest/[id]" options={{ presentation: "card" }} />
           <Stack.Screen name="city-picker" options={{ presentation: "modal" }} />
+          <Stack.Screen name="collage" options={{ presentation: "modal" }} />
         </Stack>
       </AppContext.Provider>
     </GestureHandlerRootView>
