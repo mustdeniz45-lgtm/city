@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, TextInput } from "react-native";
+import { Alert, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, TextInput } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { api, type LeaderEntry, type Progress, type CityProgress } from "@/src/api";
-import { useApp, getDisplayName, setDisplayName } from "@/src/store";
+import { useApp, getDisplayName, setDisplayName, getAvatarUri, setAvatarUri } from "@/src/store";
 import { listPostcards, removePostcard, type Postcard } from "@/src/postcards";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
+
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1598966739654-5e9a252d8c32?w=400&q=80";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -16,20 +20,22 @@ export default function ProfileScreen() {
   const [postcards, setPostcards] = useState<Postcard[]>([]);
   const [cityProgress, setCityProgress] = useState<CityProgress[]>([]);
   const [name, setName] = useState("Traveler");
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!deviceId) return;
     try {
-      const [p, b, n, pc, cp] = await Promise.all([
+      const [p, b, n, pc, cp, av] = await Promise.all([
         api.progress(deviceId),
         api.leaderboard(),
         getDisplayName(),
         listPostcards(),
         api.progressByCity(deviceId),
+        getAvatarUri(),
       ]);
-      setProgress(p); setBoard(b); setName(n); setPostcards(pc); setCityProgress(cp);
+      setProgress(p); setBoard(b); setName(n); setPostcards(pc); setCityProgress(cp); setAvatar(av);
     } catch (e) { console.warn(e); }
     finally { setRefreshing(false); }
   }, [deviceId]);
@@ -49,6 +55,70 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // ---- Avatar picker ----
+  const launchPicker = async (mode: "camera" | "library") => {
+    const ensure = mode === "camera"
+      ? ImagePicker.getCameraPermissionsAsync
+      : ImagePicker.getMediaLibraryPermissionsAsync;
+    const request = mode === "camera"
+      ? ImagePicker.requestCameraPermissionsAsync
+      : ImagePicker.requestMediaLibraryPermissionsAsync;
+    const { status, canAskAgain } = await ensure();
+    let ok = status === "granted";
+    if (!ok && canAskAgain) {
+      const r = await request();
+      ok = r.status === "granted";
+    }
+    if (!ok) {
+      Alert.alert(
+        mode === "camera" ? "Camera disabled" : "Photo access disabled",
+        "Enable access in Settings to update your avatar.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Open Settings", onPress: () => Linking.openSettings() },
+        ],
+      );
+      return;
+    }
+    const result = mode === "camera"
+      ? await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.85 })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.85,
+        });
+    if (!result.canceled && result.assets[0]) {
+      let uri = result.assets[0].uri;
+      // On web (or blob URLs) persist as data URI so it survives reload.
+      if (Platform.OS === "web" && uri.startsWith("blob:")) {
+        try {
+          const resp = await fetch(uri);
+          const blob = await resp.blob();
+          uri = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) { console.warn("blob->data", e); }
+      }
+      await setAvatarUri(uri);
+      setAvatar(uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const onPressAvatar = () => {
+    const opts: Array<{ text: string; onPress?: () => void; style?: "cancel" | "destructive" }> = [
+      { text: "Take photo",       onPress: () => launchPicker("camera") },
+      { text: "Choose from library", onPress: () => launchPicker("library") },
+    ];
+    if (avatar) opts.push({ text: "Remove photo", style: "destructive", onPress: async () => { await setAvatarUri(null); setAvatar(null); } });
+    opts.push({ text: "Cancel", style: "cancel" });
+    Alert.alert("Update profile picture", "Choose a source", opts);
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.surface }}
@@ -57,11 +127,17 @@ export default function ProfileScreen() {
       testID="profile-screen"
     >
       <View style={styles.header}>
-        <Image
-          source={"https://images.unsplash.com/photo-1598966739654-5e9a252d8c32?w=400&q=80"}
-          style={styles.avatar}
-          contentFit="cover"
-        />
+        <Pressable onPress={onPressAvatar} testID="profile-avatar-btn" style={styles.avatarWrap}>
+          <Image
+            source={avatar ?? DEFAULT_AVATAR}
+            style={styles.avatar}
+            contentFit="cover"
+            testID="profile-avatar"
+          />
+          <View style={styles.avatarEdit}>
+            <Ionicons name="camera" size={12} color="#FFF" />
+          </View>
+        </Pressable>
         <View style={{ flex: 1, marginLeft: spacing.md }}>
           {editing ? (
             <View style={styles.nameRow}>
@@ -222,43 +298,6 @@ function Section({ title, children, testIdSuffix }: { title: string; children: a
     <View style={{ marginTop: spacing.xl }} testID={`profile-section-${testIdSuffix}`}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={{ paddingHorizontal: spacing.lg }}>{children}</View>
-    </View>
-  );
-}
-
-function PassportCard({ cp }: { cp: CityProgress }) {
-  const done = cp.completed;
-  const stampedDate = cp.stamped_at
-    ? new Date(cp.stamped_at).toLocaleDateString(undefined, { month: "short", year: "numeric" }).toUpperCase()
-    : "";
-  return (
-    <View style={[styles.passportCard, done && styles.passportCardDone]} testID={`passport-${cp.city_id}`}>
-      <Image source={cp.hero_image} style={StyleSheet.absoluteFill} contentFit="cover" />
-      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: done ? "rgba(28,26,23,0.45)" : "rgba(28,26,23,0.65)" }]} />
-      <View style={styles.passportInner}>
-        <View style={styles.passportTop}>
-          <Text style={styles.passportFlag}>{cp.country_code}</Text>
-          {!done && (
-            <View style={styles.passportPct}>
-              <Text style={styles.passportPctText}>{cp.percent}%</Text>
-            </View>
-          )}
-        </View>
-        <View>
-          <Text style={styles.passportCity}>{cp.name}</Text>
-          <Text style={styles.passportCountry}>{cp.country.toUpperCase()}</Text>
-        </View>
-        <View style={styles.passportTrack}>
-          <View style={[styles.passportFill, { width: `${cp.percent}%`, backgroundColor: done ? colors.success : colors.brandSecondary }]} />
-        </View>
-        <Text style={styles.passportProgress}>{cp.completed_quests}/{cp.total_quests} quests</Text>
-      </View>
-      {done && (
-        <View style={styles.stamp} pointerEvents="none">
-          <Text style={styles.stampMain}>VISITED</Text>
-          <Text style={styles.stampSub}>{stampedDate || "STAMPED"}</Text>
-        </View>
-      )}
     </View>
   );
 }
