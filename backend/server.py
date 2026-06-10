@@ -419,9 +419,17 @@ async def get_progress(device_id: str):
         empty = {
             "device_id": device_id, "display_name": "Traveler",
             "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
+            "avatar_uri": None,
         }
         empty.update(get_level(0))
         return empty
+    # Defensive defaults for docs created via profile-only upserts (no check-ins yet)
+    doc.setdefault("display_name", "Traveler")
+    doc.setdefault("xp", 0)
+    doc.setdefault("completed_quests", [])
+    doc.setdefault("badges", [])
+    doc.setdefault("check_ins", [])
+    doc.setdefault("avatar_uri", None)
     doc.update(get_level(doc.get("xp", 0)))
     return doc
 
@@ -542,7 +550,20 @@ async def update_profile(device_id: str, payload: ProfileUpdatePayload):
     if not update:
         return {"ok": True, "updated": []}
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.progress.update_one({"device_id": device_id}, {"$set": update, "$setOnInsert": {"device_id": device_id}}, upsert=True)
+    await db.progress.update_one(
+        {"device_id": device_id},
+        {
+            "$set": update,
+            "$setOnInsert": {
+                "device_id": device_id,
+                "xp": 0,
+                "completed_quests": [],
+                "badges": [],
+                "check_ins": [],
+            },
+        },
+        upsert=True,
+    )
     return {"ok": True, "updated": list(update.keys())}
 
 

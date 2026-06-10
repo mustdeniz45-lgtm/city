@@ -259,7 +259,7 @@ export default function ProfileScreen() {
       </Section>
 
       <Section title="Badges" testIdSuffix="badges">
-        {progress && progress.badges.length > 0 ? (
+        {progress && progress.badges && progress.badges.length > 0 ? (
           <View style={styles.badgeGrid}>
             {progress.badges.map((b) => (
               <View key={b} style={styles.badge} testID={`badge-${b}`}>
