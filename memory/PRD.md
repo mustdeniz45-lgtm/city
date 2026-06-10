@@ -10,7 +10,7 @@ A worldwide gamified city guide that turns sightseeing into an XP-earning quest.
 ## Features Implemented
 - **5 bottom tabs**: Explore, Map, Quest, Food, Profile
 - **City selector** (Gaziantep / Istanbul / Paris / Rome) accessible from the Explore header. **Each city card now shows its quest completion progress** (e.g. `3/3 quests · 100%`) and a green "STAMPED" badge when fully completed.
-- **Virtual Passport on Profile**: Continent Passport summary row (`✈ X / Y cities stamped` with status dots), then 2×2 grid of cities with hero image, country code, progress bar, and a tilted red "VISITED · MMM YYYY" ink stamp once all quests in a city are completed.
+- **Virtual Passport on Profile**: a compact clickable row (`✈ X / Y cities stamped` with status dots + chevron) opens a dedicated **`/passport` modal screen** listing every city as a full-width row with hero image, country, progress bar, completion ratio, and a tilted red "VISITED · MMM YYYY" ink stamp once all quests in that city are completed. Tapping a row switches the active city and returns to where you came from.
 - **Auto-prompt postcard on city stamp**: when the check-in API detects the user just completed the LAST quest in a city, it returns `city_stamped: true` + `stamped_city_name`. The Quest Detail result card then shows a celebratory red "PASSPORT STAMPED · {CITY} · 100%" stamp box with a "Make a postcard" CTA that jumps straight to `/collage` — capturing the dopamine moment for IG/TikTok.
 - **Explore**: hero card per city + category chips (All / **Kültür Yolu** / Landmarks / Museums / Historic / Must-See / Food) + POI list
 - **Map**: Leaflet (via WebView / iframe on web) with color-coded category pins, popups showing XP, fits bounds

@@ -101,7 +101,11 @@ export default function ProfileScreen() {
       </View>
 
       <Section title="Passport" testIdSuffix="passport">
-        <View style={styles.passportSummary}>
+        <Pressable
+          style={styles.passportSummary}
+          onPress={() => router.push("/passport")}
+          testID="passport-open-btn"
+        >
           <View style={styles.passportSummaryLeft}>
             <Ionicons name="airplane" size={14} color={colors.brand} />
             <Text style={styles.passportSummaryText}>
@@ -119,18 +123,9 @@ export default function ProfileScreen() {
                 testID={`passport-dot-${c.city_id}`}
               />
             ))}
+            <Ionicons name="chevron-forward" size={16} color={colors.muted} style={{ marginLeft: 4 }} />
           </View>
-        </View>
-        <View style={styles.passportGrid}>
-          {cityProgress.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Ionicons name="airplane-outline" size={28} color={colors.muted} />
-              <Text style={styles.emptyText}>Start a quest to begin stamping your passport.</Text>
-            </View>
-          ) : (
-            cityProgress.map((cp) => <PassportCard key={cp.city_id} cp={cp} />)
-          )}
-        </View>
+        </Pressable>
       </Section>
 
       <Section title="Postcards" testIdSuffix="postcards">
@@ -341,7 +336,7 @@ const styles = StyleSheet.create({
   stamp: { position: "absolute", top: "32%", right: -8, transform: [{ rotate: "-12deg" }], paddingHorizontal: 10, paddingVertical: 5, borderWidth: 3, borderColor: "#B33939", borderRadius: 4, backgroundColor: "rgba(179,57,57,0.15)", alignItems: "center" },
   stampMain: { color: "#B33939", fontFamily: fonts.display, fontWeight: "900", fontSize: 16, letterSpacing: 2 },
   stampSub: { color: "#B33939", fontSize: 8, letterSpacing: 1.5, fontWeight: "800", marginTop: 1 },
-  passportSummary: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md },
+  passportSummary: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, ...shadow.pill },
   passportSummaryLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
   passportSummaryText: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
   passportSummaryNum: { fontFamily: fonts.display, fontSize: 20, color: colors.brand },
