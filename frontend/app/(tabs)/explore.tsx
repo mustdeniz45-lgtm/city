@@ -11,6 +11,7 @@ import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const CATEGORIES = [
   { id: "all", label: "All", icon: "apps-outline" as const },
+  { id: "kultur-yolu", label: "Kültür Yolu", icon: "footsteps-outline" as const },
   { id: "landmark", label: "Landmarks", icon: "flag-outline" as const },
   { id: "museum", label: "Museums", icon: "library-outline" as const },
   { id: "historic", label: "Historic", icon: "time-outline" as const },
@@ -29,8 +30,18 @@ export default function ExploreScreen() {
 
   const load = async () => {
     try {
-      const [c, p] = await Promise.all([api.city(activeCityId), api.pois(activeCityId, category)]);
-      setCity(c); setPois(p);
+      let p: POI[];
+      if (category === "kultur-yolu") {
+        const [c, ky] = await Promise.all([api.city(activeCityId), api.kulturYolu(activeCityId)]);
+        setCity(c);
+        p = ky.sort((a, b) => (a.ky_seq ?? 0) - (b.ky_seq ?? 0));
+      } else {
+        const [c, all] = await Promise.all([api.city(activeCityId), api.pois(activeCityId, category)]);
+        setCity(c);
+        // Hide Kültür Yolu entries from generic categories to keep the feed curated.
+        p = category === "all" ? all.filter((x) => !x.kultur_yolu) : all;
+      }
+      setPois(p);
     } catch (e) { console.warn(e); }
     finally { setLoading(false); setRefreshing(false); }
   };
@@ -89,13 +100,18 @@ function POICard({ poi }: { poi: POI }) {
       <Image source={poi.image} style={styles.cardImage} contentFit="cover" />
       <View style={styles.cardBody}>
         <View style={styles.cardCategoryRow}>
-          <Text style={styles.cardCategory}>{poi.category.toUpperCase()}</Text>
+          <Text style={styles.cardCategory}>
+            {poi.kultur_yolu ? `KÜLTÜR YOLU · #${poi.ky_seq}` : poi.category.toUpperCase()}
+          </Text>
           <View style={styles.rating}>
             <Ionicons name="star" size={11} color={colors.brandSecondary} />
             <Text style={styles.ratingText}>{poi.rating.toFixed(1)}</Text>
           </View>
         </View>
         <Text style={styles.cardTitle} numberOfLines={1}>{poi.name}</Text>
+        {poi.name_tr && poi.name_tr !== poi.name && (
+          <Text style={styles.cardSubtitle} numberOfLines={1}>{poi.name_tr}</Text>
+        )}
         <Text style={styles.cardDesc} numberOfLines={2}>{poi.description}</Text>
         <View style={styles.cardFooter}>
           <View style={styles.xpBadge}>
@@ -126,6 +142,7 @@ const styles = StyleSheet.create({
   rating: { flexDirection: "row", alignItems: "center", gap: 3 },
   ratingText: { fontSize: 12, color: colors.onSurfaceTertiary, fontWeight: "600" },
   cardTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.onSurface, marginBottom: 4 },
+  cardSubtitle: { fontStyle: "italic", color: colors.brandTertiary, fontSize: 12, marginBottom: 4 },
   cardDesc: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: spacing.md },
   cardFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   xpBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },

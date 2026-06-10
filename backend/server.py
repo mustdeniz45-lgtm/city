@@ -54,6 +54,9 @@ class POI(BaseModel):
     lng: float
     rating: float = 4.5
     xp_reward: int = 50
+    kultur_yolu: bool = False
+    ky_seq: Optional[int] = None
+    name_tr: Optional[str] = None
 
 class TriviaQuestion(BaseModel):
     question: str
@@ -295,22 +298,51 @@ def build_seed() -> Dict[str, Any]:
 
 async def seed_if_empty():
     count = await db.cities.count_documents({})
-    if count > 0:
+    if count == 0:
+        seed = build_seed()
+        if seed["cities"]:
+            await db.cities.insert_many([dict(c) for c in seed["cities"]])
+        if seed["pois"]:
+            await db.pois.insert_many([dict(p) for p in seed["pois"]])
+        if seed["quests"]:
+            await db.quests.insert_many([dict(q) for q in seed["quests"]])
+        logger.info("Base seed complete.")
+    else:
         logger.info(f"DB already seeded: {count} cities")
-        return
-    seed = build_seed()
-    if seed["cities"]:
-        await db.cities.insert_many([dict(c) for c in seed["cities"]])
-    if seed["pois"]:
-        await db.pois.insert_many([dict(p) for p in seed["pois"]])
-    if seed["quests"]:
-        await db.quests.insert_many([dict(q) for q in seed["quests"]])
-    # Update counts
-    for c in seed["cities"]:
+
+    # Kültür Yolu seed (idempotent)
+    ky_count = await db.pois.count_documents({"city_id": "gaziantep", "kultur_yolu": True})
+    if ky_count == 0:
+        from kultur_yolu_data import KULTUR_YOLU, KY_IMAGE_BY_CAT
+        docs = []
+        for item in KULTUR_YOLU:
+            cat = item["cat"]
+            docs.append({
+                "id": f"poi-gaz-ky-{item['n']:02d}",
+                "city_id": "gaziantep",
+                "name": item["en"],
+                "name_tr": item["tr"],
+                "category": cat,
+                "description": f"Site #{item['n']} on the Gaziantep Kultur Yolu (Culture Path) - {item['tr']}.",
+                "image": KY_IMAGE_BY_CAT.get(cat, KY_IMAGE_BY_CAT["historic"]),
+                "lat": item["lat"],
+                "lng": item["lng"],
+                "rating": 4.4,
+                "xp_reward": 25,
+                "kultur_yolu": True,
+                "ky_seq": item["n"],
+            })
+        await db.pois.insert_many(docs)
+        logger.info(f"Inserted {len(docs)} Kultur Yolu sites.")
+
+    # Refresh poi/quest counts on every startup so cities reflect KY additions
+    for c in await db.cities.find({}, {"_id": 0}).to_list(50):
         poi_count = await db.pois.count_documents({"city_id": c["id"]})
         quest_count = await db.quests.count_documents({"city_id": c["id"]})
-        await db.cities.update_one({"id": c["id"]}, {"$set": {"poi_count": poi_count, "quest_count": quest_count}})
-    logger.info("Seed complete.")
+        await db.cities.update_one(
+            {"id": c["id"]},
+            {"$set": {"poi_count": poi_count, "quest_count": quest_count}},
+        )
 
 # ---------------- Routes ----------------
 
@@ -331,11 +363,25 @@ async def get_city(city_id: str):
     return City(**doc)
 
 @api_router.get("/cities/{city_id}/pois", response_model=List[POI])
-async def list_pois(city_id: str, category: Optional[str] = Query(None)):
+async def list_pois(
+    city_id: str,
+    category: Optional[str] = Query(None),
+    kultur_yolu: Optional[bool] = Query(None),
+):
     q: Dict[str, Any] = {"city_id": city_id}
     if category and category != "all":
         q["category"] = category
-    docs = await db.pois.find(q, {"_id": 0}).to_list(500)
+    if kultur_yolu is True:
+        q["kultur_yolu"] = True
+    docs = await db.pois.find(q, {"_id": 0}).sort([("ky_seq", 1)]).to_list(1000)
+    return [POI(**d) for d in docs]
+
+
+@api_router.get("/cities/{city_id}/kultur-yolu", response_model=List[POI])
+async def list_kultur_yolu(city_id: str):
+    docs = await db.pois.find(
+        {"city_id": city_id, "kultur_yolu": True}, {"_id": 0}
+    ).sort([("ky_seq", 1)]).to_list(1000)
     return [POI(**d) for d in docs]
 
 @api_router.get("/cities/{city_id}/food", response_model=List[POI])

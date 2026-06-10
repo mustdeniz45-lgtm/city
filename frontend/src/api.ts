@@ -24,6 +24,7 @@ export type POI = {
   id: string; city_id: string; name: string; category: string;
   description: string; image: string; lat: number; lng: number;
   rating: number; xp_reward: number;
+  kultur_yolu?: boolean; ky_seq?: number | null; name_tr?: string | null;
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };
 export type Quest = {
@@ -51,8 +52,14 @@ export type LeaderEntry = {
 export const api = {
   cities: () => jget<City[]>("/cities"),
   city: (id: string) => jget<City>(`/cities/${id}`),
-  pois: (id: string, category?: string) =>
-    jget<POI[]>(`/cities/${id}/pois${category && category !== "all" ? `?category=${category}` : ""}`),
+  pois: (id: string, category?: string, kulturYolu?: boolean) => {
+    const params: string[] = [];
+    if (category && category !== "all") params.push(`category=${category}`);
+    if (kulturYolu) params.push("kultur_yolu=true");
+    const qs = params.length ? `?${params.join("&")}` : "";
+    return jget<POI[]>(`/cities/${id}/pois${qs}`);
+  },
+  kulturYolu: (id: string) => jget<POI[]>(`/cities/${id}/kultur-yolu`),
   food: (id: string) => jget<POI[]>(`/cities/${id}/food`),
   quests: (id: string, difficulty?: string) =>
     jget<Quest[]>(`/cities/${id}/quests${difficulty && difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`),

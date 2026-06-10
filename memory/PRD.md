@@ -10,8 +10,9 @@ A worldwide gamified city guide that turns sightseeing into an XP-earning quest.
 ## Features Implemented
 - **5 bottom tabs**: Explore, Map, Quest, Food, Profile
 - **City selector** (Gaziantep / Istanbul / Paris / Rome) accessible from the Explore header
-- **Explore**: hero card per city + category chips (All / Landmarks / Museums / Historic / Must-See / Food) + POI list
-- **Map**: Leaflet (via WebView) with color-coded category pins, popups showing XP, fits bounds
+- **Explore**: hero card per city + category chips (All / **Kültür Yolu** / Landmarks / Museums / Historic / Must-See / Food) + POI list
+- **Map**: Leaflet (via WebView / iframe on web) with color-coded category pins, popups showing XP, fits bounds
+- **Kültür Yolu route overlay** (Gaziantep only): toggleable purple-pin walking route with all 53 sites of the official Gaziantep Culture Path, sequenced 1→53 and connected by a dashed polyline. Each pin shows the Turkish + English name and awards +25 XP per visit.
 - **Quest**: difficulty chips (All / Easy / Med / Hard), tactile cover cards, completion badges
 - **Quest Detail**: hero + GPS check-in (expo-location) + optional trivia + XP/level-up/badge result card
 - **Food**: searchable restaurant list with rating + XP
