@@ -182,9 +182,9 @@ export default function QuestDetail() {
             </Text>
           </Pressable>
         )}
-        {locStatus === "denied" && (
+        {phase === "intro" && locStatus === "denied" && (
           <Pressable
-            style={[styles.cta, { backgroundColor: colors.onSurface }]}
+            style={[styles.cta, { backgroundColor: colors.onSurface, marginTop: spacing.sm }]}
             onPress={() => quest.trivia ? setPhase("trivia") : submit(null)}
             testID="quest-skip-gps"
           >

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { api, type City, type POI } from "@/src/api";
 import { useApp } from "@/src/store";
@@ -80,14 +80,19 @@ export default function MapScreen() {
         </View>
       </View>
       <View style={styles.mapWrap}>
-        <WebView
-          ref={webRef}
-          originWhitelist={["*"]}
-          source={{ html }}
-          style={{ flex: 1, backgroundColor: colors.surfaceTertiary }}
-          javaScriptEnabled
-          domStorageEnabled
-        />
+        {Platform.OS === "web" ? (
+          // @ts-expect-error iframe is a valid web-only element via react-native-web
+          <iframe srcDoc={html} style={{ flex: 1, border: 0, width: "100%", height: "100%" }} title="map" />
+        ) : (
+          <WebView
+            ref={webRef}
+            originWhitelist={["*"]}
+            source={{ html }}
+            style={{ flex: 1, backgroundColor: colors.surfaceTertiary }}
+            javaScriptEnabled
+            domStorageEnabled
+          />
+        )}
       </View>
     </View>
   );
