@@ -106,17 +106,29 @@ export default function ProfileScreen() {
       await setAvatarUri(uri);
       setAvatar(uri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (deviceId) api.updateProfile(deviceId, { avatar_uri: uri }).catch(console.warn);
     }
   };
 
   const onPressAvatar = () => {
-    const opts: Array<{ text: string; onPress?: () => void; style?: "cancel" | "destructive" }> = [
+    const opts: { text: string; onPress?: () => void; style?: "cancel" | "destructive" }[] = [
       { text: "Take photo",       onPress: () => launchPicker("camera") },
       { text: "Choose from library", onPress: () => launchPicker("library") },
     ];
-    if (avatar) opts.push({ text: "Remove photo", style: "destructive", onPress: async () => { await setAvatarUri(null); setAvatar(null); } });
+    if (avatar) opts.push({ text: "Remove photo", style: "destructive", onPress: async () => {
+      await setAvatarUri(null); setAvatar(null);
+      if (deviceId) api.updateProfile(deviceId, { avatar_uri: "" }).catch(console.warn);
+    }});
     opts.push({ text: "Cancel", style: "cancel" });
     Alert.alert("Update profile picture", "Choose a source", opts);
+  };
+
+  // Also sync display name to backend whenever user saves it
+  const handleSaveName = async () => {
+    const trimmed = name.trim() || "Traveler";
+    await setDisplayName(trimmed);
+    setEditing(false);
+    if (deviceId) api.updateProfile(deviceId, { display_name: trimmed }).catch(console.warn);
   };
 
   return (
@@ -149,7 +161,7 @@ export default function ProfileScreen() {
                 autoFocus
                 testID="profile-name-input"
               />
-              <Pressable onPress={onSaveName} style={styles.saveBtn} testID="profile-name-save">
+              <Pressable onPress={handleSaveName} style={styles.saveBtn} testID="profile-name-save">
                 <Ionicons name="checkmark" size={18} color="#FFF" />
               </Pressable>
             </View>
@@ -274,6 +286,15 @@ export default function ProfileScreen() {
             board.slice(0, 10).map((e, i) => (
               <View key={e.device_id} style={[styles.boardRow, i < board.length - 1 && styles.boardDivider, e.device_id === deviceId && styles.boardMe]}>
                 <Text style={styles.boardRank}>{i + 1}</Text>
+                {e.avatar_uri ? (
+                  <Image source={e.avatar_uri} style={styles.boardAvatar} contentFit="cover" />
+                ) : (
+                  <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
+                    <Text style={styles.boardAvatarInitial}>
+                      {(e.display_name?.[0] ?? "T").toUpperCase()}
+                    </Text>
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.boardName} numberOfLines={1}>
                     {e.display_name} {e.device_id === deviceId ? "(you)" : ""}
@@ -337,7 +358,10 @@ const styles = StyleSheet.create({
   boardRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   boardDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
   boardMe: { backgroundColor: "#FCE9E1" },
-  boardRank: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface, width: 24, textAlign: "center" },
+  boardRank: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface, width: 22, textAlign: "center" },
+  boardAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border },
+  boardAvatarFallback: { alignItems: "center", justifyContent: "center", backgroundColor: colors.brandTertiary },
+  boardAvatarInitial: { color: "#FFF", fontFamily: fonts.display, fontSize: 16 },
   boardName: { fontWeight: "700", color: colors.onSurface, fontSize: 14 },
   boardMeta: { color: colors.muted, fontSize: 11, marginTop: 2 },
   boardXp: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },

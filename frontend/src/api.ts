@@ -50,6 +50,7 @@ export type CheckInResult = {
 export type LeaderEntry = {
   device_id: string; display_name: string; xp: number; level: number;
   title: string; badges: number; quests: number;
+  avatar_uri?: string | null;
 };
 export type CityProgress = {
   city_id: string; name: string; country: string; country_code: string;
@@ -79,4 +80,6 @@ export const api = {
   }) => jpost<CheckInResult>("/progress/check-in", payload),
   leaderboard: () => jget<LeaderEntry[]>("/leaderboard"),
   progressByCity: (deviceId: string) => jget<CityProgress[]>(`/progress/${deviceId}/by-city`),
+  updateProfile: (deviceId: string, payload: { display_name?: string; avatar_uri?: string | null }) =>
+    jpost<{ ok: boolean }>(`/progress/${deviceId}/profile`, payload),
 };

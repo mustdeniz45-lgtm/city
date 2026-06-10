@@ -85,6 +85,12 @@ class CheckInPayload(BaseModel):
     lng: Optional[float] = None
     trivia_answer_index: Optional[int] = None
     display_name: Optional[str] = None
+    avatar_uri: Optional[str] = None
+
+
+class ProfileUpdatePayload(BaseModel):
+    display_name: Optional[str] = None
+    avatar_uri: Optional[str] = None  # set None or "" to clear
 
 class CheckInResult(BaseModel):
     success: bool
@@ -461,6 +467,8 @@ async def check_in(payload: CheckInPayload):
     })
     if payload.display_name:
         user["display_name"] = payload.display_name
+    if payload.avatar_uri is not None:
+        user["avatar_uri"] = payload.avatar_uri
     user["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
@@ -524,6 +532,20 @@ async def progress_by_city(device_id: str):
     return out
 
 
+@api_router.post("/progress/{device_id}/profile")
+async def update_profile(device_id: str, payload: ProfileUpdatePayload):
+    update: Dict[str, Any] = {}
+    if payload.display_name is not None:
+        update["display_name"] = payload.display_name or "Traveler"
+    if payload.avatar_uri is not None:
+        update["avatar_uri"] = payload.avatar_uri  # may be "" to clear
+    if not update:
+        return {"ok": True, "updated": []}
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.progress.update_one({"device_id": device_id}, {"$set": update, "$setOnInsert": {"device_id": device_id}}, upsert=True)
+    return {"ok": True, "updated": list(update.keys())}
+
+
 @api_router.get("/leaderboard")
 async def leaderboard():
     docs = await db.progress.find({}, {"_id": 0}).sort("xp", -1).limit(50).to_list(50)
@@ -533,6 +555,7 @@ async def leaderboard():
         out.append({
             "device_id": d.get("device_id"),
             "display_name": d.get("display_name", "Traveler"),
+            "avatar_uri": d.get("avatar_uri") or None,
             "xp": d.get("xp", 0),
             "level": lvl["level"],
             "title": lvl["title"],

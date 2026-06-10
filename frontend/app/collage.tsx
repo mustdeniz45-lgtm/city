@@ -13,7 +13,7 @@ import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
 import ViewShot from "react-native-view-shot";
 import { api, type City, type Progress } from "@/src/api";
-import { useApp } from "@/src/store";
+import { useApp, getAvatarUri } from "@/src/store";
 import { addPostcard, type Postcard } from "@/src/postcards";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -34,12 +34,14 @@ export default function CollageScreen() {
   const [caption, setCaption] = useState("");
   const [city, setCity] = useState<City | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const shotRef = useRef<ViewShot>(null);
 
   useEffect(() => {
     api.city(activeCityId).then(setCity).catch(console.warn);
     if (deviceId) api.progress(deviceId).then(setProgress).catch(console.warn);
+    getAvatarUri().then(setAvatarUri).catch(console.warn);
   }, [activeCityId, deviceId]);
 
   // ----- permissions helpers -----
@@ -211,6 +213,7 @@ export default function CollageScreen() {
                 xp={progress?.xp ?? 0}
                 level={progress?.title ?? "Newcomer"}
                 quests={progress?.completed_quests.length ?? 0}
+                avatarUri={avatarUri}
               />
             </ViewShot>
           </View>
@@ -336,6 +339,7 @@ type CanvasProps = {
   xp: number;
   level: string;
   quests: number;
+  avatarUri: string | null;
 };
 
 function PostcardCanvas(p: CanvasProps) {
@@ -440,13 +444,22 @@ function XPFrame(p: CanvasProps) {
           <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 10, letterSpacing: 1 }}>{p.level.toUpperCase()}</Text>
         </View>
       </View>
-      <View style={{ padding: 16, paddingTop: 12, borderTopWidth: 2, borderTopColor: "#C85A40" }}>
-        <Text style={{ color: "#FFF", fontFamily: fonts.display, fontSize: 22 }} numberOfLines={1}>{p.cityName} · explored</Text>
-        {!!p.caption && <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 4, fontStyle: "italic" }} numberOfLines={2}>{p.caption}</Text>}
-        <View style={{ flexDirection: "row", gap: 12, marginTop: 10 }}>
-          <Stat icon="checkmark-circle" label="QUESTS" value={`${p.quests}`} />
-          <Stat icon="flash" label="TOTAL XP" value={`${p.xp}`} />
-          <Stat icon="ribbon" label="TIER" value={p.level.split(" ")[0]} />
+      <View style={{ padding: 16, paddingTop: 12, borderTopWidth: 2, borderTopColor: "#C85A40", flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+        <View style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: "#C85A40", overflow: "hidden", backgroundColor: "#2A2722", alignItems: "center", justifyContent: "center" }}>
+          {p.avatarUri ? (
+            <Image source={p.avatarUri} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+          ) : (
+            <Ionicons name="person" size={28} color="#6E6A63" />
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#FFF", fontFamily: fonts.display, fontSize: 20 }} numberOfLines={1}>{p.cityName} · explored</Text>
+          {!!p.caption && <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2, fontStyle: "italic" }} numberOfLines={2}>{p.caption}</Text>}
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
+            <Stat icon="checkmark-circle" label="QUESTS" value={`${p.quests}`} />
+            <Stat icon="flash" label="TOTAL XP" value={`${p.xp}`} />
+            <Stat icon="ribbon" label="TIER" value={p.level.split(" ")[0]} />
+          </View>
         </View>
       </View>
     </View>
