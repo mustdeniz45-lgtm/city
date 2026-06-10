@@ -473,6 +473,43 @@ async def check_in(payload: CheckInPayload):
         message=f"+{xp_earned} XP — {quest['title']} complete!",
     )
 
+@api_router.get("/progress/{device_id}/by-city")
+async def progress_by_city(device_id: str):
+    user = await db.progress.find_one({"device_id": device_id}, {"_id": 0}) or {}
+    completed_set = set(user.get("completed_quests", []))
+    check_ins = user.get("check_ins", [])
+
+    cities = await db.cities.find({}, {"_id": 0}).to_list(100)
+    out = []
+    for c in cities:
+        all_qs = await db.quests.find({"city_id": c["id"]}, {"_id": 0, "id": 1}).to_list(500)
+        all_q_ids = {q["id"] for q in all_qs}
+        completed_in_city = completed_set & all_q_ids
+        total = len(all_q_ids)
+        done = len(completed_in_city)
+        is_complete = total > 0 and done == total
+
+        stamped_at = None
+        if is_complete:
+            city_dates = [ci.get("at") for ci in check_ins if ci.get("quest_id") in completed_in_city and ci.get("at")]
+            if city_dates:
+                stamped_at = max(city_dates)
+
+        out.append({
+            "city_id": c["id"],
+            "name": c["name"],
+            "country": c["country"],
+            "country_code": c["country_code"],
+            "hero_image": c["hero_image"],
+            "total_quests": total,
+            "completed_quests": done,
+            "percent": round(100 * done / total) if total else 0,
+            "completed": is_complete,
+            "stamped_at": stamped_at,
+        })
+    return out
+
+
 @api_router.get("/leaderboard")
 async def leaderboard():
     docs = await db.progress.find({}, {"_id": 0}).sort("xp", -1).limit(50).to_list(50)

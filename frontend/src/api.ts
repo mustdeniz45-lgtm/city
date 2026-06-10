@@ -48,6 +48,11 @@ export type LeaderEntry = {
   device_id: string; display_name: string; xp: number; level: number;
   title: string; badges: number; quests: number;
 };
+export type CityProgress = {
+  city_id: string; name: string; country: string; country_code: string;
+  hero_image: string; total_quests: number; completed_quests: number;
+  percent: number; completed: boolean; stamped_at: string | null;
+};
 
 export const api = {
   cities: () => jget<City[]>("/cities"),
@@ -70,4 +75,5 @@ export const api = {
     lat?: number; lng?: number; trivia_answer_index?: number; display_name?: string;
   }) => jpost<CheckInResult>("/progress/check-in", payload),
   leaderboard: () => jget<LeaderEntry[]>("/leaderboard"),
+  progressByCity: (deviceId: string) => jget<CityProgress[]>(`/progress/${deviceId}/by-city`),
 };

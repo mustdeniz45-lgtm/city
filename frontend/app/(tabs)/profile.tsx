@@ -3,7 +3,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, T
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import { api, type LeaderEntry, type Progress } from "@/src/api";
+import { api, type LeaderEntry, type Progress, type CityProgress } from "@/src/api";
 import { useApp, getDisplayName, setDisplayName } from "@/src/store";
 import { listPostcards, removePostcard, type Postcard } from "@/src/postcards";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -14,6 +14,7 @@ export default function ProfileScreen() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [board, setBoard] = useState<LeaderEntry[]>([]);
   const [postcards, setPostcards] = useState<Postcard[]>([]);
+  const [cityProgress, setCityProgress] = useState<CityProgress[]>([]);
   const [name, setName] = useState("Traveler");
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -21,13 +22,14 @@ export default function ProfileScreen() {
   const load = useCallback(async () => {
     if (!deviceId) return;
     try {
-      const [p, b, n, pc] = await Promise.all([
+      const [p, b, n, pc, cp] = await Promise.all([
         api.progress(deviceId),
         api.leaderboard(),
         getDisplayName(),
         listPostcards(),
+        api.progressByCity(deviceId),
       ]);
-      setProgress(p); setBoard(b); setName(n); setPostcards(pc);
+      setProgress(p); setBoard(b); setName(n); setPostcards(pc); setCityProgress(cp);
     } catch (e) { console.warn(e); }
     finally { setRefreshing(false); }
   }, [deviceId]);
@@ -97,6 +99,19 @@ export default function ProfileScreen() {
         <StatBox value={`${progress?.badges.length ?? 0}`} label="Badges" />
         <StatBox value={`${progress?.xp ?? 0}`} label="Total XP" />
       </View>
+
+      <Section title="Passport" testIdSuffix="passport">
+        <View style={styles.passportGrid}>
+          {cityProgress.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Ionicons name="airplane-outline" size={28} color={colors.muted} />
+              <Text style={styles.emptyText}>Start a quest to begin stamping your passport.</Text>
+            </View>
+          ) : (
+            cityProgress.map((cp) => <PassportCard key={cp.city_id} cp={cp} />)
+          )}
+        </View>
+      </Section>
 
       <Section title="Postcards" testIdSuffix="postcards">
         <View style={styles.postcardWrap}>
@@ -196,6 +211,43 @@ function Section({ title, children, testIdSuffix }: { title: string; children: a
   );
 }
 
+function PassportCard({ cp }: { cp: CityProgress }) {
+  const done = cp.completed;
+  const stampedDate = cp.stamped_at
+    ? new Date(cp.stamped_at).toLocaleDateString(undefined, { month: "short", year: "numeric" }).toUpperCase()
+    : "";
+  return (
+    <View style={[styles.passportCard, done && styles.passportCardDone]} testID={`passport-${cp.city_id}`}>
+      <Image source={cp.hero_image} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: done ? "rgba(28,26,23,0.45)" : "rgba(28,26,23,0.65)" }]} />
+      <View style={styles.passportInner}>
+        <View style={styles.passportTop}>
+          <Text style={styles.passportFlag}>{cp.country_code}</Text>
+          {!done && (
+            <View style={styles.passportPct}>
+              <Text style={styles.passportPctText}>{cp.percent}%</Text>
+            </View>
+          )}
+        </View>
+        <View>
+          <Text style={styles.passportCity}>{cp.name}</Text>
+          <Text style={styles.passportCountry}>{cp.country.toUpperCase()}</Text>
+        </View>
+        <View style={styles.passportTrack}>
+          <View style={[styles.passportFill, { width: `${cp.percent}%`, backgroundColor: done ? colors.success : colors.brandSecondary }]} />
+        </View>
+        <Text style={styles.passportProgress}>{cp.completed_quests}/{cp.total_quests} quests</Text>
+      </View>
+      {done && (
+        <View style={styles.stamp} pointerEvents="none">
+          <Text style={styles.stampMain}>VISITED</Text>
+          <Text style={styles.stampSub}>{stampedDate || "STAMPED"}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function StatBox({ value, label }: { value: string; label: string }) {
   return (
     <View style={styles.statBox}>
@@ -251,4 +303,22 @@ const styles = StyleSheet.create({
   postcardCity: { color: "#FFF", fontFamily: fonts.display, fontSize: 13 },
   postcardFrame: { color: colors.brandSecondary, fontSize: 8, fontWeight: "800", letterSpacing: 1.5, marginTop: 1 },
   tipText: { fontSize: 11, color: colors.muted, fontStyle: "italic" },
+
+  // Passport
+  passportGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, justifyContent: "space-between" },
+  passportCard: { width: "48%", aspectRatio: 0.85, borderRadius: radius.md, overflow: "hidden", borderWidth: 1, borderColor: colors.border, ...shadow.card },
+  passportCardDone: { borderColor: colors.success, borderWidth: 2 },
+  passportInner: { flex: 1, padding: spacing.md, justifyContent: "space-between" },
+  passportTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  passportFlag: { color: "#FFF", fontWeight: "800", fontSize: 10, letterSpacing: 2, backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" },
+  passportPct: { backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
+  passportPctText: { color: "#FFF", fontWeight: "800", fontSize: 11 },
+  passportCity: { fontFamily: fonts.display, color: "#FFF", fontSize: 18, marginBottom: 2 },
+  passportCountry: { color: "rgba(255,255,255,0.85)", fontSize: 9, letterSpacing: 1.5, fontWeight: "700" },
+  passportTrack: { height: 4, backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 2, overflow: "hidden", marginTop: 6 },
+  passportFill: { height: "100%", borderRadius: 2 },
+  passportProgress: { color: "rgba(255,255,255,0.92)", fontSize: 10, fontWeight: "600", marginTop: 4 },
+  stamp: { position: "absolute", top: "32%", right: -8, transform: [{ rotate: "-12deg" }], paddingHorizontal: 10, paddingVertical: 5, borderWidth: 3, borderColor: "#B33939", borderRadius: 4, backgroundColor: "rgba(179,57,57,0.15)", alignItems: "center" },
+  stampMain: { color: "#B33939", fontFamily: fonts.display, fontWeight: "900", fontSize: 16, letterSpacing: 2 },
+  stampSub: { color: "#B33939", fontSize: 8, letterSpacing: 1.5, fontWeight: "800", marginTop: 1 },
 });
