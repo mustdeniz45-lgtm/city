@@ -212,7 +212,7 @@ export default function CollageScreen() {
                 caption={caption}
                 xp={progress?.xp ?? 0}
                 level={progress?.title ?? "Newcomer"}
-                quests={progress?.completed_quests.length ?? 0}
+                quests={progress?.completed_quests?.length ?? 0}
                 avatarUri={avatarUri}
               />
             </ViewShot>

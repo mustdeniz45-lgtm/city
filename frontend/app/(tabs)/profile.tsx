@@ -183,8 +183,8 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <StatBox value={`${progress?.completed_quests.length ?? 0}`} label="Quests" />
-        <StatBox value={`${progress?.badges.length ?? 0}`} label="Badges" />
+        <StatBox value={`${progress?.completed_quests?.length ?? 0}`} label="Quests" />
+        <StatBox value={`${progress?.badges?.length ?? 0}`} label="Badges" />
         <StatBox value={`${progress?.xp ?? 0}`} label="Total XP" />
       </View>
 
