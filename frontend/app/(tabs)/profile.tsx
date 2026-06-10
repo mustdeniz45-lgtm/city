@@ -101,6 +101,26 @@ export default function ProfileScreen() {
       </View>
 
       <Section title="Passport" testIdSuffix="passport">
+        <View style={styles.passportSummary}>
+          <View style={styles.passportSummaryLeft}>
+            <Ionicons name="airplane" size={14} color={colors.brand} />
+            <Text style={styles.passportSummaryText}>
+              <Text style={styles.passportSummaryNum}>
+                {cityProgress.filter((c) => c.completed).length}
+              </Text>
+              <Text> / {cityProgress.length || "—"} cities stamped</Text>
+            </Text>
+          </View>
+          <View style={styles.passportDotsRow}>
+            {cityProgress.map((c) => (
+              <View
+                key={c.city_id}
+                style={[styles.passportDot, c.completed && { backgroundColor: colors.success }]}
+                testID={`passport-dot-${c.city_id}`}
+              />
+            ))}
+          </View>
+        </View>
         <View style={styles.passportGrid}>
           {cityProgress.length === 0 ? (
             <View style={styles.emptyBox}>
@@ -321,4 +341,10 @@ const styles = StyleSheet.create({
   stamp: { position: "absolute", top: "32%", right: -8, transform: [{ rotate: "-12deg" }], paddingHorizontal: 10, paddingVertical: 5, borderWidth: 3, borderColor: "#B33939", borderRadius: 4, backgroundColor: "rgba(179,57,57,0.15)", alignItems: "center" },
   stampMain: { color: "#B33939", fontFamily: fonts.display, fontWeight: "900", fontSize: 16, letterSpacing: 2 },
   stampSub: { color: "#B33939", fontSize: 8, letterSpacing: 1.5, fontWeight: "800", marginTop: 1 },
+  passportSummary: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md },
+  passportSummaryLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  passportSummaryText: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "600" },
+  passportSummaryNum: { fontFamily: fonts.display, fontSize: 20, color: colors.brand },
+  passportDotsRow: { flexDirection: "row", gap: 5 },
+  passportDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.borderStrong },
 });

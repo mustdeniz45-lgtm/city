@@ -163,6 +163,25 @@ export default function QuestDetail() {
                   <Text style={styles.badgeUnlockText}>Badge: {result.badge_unlocked}</Text>
                 </View>
               )}
+              {result.city_stamped && (
+                <View style={styles.stampCelebration} testID="city-stamp-celebration">
+                  <View style={styles.stampInkBox}>
+                    <Text style={styles.stampInkMain}>PASSPORT STAMPED</Text>
+                    <Text style={styles.stampInkSub}>{result.stamped_city_name?.toUpperCase()} · 100%</Text>
+                  </View>
+                  <Text style={styles.stampCelebText}>
+                    You completed every quest in {result.stamped_city_name}. Capture the moment.
+                  </Text>
+                  <Pressable
+                    style={styles.postcardCta}
+                    onPress={() => router.replace("/collage")}
+                    testID="make-postcard-cta"
+                  >
+                    <Ionicons name="camera" size={16} color="#FFF" />
+                    <Text style={styles.postcardCtaText}>Make a postcard</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -257,6 +276,13 @@ const styles = StyleSheet.create({
   levelUpText: { color: "#FFF", fontWeight: "800", fontSize: 11, letterSpacing: 0.5 },
   badgeUnlock: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.sm },
   badgeUnlockText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
+  stampCelebration: { width: "100%", marginTop: spacing.lg, padding: spacing.md, backgroundColor: "rgba(179,57,57,0.08)", borderRadius: radius.md, borderWidth: 1, borderColor: "rgba(179,57,57,0.25)", alignItems: "center" },
+  stampInkBox: { borderWidth: 3, borderColor: "#B33939", paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: 4, transform: [{ rotate: "-4deg" }], marginBottom: spacing.sm },
+  stampInkMain: { color: "#B33939", fontFamily: fonts.display, fontWeight: "900", fontSize: 18, letterSpacing: 2.5 },
+  stampInkSub: { color: "#B33939", fontSize: 9, letterSpacing: 1.5, fontWeight: "800", marginTop: 1, textAlign: "center" },
+  stampCelebText: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center", marginBottom: spacing.md, lineHeight: 17 },
+  postcardCta: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.pill },
+  postcardCtaText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, padding: spacing.lg, paddingBottom: spacing.xl, backgroundColor: "rgba(249,248,246,0.95)", borderTopWidth: 1, borderTopColor: colors.border },
   cta: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.brand, paddingVertical: spacing.md, borderRadius: radius.pill, ...shadow.card },
   ctaText: { color: "#FFF", fontWeight: "700", fontSize: 15, letterSpacing: 0.3 },

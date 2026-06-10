@@ -42,7 +42,10 @@ export type Progress = {
 export type CheckInResult = {
   success: boolean; xp_earned: number; total_xp: number; level: number;
   level_title: string; leveled_up: boolean; quest_completed: boolean;
-  badge_unlocked?: string; message: string;
+  badge_unlocked?: string;
+  city_stamped?: boolean;
+  stamped_city_name?: string | null;
+  message: string;
 };
 export type LeaderEntry = {
   device_id: string; display_name: string; xp: number; level: number;

@@ -95,6 +95,8 @@ class CheckInResult(BaseModel):
     leveled_up: bool
     quest_completed: bool
     badge_unlocked: Optional[str] = None
+    city_stamped: bool = False
+    stamped_city_name: Optional[str] = None
     message: str
 
 # ---------------- Level system ----------------
@@ -463,6 +465,16 @@ async def check_in(payload: CheckInPayload):
 
     await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
 
+    # Did this check-in stamp the city? (all quests in this city now complete)
+    city_stamped = False
+    stamped_city_name = None
+    city_quests = await db.quests.find({"city_id": quest["city_id"]}, {"_id": 0, "id": 1}).to_list(500)
+    city_qids = {q["id"] for q in city_quests}
+    if city_qids and city_qids.issubset(set(user["completed_quests"])):
+        city_stamped = True
+        city_doc = await db.cities.find_one({"id": quest["city_id"]}, {"_id": 0, "name": 1})
+        stamped_city_name = city_doc.get("name") if city_doc else None
+
     new_lvl = get_level(user["xp"])
     return CheckInResult(
         success=True, xp_earned=xp_earned, total_xp=user["xp"],
@@ -470,6 +482,8 @@ async def check_in(payload: CheckInPayload):
         leveled_up=new_lvl["level"] > prev_level,
         quest_completed=True,
         badge_unlocked=quest.get("badge_name"),
+        city_stamped=city_stamped,
+        stamped_city_name=stamped_city_name,
         message=f"+{xp_earned} XP — {quest['title']} complete!",
     )
 
