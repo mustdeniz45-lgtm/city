@@ -95,8 +95,13 @@ export default function ExploreScreen() {
 }
 
 function POICard({ poi }: { poi: POI }) {
+  const router = useRouter();
   return (
-    <View style={styles.card} testID={`poi-card-${poi.id}`}>
+    <Pressable
+      style={styles.card}
+      onPress={() => router.push(`/poi/${poi.id}`)}
+      testID={`poi-card-${poi.id}`}
+    >
       <Image source={poi.image} style={styles.cardImage} contentFit="cover" />
       <View style={styles.cardBody}>
         <View style={styles.cardCategoryRow}>
@@ -118,9 +123,13 @@ function POICard({ poi }: { poi: POI }) {
             <Ionicons name="flash" size={11} color={colors.brand} />
             <Text style={styles.xpText}>+{poi.xp_reward} XP</Text>
           </View>
+          <View style={styles.openHint}>
+            <Text style={styles.openHintText}>View details</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+          </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -144,8 +153,10 @@ const styles = StyleSheet.create({
   cardTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.onSurface, marginBottom: 4 },
   cardSubtitle: { fontStyle: "italic", color: colors.brandTertiary, fontSize: 12, marginBottom: 4 },
   cardDesc: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: spacing.md },
-  cardFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   xpBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
   xpText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
+  openHint: { flexDirection: "row", alignItems: "center", gap: 2 },
+  openHintText: { color: colors.muted, fontSize: 12, fontWeight: "600" },
   empty: { textAlign: "center", color: colors.muted, padding: spacing.xl },
 });

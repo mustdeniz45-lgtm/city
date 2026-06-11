@@ -417,6 +417,14 @@ async def list_food(city_id: str):
     docs = await db.pois.find({"city_id": city_id, "category": "restaurant"}, {"_id": 0}).to_list(200)
     return [POI(**d) for d in docs]
 
+@api_router.get("/pois/{poi_id}", response_model=POI)
+async def get_poi(poi_id: str):
+    doc = await db.pois.find_one({"id": poi_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "POI not found")
+    return POI(**doc)
+
+
 @api_router.get("/cities/{city_id}/quests", response_model=List[Quest])
 async def list_quests(city_id: str, difficulty: Optional[str] = Query(None)):
     q: Dict[str, Any] = {"city_id": city_id}

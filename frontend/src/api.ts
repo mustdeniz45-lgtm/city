@@ -80,6 +80,7 @@ export const api = {
   quests: (id: string, difficulty?: string) =>
     jget<Quest[]>(`/cities/${id}/quests${difficulty && difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`),
   quest: (id: string) => jget<Quest>(`/quests/${id}`),
+  poi: (id: string) => jget<POI>(`/pois/${id}`),
   progress: (deviceId: string) => jget<Progress>(`/progress/${deviceId}`),
   checkIn: (payload: {
     device_id: string; quest_id: string; poi_id?: string;

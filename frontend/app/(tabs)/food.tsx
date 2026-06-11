@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View, TextInput } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View, TextInput } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { api, type POI } from "@/src/api";
 import { useApp } from "@/src/store";
 import { SkeletonList } from "@/src/components/Skeleton";
@@ -57,8 +58,13 @@ export default function FoodScreen() {
 }
 
 function FoodCard({ f }: { f: POI }) {
+  const router = useRouter();
   return (
-    <View style={styles.card} testID={`food-card-${f.id}`}>
+    <Pressable
+      style={styles.card}
+      onPress={() => router.push(`/poi/${f.id}`)}
+      testID={`food-card-${f.id}`}
+    >
       <Image source={f.image} style={styles.cardImage} contentFit="cover" />
       <View style={styles.cardBody}>
         <View style={styles.row}>
@@ -69,12 +75,15 @@ function FoodCard({ f }: { f: POI }) {
           </View>
         </View>
         <Text style={styles.cardDesc} numberOfLines={2}>{f.description}</Text>
-        <View style={styles.xpBadge}>
-          <Ionicons name="flash" size={11} color={colors.brand} />
-          <Text style={styles.xpText}>+{f.xp_reward} XP for visiting</Text>
+        <View style={styles.footerRow}>
+          <View style={styles.xpBadge}>
+            <Ionicons name="flash" size={11} color={colors.brand} />
+            <Text style={styles.xpText}>+{f.xp_reward} XP for visiting</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={colors.muted} />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -95,5 +104,6 @@ const styles = StyleSheet.create({
   cardDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   xpBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, alignSelf: "flex-start" },
   xpText: { color: colors.brand, fontWeight: "700", fontSize: 11 },
+  footerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   empty: { textAlign: "center", color: colors.muted, padding: spacing.xl },
 });
