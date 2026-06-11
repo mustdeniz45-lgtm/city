@@ -425,6 +425,96 @@ async def get_poi(poi_id: str):
     return POI(**doc)
 
 
+class PoiCheckInPayload(BaseModel):
+    device_id: str
+    poi_id: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    display_name: Optional[str] = None
+
+
+class PoiCheckInResult(BaseModel):
+    success: bool
+    too_far: bool = False
+    distance_m: Optional[int] = None
+    quests_credited: List[str] = []
+    already_visited: bool = False
+    message: str
+
+
+@api_router.post("/progress/poi-check-in", response_model=PoiCheckInResult)
+async def poi_check_in(payload: PoiCheckInPayload):
+    poi = await db.pois.find_one({"id": payload.poi_id}, {"_id": 0})
+    if not poi:
+        raise HTTPException(404, "POI not found")
+
+    if payload.lat is not None and payload.lng is not None:
+        d = haversine_m(payload.lat, payload.lng, poi["lat"], poi["lng"])
+        if d > CHECKIN_RADIUS_M:
+            pretty = f"{int(round(d))} m" if d < 10000 else f"{d/1000:.1f} km"
+            return PoiCheckInResult(
+                success=False, too_far=True, distance_m=int(round(d)),
+                message=f"You're {pretty} from {poi['name']}. Walk within {CHECKIN_RADIUS_M} m to check in.",
+            )
+
+    user = await db.progress.find_one({"device_id": payload.device_id}, {"_id": 0}) or {
+        "device_id": payload.device_id,
+        "display_name": payload.display_name or "Traveler",
+        "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
+        "quest_progress": {},
+    }
+    user.setdefault("xp", 0)
+    user.setdefault("completed_quests", [])
+    user.setdefault("badges", [])
+    user.setdefault("check_ins", [])
+    user.setdefault("quest_progress", {})
+
+    # Has the user already visited this POI in any quest context?
+    already = any(payload.poi_id in (qp.get("visited") or []) for qp in user["quest_progress"].values())
+
+    quests = await db.quests.find(
+        {"city_id": poi["city_id"], "poi_ids": payload.poi_id},
+        {"_id": 0, "id": 1},
+    ).to_list(500)
+    credited: List[str] = []
+    for q in quests:
+        qid = q["id"]
+        if qid in user["completed_quests"]:
+            continue
+        qp = user["quest_progress"].setdefault(qid, {"visited": []})
+        if payload.poi_id not in (qp.get("visited") or []):
+            qp.setdefault("visited", []).append(payload.poi_id)
+            credited.append(qid)
+
+    user["check_ins"].append({
+        "quest_id": None,
+        "poi_id": payload.poi_id,
+        "lat": payload.lat, "lng": payload.lng,
+        "at": datetime.now(timezone.utc).isoformat(),
+    })
+    if payload.display_name:
+        user["display_name"] = payload.display_name
+    user["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+
+    n = len(credited)
+    if n == 0 and already:
+        msg = f"You've already checked in at {poi['name']}."
+    elif n == 0:
+        msg = f"Visit recorded at {poi['name']}!"
+    elif n == 1:
+        msg = f"Visited {poi['name']}! Counted toward 1 quest."
+    else:
+        msg = f"Visited {poi['name']}! Counted toward {n} quests."
+
+    return PoiCheckInResult(
+        success=True, too_far=False,
+        quests_credited=credited, already_visited=already and n == 0,
+        message=msg,
+    )
+
+
 @api_router.get("/cities/{city_id}/quests", response_model=List[Quest])
 async def list_quests(city_id: str, difficulty: Optional[str] = Query(None)):
     q: Dict[str, Any] = {"city_id": city_id}

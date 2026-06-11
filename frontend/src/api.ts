@@ -81,6 +81,11 @@ export const api = {
     jget<Quest[]>(`/cities/${id}/quests${difficulty && difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`),
   quest: (id: string) => jget<Quest>(`/quests/${id}`),
   poi: (id: string) => jget<POI>(`/pois/${id}`),
+  poiCheckIn: (payload: { device_id: string; poi_id: string; lat?: number; lng?: number; display_name?: string }) =>
+    jpost<{ success: boolean; too_far: boolean; distance_m: number | null; quests_credited: string[]; already_visited: boolean; message: string }>(
+      "/progress/poi-check-in",
+      payload,
+    ),
   progress: (deviceId: string) => jget<Progress>(`/progress/${deviceId}`),
   checkIn: (payload: {
     device_id: string; quest_id: string; poi_id?: string;
