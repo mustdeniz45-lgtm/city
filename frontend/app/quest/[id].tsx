@@ -12,6 +12,25 @@ import { colors, difficultyColor, fonts, radius, shadow, spacing } from "@/src/t
 
 type Phase = "checklist" | "trivia" | "result";
 
+const CHECKIN_RADIUS_M = 150;
+
+function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function formatDistance(m: number) {
+  if (m < 1000) return `${Math.round(m)} m away`;
+  if (m < 10000) return `${(m / 1000).toFixed(1)} km away`;
+  return `${Math.round(m / 1000)} km away`;
+}
+
 export default function QuestDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -24,6 +43,20 @@ export default function QuestDetail() {
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [activePoiId, setActivePoiId] = useState<string | null>(null);
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Read (but don't request) current GPS — if already granted, fetch a single fix
+  // so each POI card can show a live "~XX m away" badge.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== "granted") return;
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      } catch (e) { console.warn("loc", e); }
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -180,6 +213,8 @@ export default function QuestDetail() {
           {pois.map((p, idx) => {
             const isVisited = visited.includes(p.id);
             const isLoading = busy && activePoiId === p.id;
+            const distance = userLoc ? haversineMeters(userLoc, { lat: p.lat, lng: p.lng }) : null;
+            const inRange = distance !== null && distance <= CHECKIN_RADIUS_M;
             return (
               <View
                 key={p.id}
@@ -198,6 +233,24 @@ export default function QuestDetail() {
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
                     <Text style={styles.poiName} numberOfLines={1}>{p.name}</Text>
                     <Text style={styles.poiDesc} numberOfLines={2}>{p.description}</Text>
+                    {distance !== null && !isVisited && (
+                      <View
+                        style={[
+                          styles.distancePill,
+                          inRange ? styles.distancePillIn : styles.distancePillOut,
+                        ]}
+                        testID={`poi-distance-${p.id}`}
+                      >
+                        <Ionicons
+                          name={inRange ? "location" : "walk-outline"}
+                          size={10}
+                          color={inRange ? colors.success : colors.brand}
+                        />
+                        <Text style={[styles.distanceText, inRange && { color: colors.success }]}>
+                          {inRange ? `${Math.round(distance)} m · in range` : formatDistance(distance)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 {isVisited ? (
@@ -378,6 +431,10 @@ const styles = StyleSheet.create({
   checkBtnText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
   visitedPill: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: "rgba(77,124,95,0.12)" },
   visitedText: { color: colors.success, fontWeight: "700", fontSize: 11, letterSpacing: 0.3 },
+  distancePill: { flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-start", marginTop: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill, borderWidth: 1 },
+  distancePillIn: { backgroundColor: "rgba(77,124,95,0.12)", borderColor: "rgba(77,124,95,0.35)" },
+  distancePillOut: { backgroundColor: "#FCE9E1", borderColor: "rgba(200,90,64,0.35)" },
+  distanceText: { color: colors.brand, fontSize: 10, fontWeight: "700", letterSpacing: 0.2 },
 
   triviaCard: { marginTop: spacing.xl, backgroundColor: colors.surfaceSecondary, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, ...shadow.card },
   triviaHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
