@@ -131,9 +131,14 @@ class TestProgress:
 
     def test_checkin_correct_answer_awards_xp(self, s):
         device = f"TEST_ok_{uuid.uuid4().hex[:8]}"
-        # q-gaz-1 correct_index is 0, xp 75
-        payload = {"device_id": device, "quest_id": "q-gaz-1", "trivia_answer_index": 0}
-        r = s.post(f"{API}/progress/check-in", json=payload, timeout=15)
+        # q-gaz-1 has 1 POI (poi-gaz-1), correct_index is 0, xp 75
+        # First visit the POI, then submit trivia.
+        s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-1", "poi_id": "poi-gaz-1",
+        }, timeout=15)
+        r = s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-1", "trivia_answer_index": 0,
+        }, timeout=15)
         assert r.status_code == 200, r.text
         data = r.json()
         assert data["success"] is True
@@ -149,12 +154,19 @@ class TestProgress:
 
     def test_checkin_idempotent_on_repeat(self, s):
         device = f"TEST_idem_{uuid.uuid4().hex[:8]}"
-        payload = {"device_id": device, "quest_id": "q-gaz-2", "trivia_answer_index": 2}
-        r1 = s.post(f"{API}/progress/check-in", json=payload, timeout=15)
+        # q-gaz-2 has 1 POI (poi-gaz-6), correct trivia is index 2
+        s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-2", "poi_id": "poi-gaz-6",
+        }, timeout=15)
+        r1 = s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-2", "trivia_answer_index": 2,
+        }, timeout=15)
         assert r1.status_code == 200 and r1.json()["success"] is True
         first_xp = r1.json()["total_xp"]
-        # repeat
-        r2 = s.post(f"{API}/progress/check-in", json=payload, timeout=15)
+        # repeat (full payload) - should be idempotent
+        r2 = s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-2", "poi_id": "poi-gaz-6", "trivia_answer_index": 2,
+        }, timeout=15)
         assert r2.status_code == 200
         d2 = r2.json()
         assert d2["success"] is False
@@ -164,16 +176,20 @@ class TestProgress:
 
     def test_checkin_incorrect_trivia_no_xp(self, s):
         device = f"TEST_wrong_{uuid.uuid4().hex[:8]}"
-        # q-gaz-1 correct is 0, send 3 (wrong)
-        payload = {"device_id": device, "quest_id": "q-gaz-1", "trivia_answer_index": 3}
-        r = s.post(f"{API}/progress/check-in", json=payload, timeout=15)
+        # Visit the POI, then send wrong trivia
+        s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-1", "poi_id": "poi-gaz-1",
+        }, timeout=15)
+        r = s.post(f"{API}/progress/check-in", json={
+            "device_id": device, "quest_id": "q-gaz-1", "trivia_answer_index": 3,
+        }, timeout=15)
         assert r.status_code == 200
         d = r.json()
         assert d["success"] is False
         assert d["xp_earned"] == 0
         assert d["total_xp"] == 0
         assert d["quest_completed"] is False
-        # Verify NOT persisted
+        # Verify NOT awarded XP / NOT completed
         g = s.get(f"{API}/progress/{device}", timeout=10).json()
         assert g["xp"] == 0
         assert g["completed_quests"] == []
@@ -181,13 +197,15 @@ class TestProgress:
     def test_leveled_up_flag(self, s):
         # Level 2 threshold is 150 XP. We complete two quests to cross it.
         device = f"TEST_lvl_{uuid.uuid4().hex[:8]}"
-        # q-gaz-1 = 75 xp, q-gaz-3 = 100 xp -> 175 should hit level 2
-        p1 = {"device_id": device, "quest_id": "q-gaz-1", "trivia_answer_index": 0}
-        r1 = s.post(f"{API}/progress/check-in", json=p1, timeout=15).json()
+        # q-gaz-1 (1 POI) = 75 xp, q-gaz-3 (2 POIs) = 100 xp -> 175 should hit level 2
+        s.post(f"{API}/progress/check-in", json={"device_id": device, "quest_id": "q-gaz-1", "poi_id": "poi-gaz-1"}, timeout=15)
+        r1 = s.post(f"{API}/progress/check-in", json={"device_id": device, "quest_id": "q-gaz-1", "trivia_answer_index": 0}, timeout=15).json()
         assert r1["level"] == 1
         assert r1["leveled_up"] is False
-        p2 = {"device_id": device, "quest_id": "q-gaz-3", "trivia_answer_index": 1}
-        r2 = s.post(f"{API}/progress/check-in", json=p2, timeout=15).json()
+        # q-gaz-3 has 2 POIs (poi-gaz-3, poi-gaz-7) + trivia idx 1
+        s.post(f"{API}/progress/check-in", json={"device_id": device, "quest_id": "q-gaz-3", "poi_id": "poi-gaz-3"}, timeout=15)
+        s.post(f"{API}/progress/check-in", json={"device_id": device, "quest_id": "q-gaz-3", "poi_id": "poi-gaz-7"}, timeout=15)
+        r2 = s.post(f"{API}/progress/check-in", json={"device_id": device, "quest_id": "q-gaz-3", "trivia_answer_index": 1}, timeout=15).json()
         assert r2["total_xp"] == 175
         assert r2["level"] == 2
         assert r2["leveled_up"] is True

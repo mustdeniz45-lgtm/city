@@ -103,6 +103,9 @@ class CheckInResult(BaseModel):
     badge_unlocked: Optional[str] = None
     city_stamped: bool = False
     stamped_city_name: Optional[str] = None
+    visited_pois: List[str] = []
+    total_pois: int = 0
+    awaiting_trivia: bool = False
     message: str
 
 # ---------------- Level system ----------------
@@ -419,7 +422,7 @@ async def get_progress(device_id: str):
         empty = {
             "device_id": device_id, "display_name": "Traveler",
             "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
-            "avatar_uri": None,
+            "quest_progress": {}, "avatar_uri": None,
         }
         empty.update(get_level(0))
         return empty
@@ -429,6 +432,7 @@ async def get_progress(device_id: str):
     doc.setdefault("completed_quests", [])
     doc.setdefault("badges", [])
     doc.setdefault("check_ins", [])
+    doc.setdefault("quest_progress", {})
     doc.setdefault("avatar_uri", None)
     doc.update(get_level(doc.get("xp", 0)))
     return doc
@@ -443,31 +447,38 @@ async def check_in(payload: CheckInPayload):
         "device_id": payload.device_id,
         "display_name": payload.display_name or "Traveler",
         "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
+        "quest_progress": {},
     }
+    user.setdefault("xp", 0)
+    user.setdefault("completed_quests", [])
+    user.setdefault("badges", [])
+    user.setdefault("check_ins", [])
+    user.setdefault("quest_progress", {})
 
+    quest_pois: List[str] = list(quest.get("poi_ids") or [])
+    total = len(quest_pois)
+    has_trivia = quest.get("trivia") is not None
+
+    # Idempotent: already completed
     if payload.quest_id in user["completed_quests"]:
         lvl = get_level(user["xp"])
-        return CheckInResult(success=False, xp_earned=0, total_xp=user["xp"],
-                             level=lvl["level"], level_title=lvl["title"], leveled_up=False,
-                             quest_completed=True, message="Quest already completed.")
+        return CheckInResult(
+            success=False, xp_earned=0, total_xp=user["xp"],
+            level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+            quest_completed=True, visited_pois=quest_pois, total_pois=total,
+            message="Quest already completed.",
+        )
 
-    # Trivia check (optional)
-    trivia_correct = True
-    if quest.get("trivia") and payload.trivia_answer_index is not None:
-        trivia_correct = payload.trivia_answer_index == quest["trivia"]["correct_index"]
+    # Update visited POIs for this quest
+    qp = user["quest_progress"].setdefault(payload.quest_id, {"visited": []})
+    visited: List[str] = list(qp.get("visited") or [])
+    if payload.poi_id and payload.poi_id in quest_pois and payload.poi_id not in visited:
+        visited.append(payload.poi_id)
+    qp["visited"] = visited
 
-    if not trivia_correct:
-        lvl = get_level(user["xp"])
-        return CheckInResult(success=False, xp_earned=0, total_xp=user["xp"],
-                             level=lvl["level"], level_title=lvl["title"], leveled_up=False,
-                             quest_completed=False, message="Incorrect trivia answer. Try again!")
+    all_visited = total > 0 and set(visited) >= set(quest_pois)
 
-    prev_level = get_level(user["xp"])["level"]
-    xp_earned = int(quest.get("xp_reward", 50))
-    user["xp"] = user.get("xp", 0) + xp_earned
-    user["completed_quests"].append(payload.quest_id)
-    if quest.get("badge_name") and quest["badge_name"] not in user["badges"]:
-        user["badges"].append(quest["badge_name"])
+    # Always record this individual check-in
     user["check_ins"].append({
         "quest_id": payload.quest_id, "poi_id": payload.poi_id,
         "lat": payload.lat, "lng": payload.lng,
@@ -479,9 +490,53 @@ async def check_in(payload: CheckInPayload):
         user["avatar_uri"] = payload.avatar_uri
     user["updated_at"] = datetime.now(timezone.utc).isoformat()
 
+    # Still locations to visit?
+    if not all_visited:
+        await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+        lvl = get_level(user["xp"])
+        remaining = total - len(visited)
+        return CheckInResult(
+            success=True, xp_earned=0, total_xp=user["xp"],
+            level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+            quest_completed=False, visited_pois=visited, total_pois=total,
+            message=f"Checked in! {remaining} location{'s' if remaining != 1 else ''} to go.",
+        )
+
+    # All locations visited - handle trivia
+    if has_trivia:
+        if payload.trivia_answer_index is None:
+            await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+            lvl = get_level(user["xp"])
+            return CheckInResult(
+                success=True, xp_earned=0, total_xp=user["xp"],
+                level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+                quest_completed=False, awaiting_trivia=True,
+                visited_pois=visited, total_pois=total,
+                message="All locations visited. Answer the trivia to complete the quest.",
+            )
+        if payload.trivia_answer_index != quest["trivia"]["correct_index"]:
+            await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+            lvl = get_level(user["xp"])
+            return CheckInResult(
+                success=False, xp_earned=0, total_xp=user["xp"],
+                level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+                quest_completed=False, awaiting_trivia=True,
+                visited_pois=visited, total_pois=total,
+                message="Incorrect trivia answer. Try again!",
+            )
+
+    # COMPLETE
+    prev_level = get_level(user["xp"])["level"]
+    xp_earned = int(quest.get("xp_reward", 50))
+    user["xp"] = user.get("xp", 0) + xp_earned
+    user["completed_quests"].append(payload.quest_id)
+    if quest.get("badge_name") and quest["badge_name"] not in user["badges"]:
+        user["badges"].append(quest["badge_name"])
+    user["quest_progress"].pop(payload.quest_id, None)
+
     await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
 
-    # Did this check-in stamp the city? (all quests in this city now complete)
+    # City stamp check
     city_stamped = False
     stamped_city_name = None
     city_quests = await db.quests.find({"city_id": quest["city_id"]}, {"_id": 0, "id": 1}).to_list(500)
@@ -500,6 +555,7 @@ async def check_in(payload: CheckInPayload):
         badge_unlocked=quest.get("badge_name"),
         city_stamped=city_stamped,
         stamped_city_name=stamped_city_name,
+        visited_pois=quest_pois, total_pois=total,
         message=f"+{xp_earned} XP — {quest['title']} complete!",
     )
 

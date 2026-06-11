@@ -37,7 +37,9 @@ export type Progress = {
   device_id: string; display_name: string; xp: number;
   completed_quests: string[]; badges: string[];
   check_ins: { quest_id: string; poi_id?: string; lat?: number; lng?: number; at: string }[];
+  quest_progress?: Record<string, { visited: string[] }>;
   level: number; title: string; current_threshold: number; next_threshold: number; progress: number;
+  avatar_uri?: string | null;
 };
 export type CheckInResult = {
   success: boolean; xp_earned: number; total_xp: number; level: number;
@@ -45,6 +47,9 @@ export type CheckInResult = {
   badge_unlocked?: string;
   city_stamped?: boolean;
   stamped_city_name?: string | null;
+  visited_pois?: string[];
+  total_pois?: number;
+  awaiting_trivia?: boolean;
   message: string;
 };
 export type LeaderEntry = {

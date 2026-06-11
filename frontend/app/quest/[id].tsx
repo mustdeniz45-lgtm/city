@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +10,7 @@ import { api, type Quest, type POI, type CheckInResult } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
 import { colors, difficultyColor, fonts, radius, shadow, spacing } from "@/src/theme";
 
-type Phase = "intro" | "check-in" | "trivia" | "result";
+type Phase = "checklist" | "trivia" | "result";
 
 export default function QuestDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,12 +18,12 @@ export default function QuestDetail() {
   const { deviceId, refreshProgress } = useApp();
   const [quest, setQuest] = useState<Quest | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
-  const [phase, setPhase] = useState<Phase>("intro");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [locStatus, setLocStatus] = useState<"idle" | "checking" | "ok" | "denied" | "error">("idle");
+  const [visited, setVisited] = useState<string[]>([]);
+  const [phase, setPhase] = useState<Phase>("checklist");
   const [selected, setSelected] = useState<number | null>(null);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activePoiId, setActivePoiId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -32,48 +32,96 @@ export default function QuestDetail() {
         setQuest(q);
         if (q.poi_ids.length) {
           const all = await api.pois(q.city_id);
-          setPois(all.filter(p => q.poi_ids.includes(p.id)));
+          const ordered = q.poi_ids
+            .map((pid) => all.find((x) => x.id === pid))
+            .filter((x): x is POI => Boolean(x));
+          setPois(ordered);
+        }
+        if (deviceId) {
+          const prog = await api.progress(deviceId);
+          if (prog.completed_quests.includes(id)) {
+            setVisited(q.poi_ids);
+            setPhase("checklist");
+          } else {
+            const v = prog.quest_progress?.[id]?.visited ?? [];
+            setVisited(v);
+            if (q.poi_ids.length > 0 && v.length === q.poi_ids.length && q.trivia) {
+              setPhase("trivia");
+            }
+          }
         }
       } catch (e) { console.warn(e); }
     })();
-  }, [id]);
+  }, [id, deviceId]);
 
-  const doCheckIn = async () => {
-    setLocStatus("checking");
+  const alreadyCompleted = useMemo(
+    () => Boolean(quest && visited.length === quest.poi_ids.length && phase === "checklist" && result === null && visited.length > 0 && !quest.trivia)
+      // We will primarily detect completion via server response on submit.
+      ,
+    [quest, visited, phase, result],
+  );
+  // Reuse a more reliable signal: if server progress had it completed, we set phase="checklist" but no result.
+  // We'll show a "Completed" banner if visited == all and quest is in completed_quests; computed via questCompletedLocally.
+
+  const checkInPoi = async (poiId: string) => {
+    if (!quest) return;
+    setBusy(true);
+    setActivePoiId(poiId);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") { setLocStatus("denied"); return; }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      setLocStatus("ok");
+      let coords: { lat: number; lng: number } | null = null;
+      const { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
+      let ok = status === "granted";
+      if (!ok && canAskAgain) {
+        const r = await Location.requestForegroundPermissionsAsync();
+        ok = r.status === "granted";
+      }
+      if (ok) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        } catch (e) { console.warn("loc", e); }
+      }
+      const name = await getDisplayName();
+      const r = await api.checkIn({
+        device_id: deviceId,
+        quest_id: quest.id,
+        poi_id: poiId,
+        lat: coords?.lat,
+        lng: coords?.lng,
+        display_name: name,
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Auto-advance to trivia if exists, else submit
-      if (quest?.trivia) setPhase("trivia"); else submit(null);
-    } catch (e) {
-      console.warn(e); setLocStatus("error");
-    }
+      setVisited(r.visited_pois ?? visited);
+      if (r.quest_completed) {
+        setResult(r);
+        setPhase("result");
+        refreshProgress();
+      } else if (r.awaiting_trivia && quest.trivia) {
+        setPhase("trivia");
+      }
+    } catch (e) { console.warn(e); }
+    finally { setBusy(false); setActivePoiId(null); }
   };
 
-  const submit = async (answerIdx: number | null) => {
-    if (!quest) return;
+  const submitTrivia = async () => {
+    if (!quest || selected === null) return;
     setBusy(true);
     try {
       const name = await getDisplayName();
       const r = await api.checkIn({
         device_id: deviceId,
         quest_id: quest.id,
-        poi_id: quest.poi_ids[0],
-        lat: coords?.lat,
-        lng: coords?.lng,
-        trivia_answer_index: answerIdx ?? undefined,
+        trivia_answer_index: selected,
         display_name: name,
       });
-      setResult(r); setPhase("result");
-      if (r.success) {
+      if (r.success && r.quest_completed) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setResult(r);
+        setPhase("result");
         refreshProgress();
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setResult(r);
       }
     } catch (e) { console.warn(e); }
     finally { setBusy(false); }
@@ -82,10 +130,13 @@ export default function QuestDetail() {
   if (!quest) return <View style={{ flex: 1, backgroundColor: colors.surface }} />;
 
   const diffColor = difficultyColor(quest.difficulty);
+  const total = quest.poi_ids.length;
+  const done = visited.length;
+  const allVisited = total > 0 && done >= total;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="quest-detail">
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
         <View style={styles.hero}>
           <Image source={quest.cover_image} style={StyleSheet.absoluteFill} contentFit="cover" />
           <LinearGradient colors={["rgba(28,26,23,0.1)", "rgba(28,26,23,0.85)"]} style={StyleSheet.absoluteFill} />
@@ -109,24 +160,77 @@ export default function QuestDetail() {
           <Text style={styles.sectionLabel}>ABOUT</Text>
           <Text style={styles.desc}>{quest.description}</Text>
 
-          {pois.length > 0 && (
-            <>
-              <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>VISIT</Text>
-              {pois.map(p => (
-                <View key={p.id} style={styles.poiRow}>
+          {total > 0 && (
+            <View style={styles.progressBar}>
+              <View style={styles.progressHead}>
+                <Text style={styles.sectionLabel}>{total > 1 ? "VISIT — ALL LOCATIONS" : "VISIT"}</Text>
+                <Text style={styles.progressCount}>{done}/{total} done</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${(done / Math.max(total, 1)) * 100}%`, backgroundColor: allVisited ? colors.success : diffColor }]} />
+              </View>
+            </View>
+          )}
+
+          {pois.map((p, idx) => {
+            const isVisited = visited.includes(p.id);
+            const isLoading = busy && activePoiId === p.id;
+            return (
+              <View
+                key={p.id}
+                style={[styles.poiRow, isVisited && styles.poiRowDone]}
+                testID={`poi-row-${p.id}`}
+              >
+                <View style={styles.poiHead}>
+                  <View style={[styles.poiBadge, isVisited && styles.poiBadgeDone]}>
+                    {isVisited ? (
+                      <Ionicons name="checkmark" size={14} color="#FFF" />
+                    ) : (
+                      <Text style={styles.poiBadgeText}>{idx + 1}</Text>
+                    )}
+                  </View>
                   <Image source={p.image} style={styles.poiImg} contentFit="cover" />
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
-                    <Text style={styles.poiName}>{p.name}</Text>
+                    <Text style={styles.poiName} numberOfLines={1}>{p.name}</Text>
                     <Text style={styles.poiDesc} numberOfLines={2}>{p.description}</Text>
                   </View>
                 </View>
-              ))}
-            </>
-          )}
+                {isVisited ? (
+                  <View style={styles.visitedPill} testID={`poi-visited-${p.id}`}>
+                    <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+                    <Text style={styles.visitedText}>Visited</Text>
+                  </View>
+                ) : (
+                  <View style={styles.poiActions}>
+                    <Pressable
+                      style={styles.openMapBtn}
+                      onPress={() => Linking.openURL(`https://www.google.com/maps?q=${p.lat},${p.lng}`)}
+                      testID={`poi-map-${p.id}`}
+                    >
+                      <Ionicons name="map-outline" size={14} color={colors.brand} />
+                      <Text style={styles.openMapText}>Directions</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.checkBtn, isLoading && { opacity: 0.6 }]}
+                      onPress={() => checkInPoi(p.id)}
+                      disabled={busy}
+                      testID={`poi-checkin-${p.id}`}
+                    >
+                      <Ionicons name="location" size={14} color="#FFF" />
+                      <Text style={styles.checkBtnText}>{isLoading ? "Checking in..." : "Check in here"}</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            );
+          })}
 
           {phase === "trivia" && quest.trivia && (
             <View style={styles.triviaCard} testID="trivia-card">
-              <Text style={styles.sectionLabel}>TRIVIA</Text>
+              <View style={styles.triviaHead}>
+                <Ionicons name="bulb" size={16} color={colors.brand} />
+                <Text style={styles.sectionLabel}>FINAL TRIVIA</Text>
+              </View>
               <Text style={styles.triviaQ}>{quest.trivia.question}</Text>
               {quest.trivia.options.map((opt, i) => (
                 <Pressable
@@ -141,6 +245,9 @@ export default function QuestDetail() {
                   <Text style={[styles.triviaText, selected === i && { fontWeight: "700" }]}>{opt}</Text>
                 </Pressable>
               ))}
+              {result && !result.success && result.message && (
+                <Text style={styles.triviaError}>{result.message}</Text>
+              )}
             </View>
           )}
 
@@ -188,47 +295,33 @@ export default function QuestDetail() {
       </ScrollView>
 
       <View style={styles.footer}>
-        {phase === "intro" && (
-          <Pressable
-            style={[styles.cta, locStatus === "checking" && { opacity: 0.7 }]}
-            onPress={doCheckIn}
-            disabled={locStatus === "checking"}
-            testID="quest-start-btn"
-          >
-            <Ionicons name="location" size={18} color="#FFF" />
-            <Text style={styles.ctaText}>
-              {locStatus === "checking" ? "Getting location..." : "GPS Check-in"}
-            </Text>
-          </Pressable>
-        )}
-        {phase === "intro" && locStatus === "denied" && (
-          <Pressable
-            style={[styles.cta, { backgroundColor: colors.onSurface, marginTop: spacing.sm }]}
-            onPress={() => quest.trivia ? setPhase("trivia") : submit(null)}
-            testID="quest-skip-gps"
-          >
-            <Text style={styles.ctaText}>Skip GPS — Continue</Text>
-          </Pressable>
-        )}
         {phase === "trivia" && (
           <Pressable
-            style={[styles.cta, selected === null && { opacity: 0.5 }]}
+            style={[styles.cta, (selected === null || busy) && { opacity: 0.5 }]}
             disabled={selected === null || busy}
-            onPress={() => submit(selected)}
+            onPress={submitTrivia}
             testID="quest-submit-trivia"
           >
             <Ionicons name="checkmark-circle" size={18} color="#FFF" />
             <Text style={styles.ctaText}>{busy ? "Submitting..." : "Submit answer"}</Text>
           </Pressable>
         )}
-        {phase === "result" && (
+        {phase === "result" && result?.success && (
           <Pressable
-            style={[styles.cta, { backgroundColor: result?.success ? colors.success : colors.onSurface }]}
-            onPress={() => result?.success ? router.back() : setPhase(quest.trivia ? "trivia" : "intro")}
+            style={[styles.cta, { backgroundColor: colors.success }]}
+            onPress={() => router.back()}
             testID="quest-result-cta"
           >
-            <Text style={styles.ctaText}>{result?.success ? "Done" : "Try again"}</Text>
+            <Text style={styles.ctaText}>Done</Text>
           </Pressable>
+        )}
+        {phase === "checklist" && !allVisited && total > 0 && (
+          <View style={styles.footerHint} testID="footer-hint">
+            <Ionicons name="information-circle-outline" size={14} color={colors.muted} />
+            <Text style={styles.footerHintText}>
+              {`Check in at all ${total} location${total > 1 ? "s" : ""} to unlock the ${quest.trivia ? "final trivia" : "quest reward"}.`}
+            </Text>
+          </View>
         )}
       </View>
     </View>
@@ -257,17 +350,40 @@ const styles = StyleSheet.create({
   body: { padding: spacing.lg },
   sectionLabel: { fontSize: 11, letterSpacing: 2, color: colors.brand, fontWeight: "700", marginBottom: spacing.sm },
   desc: { color: colors.onSurfaceTertiary, fontSize: 14, lineHeight: 21 },
-  poiRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  poiImg: { width: 64, height: 64, borderRadius: radius.sm },
+
+  progressBar: { marginTop: spacing.xl, marginBottom: spacing.sm },
+  progressHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  progressCount: { fontSize: 12, fontWeight: "700", color: colors.onSurfaceTertiary, marginBottom: spacing.sm },
+  progressTrack: { height: 6, backgroundColor: colors.surfaceTertiary, borderRadius: 3, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 3 },
+
+  poiRow: { marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...shadow.pill },
+  poiRowDone: { borderColor: colors.success, backgroundColor: "#F2F6F2" },
+  poiHead: { flexDirection: "row", alignItems: "center" },
+  poiBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center", marginRight: spacing.sm },
+  poiBadgeDone: { backgroundColor: colors.success },
+  poiBadgeText: { fontFamily: fonts.display, color: colors.onSurfaceTertiary, fontSize: 12, fontWeight: "800" },
+  poiImg: { width: 56, height: 56, borderRadius: radius.sm },
   poiName: { fontWeight: "700", color: colors.onSurface, fontSize: 14 },
   poiDesc: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  poiActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  openMapBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.brand, backgroundColor: "#FCE9E1" },
+  openMapText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
+  checkBtn: { flex: 1.4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.brand },
+  checkBtnText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
+  visitedPill: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: "rgba(77,124,95,0.12)" },
+  visitedText: { color: colors.success, fontWeight: "700", fontSize: 11, letterSpacing: 0.3 },
+
   triviaCard: { marginTop: spacing.xl, backgroundColor: colors.surfaceSecondary, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, ...shadow.card },
+  triviaHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
   triviaQ: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface, marginBottom: spacing.md },
   triviaOpt: { flexDirection: "row", alignItems: "center", padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
   triviaOptActive: { borderColor: colors.brand, backgroundColor: "#FCE9E1" },
   triviaDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
   triviaDotActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   triviaText: { flex: 1, fontSize: 14, color: colors.onSurface },
+  triviaError: { color: colors.error, fontSize: 12, marginTop: 4, fontWeight: "600" },
+
   resultCard: { marginTop: spacing.xl, padding: spacing.xl, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 2, borderColor: colors.success, alignItems: "center", ...shadow.card },
   resultIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.success, alignItems: "center", justifyContent: "center", marginBottom: spacing.md },
   resultTitle: { fontFamily: fonts.display, fontSize: 22, color: colors.onSurface, marginBottom: 6 },
@@ -283,7 +399,10 @@ const styles = StyleSheet.create({
   stampCelebText: { color: colors.onSurfaceTertiary, fontSize: 12, textAlign: "center", marginBottom: spacing.md, lineHeight: 17 },
   postcardCta: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.pill },
   postcardCtaText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
-  footer: { position: "absolute", left: 0, right: 0, bottom: 0, padding: spacing.lg, paddingBottom: spacing.xl, backgroundColor: "rgba(249,248,246,0.95)", borderTopWidth: 1, borderTopColor: colors.border },
+
+  footer: { position: "absolute", left: 0, right: 0, bottom: 0, padding: spacing.lg, paddingBottom: spacing.xl, backgroundColor: "rgba(249,248,246,0.96)", borderTopWidth: 1, borderTopColor: colors.border },
+  footerHint: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: spacing.md },
+  footerHintText: { color: colors.muted, fontSize: 11, flex: 1 },
   cta: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.brand, paddingVertical: spacing.md, borderRadius: radius.pill, ...shadow.card },
   ctaText: { color: "#FFF", fontWeight: "700", fontSize: 15, letterSpacing: 0.3 },
 });

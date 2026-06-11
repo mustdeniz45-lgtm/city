@@ -16,7 +16,7 @@ A worldwide gamified city guide that turns sightseeing into an XP-earning quest.
 - **Map**: Leaflet (via WebView / iframe on web) with color-coded category pins, popups showing XP, fits bounds
 - **Kültür Yolu route overlay** (Gaziantep only): toggleable purple-pin walking route with all 53 sites of the official Gaziantep Culture Path, sequenced 1→53 and connected by a dashed polyline. Each pin shows the Turkish + English name and awards +25 XP per visit.
 - **Quest**: difficulty chips (All / Easy / Med / Hard), tactile cover cards, completion badges
-- **Quest Detail**: hero + GPS check-in (expo-location) + optional trivia + XP/level-up/badge result card
+- **Quest Detail (multi-POI gated completion)**: every POI in a quest must be checked in individually — each location is rendered as a numbered card with a "Check in here" button + a "Directions" Google Maps shortcut. A progress bar at the top shows `X/Y done`. The trivia is locked behind 100% visit completion; only then does the quest award XP, badge, and (potentially) the city stamp.
 - **Food**: searchable restaurant list with rating + XP
 - **Profile**: editable name, tappable avatar (camera or gallery picker, persisted across reloads, **also synced to backend** and shown on leaderboard), XP bar, 7-tier level system (Newcomer → Legend of CityQuest), badges grid, **leaderboard with avatars** (initials-colored circle fallback for users without a custom photo), Postcards gallery, clickable Passport summary row
 - **Postcard Maker**: 4 frames including an **XP-Card that embeds the user's avatar** beside the city name + stats, so every shared postcard carries the player's identity.
