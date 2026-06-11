@@ -50,6 +50,8 @@ export type CheckInResult = {
   visited_pois?: string[];
   total_pois?: number;
   awaiting_trivia?: boolean;
+  too_far?: boolean;
+  distance_m?: number | null;
   message: string;
 };
 export type LeaderEntry = {

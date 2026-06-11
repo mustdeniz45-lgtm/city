@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import math
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -106,7 +107,23 @@ class CheckInResult(BaseModel):
     visited_pois: List[str] = []
     total_pois: int = 0
     awaiting_trivia: bool = False
+    too_far: bool = False
+    distance_m: Optional[int] = None
     message: str
+
+
+# Anti-cheat: check-ins must be within this radius of the POI.
+CHECKIN_RADIUS_M = 150
+
+def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Distance between two lat/lng coords in meters."""
+    earth_r = 6371000.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * earth_r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 # ---------------- Level system ----------------
 
@@ -472,6 +489,36 @@ async def check_in(payload: CheckInPayload):
     # Update visited POIs for this quest
     qp = user["quest_progress"].setdefault(payload.quest_id, {"visited": []})
     visited: List[str] = list(qp.get("visited") or [])
+
+    # GPS-distance enforcement: reject if the user is too far from the POI.
+    # Skipped when GPS coords are missing (e.g. web demo / permission denied),
+    # so the app remains functional without location while still hardening
+    # check-ins for real mobile users who grant location.
+    if (
+        payload.poi_id
+        and payload.poi_id in quest_pois
+        and payload.poi_id not in visited
+        and payload.lat is not None
+        and payload.lng is not None
+    ):
+        poi_doc = await db.pois.find_one(
+            {"id": payload.poi_id, "city_id": quest["city_id"]},
+            {"_id": 0, "lat": 1, "lng": 1, "name": 1},
+        )
+        if poi_doc and poi_doc.get("lat") is not None and poi_doc.get("lng") is not None:
+            distance_m = haversine_m(payload.lat, payload.lng, poi_doc["lat"], poi_doc["lng"])
+            if distance_m > CHECKIN_RADIUS_M:
+                lvl = get_level(user.get("xp", 0))
+                pretty = f"{int(round(distance_m))} m" if distance_m < 10000 else f"{distance_m/1000:.1f} km"
+                return CheckInResult(
+                    success=False, xp_earned=0, total_xp=user.get("xp", 0),
+                    level=lvl["level"], level_title=lvl["title"], leveled_up=False,
+                    quest_completed=False,
+                    visited_pois=visited, total_pois=total,
+                    too_far=True, distance_m=int(round(distance_m)),
+                    message=f"You're {pretty} from {poi_doc.get('name','this place')}. Walk within {CHECKIN_RADIUS_M} m to check in.",
+                )
+
     if payload.poi_id and payload.poi_id in quest_pois and payload.poi_id not in visited:
         visited.append(payload.poi_id)
     qp["visited"] = visited
