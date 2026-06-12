@@ -833,7 +833,32 @@ async def list_dishes(city_id: str):
     return [Dish(**d) for d in docs]
 
 
+@api_router.get("/supabase/health")
+async def supabase_health():
+    """Smoke-test the Supabase service-role connection."""
+    from supabase_client import get_supabase, data_backend
+    sb = get_supabase()
+    if not sb:
+        return {"configured": False, "data_backend": data_backend(), "message": "Supabase env vars missing"}
+    try:
+        res = sb.table("cities").select("id", count="exact").limit(1).execute()
+        n = res.count if res.count is not None else 0
+        return {
+            "configured": True,
+            "data_backend": data_backend(),
+            "cities_rows": n,
+            "message": "Connected. Run /app/backend/supabase_schema.sql in the SQL editor next." if n == 0 else "Connected.",
+        }
+    except Exception as e:
+        return {"configured": True, "data_backend": data_backend(), "error": str(e)[:200]}
+
+
 app.include_router(api_router)
+
+
+@api_router.get("/supabase/health-DUP")
+async def _dup():
+    return {}
 
 app.add_middleware(
     CORSMiddleware,
