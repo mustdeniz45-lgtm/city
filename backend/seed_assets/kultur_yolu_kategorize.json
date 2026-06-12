@@ -1,0 +1,1127 @@
+{
+  "landmarks": [
+    {
+      "id": "l1",
+      "en": "Gaziantep Castle",
+      "tr": "Gaziantep Kalesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "l4",
+      "en": "Tahmis Coffee House",
+      "tr": "Tahmis Kahvesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "l9",
+      "en": "Bakircilar Bazaar",
+      "tr": "Bakırcılar Bazaarı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l10",
+      "en": "Gaziantep Zoo",
+      "tr": "Gaziantep Hayvanat Bahçesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l11",
+      "en": "Dülük Baba Sanctuary",
+      "tr": "Dülük Baba Külliyesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l13",
+      "en": "Kendirli Church",
+      "tr": "Kendirli Kilisesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l14",
+      "en": "Medusa Han",
+      "tr": "Medusa Han",
+      "kulturyolu": false
+    },
+    {
+      "id": "l16",
+      "en": "Rumkale Fortress",
+      "tr": "Rumkale",
+      "kulturyolu": false
+    },
+    {
+      "id": "l17",
+      "en": "Ravanda Castle",
+      "tr": "Ravanda Kalesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l18",
+      "en": "Karkamış Ancient City",
+      "tr": "Karkamış Antik Kenti",
+      "kulturyolu": false
+    },
+    {
+      "id": "l21",
+      "en": "Halfeti Sunken Village",
+      "tr": "Halfeti Batan Köy",
+      "kulturyolu": false
+    },
+    {
+      "id": "l22",
+      "en": "Habeş Canyon",
+      "tr": "Habeş Kanyonu",
+      "kulturyolu": false
+    },
+    {
+      "id": "l23",
+      "en": "Küklüce Canyon",
+      "tr": "Küklüce Kanyonu",
+      "kulturyolu": false
+    },
+    {
+      "id": "l24",
+      "en": "Burç Nature Park",
+      "tr": "Burç Tabiat Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l25",
+      "en": "Yeşilvadi Park",
+      "tr": "Yeşilvadi Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l26",
+      "en": "Vadi Park",
+      "tr": "Vadi Park",
+      "kulturyolu": false
+    },
+    {
+      "id": "l27",
+      "en": "Botanical Garden",
+      "tr": "Botanik Bahçesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l28",
+      "en": "Kozluca Castle",
+      "tr": "Kozluca Kalesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l29",
+      "en": "Masal Park",
+      "tr": "Masal Park",
+      "kulturyolu": false
+    },
+    {
+      "id": "l30",
+      "en": "Fıstık Park",
+      "tr": "Fıstık Park",
+      "kulturyolu": false
+    },
+    {
+      "id": "l31",
+      "en": "Kavakl  Park",
+      "tr": "Kavakl k Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l32",
+      "en": "Şahinbey Park",
+      "tr": "Şahinbey Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l33",
+      "en": "10 Nisan Park",
+      "tr": "10 Nisan Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l34",
+      "en": "100. Yıl Park",
+      "tr": "100. Yıl Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l35",
+      "en": "Burak Mahallesi Park",
+      "tr": "Burak Mahallesi Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l36",
+      "en": "Balkız Park",
+      "tr": "Balkız Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l37",
+      "en": "Celal Doğan Park",
+      "tr": "Celal Doğan Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l38",
+      "en": "Engelliler Park",
+      "tr": "Engelliler Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l39",
+      "en": "Festival Park",
+      "tr": "Festival Park",
+      "kulturyolu": false
+    },
+    {
+      "id": "l40",
+      "en": "Gazikent District Park",
+      "tr": "Gazikent Semt Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "l41",
+      "en": "Uzay Park",
+      "tr": "Uzay Parkı",
+      "kulturyolu": false
+    },
+    {
+      "id": "mn1",
+      "en": "Hasan Süzer Mansion",
+      "tr": "Hasan Süzer Konağı",
+      "kulturyolu": false
+    },
+    {
+      "id": "mn2",
+      "en": "Kendirli Church",
+      "tr": "Kendirli Kilisesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "mn3",
+      "en": "Surp Asdvadzadzin Church",
+      "tr": "Surp Asdvadzadzin Kilisesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "mn4",
+      "en": "Medusa Han",
+      "tr": "Medusa Han",
+      "kulturyolu": false
+    },
+    {
+      "id": "mn6",
+      "en": "Elmacı Pazarı (Apple Market)",
+      "tr": "Elmacı Pazarı",
+      "kulturyolu": true
+    },
+    {
+      "id": "mn7",
+      "en": "Şehreküstü Mansions",
+      "tr": "Şehreküstü Konakları",
+      "kulturyolu": true
+    },
+    {
+      "id": "mn8",
+      "en": "14 Martyrs Monument",
+      "tr": "14 Şehit Anıtı",
+      "kulturyolu": true
+    },
+    {
+      "id": "mn9",
+      "en": "Şahinbey Monument",
+      "tr": "Şahinbey Anıtı",
+      "kulturyolu": false
+    },
+    {
+      "id": "ky_2",
+      "en": "Historical Rural Coffee House",
+      "tr": "Tarihi Kır Kahvesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_4",
+      "en": "Boutique Hotel",
+      "tr": "Butik Otel",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_5",
+      "en": "Historical Olive Workshop Area",
+      "tr": "Tarihi Zeytin İşlik Alanı",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_6",
+      "en": "Tourism Info Office",
+      "tr": "Turizm Danışma Şube Müdürlüğü",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_7",
+      "en": "Synagogue",
+      "tr": "Havra",
+      "kulturyolu": true
+    }
+  ],
+  "museums": [
+    {
+      "id": "l2",
+      "en": "Zeugma Mosaic Museum",
+      "tr": "Zeugma Mozaik Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l5",
+      "en": "Hasan Süzer Ethnography Museum",
+      "tr": "Hasan Süzer Etnografya Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l6",
+      "en": "Emine Göğüş Culinary Museum",
+      "tr": "Emine Göğüş Mutfak Müzesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "l12",
+      "en": "Gaziantep Archaeological Museum",
+      "tr": "Gaziantep Arkeoloji Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "l20",
+      "en": "Gaziantep Toy Museum",
+      "tr": "Gaziantep Oyuncak Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "a3",
+      "en": "Yesemek Open Air Museum",
+      "tr": "Yesemek Açık Hava Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m1",
+      "en": "Zeugma Mosaic Museum",
+      "tr": "Zeugma Mozaik Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m2",
+      "en": "Gaziantep Archaeological Museum",
+      "tr": "Gaziantep Arkeoloji Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m3",
+      "en": "Gaziantep Toy & Game Museum",
+      "tr": "Gaziantep Oyun ve Oyuncak Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m4",
+      "en": "Emine Göğüş Culinary Museum",
+      "tr": "Emine Göğüş Mutfak Müzesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "m5",
+      "en": "Hasan Süzer Ethnography Museum",
+      "tr": "Hasan Süzer Etnografya Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m6",
+      "en": "Bayazhan Gaziantep City Museum",
+      "tr": "Bayazhan Gaziantep Kent Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m7",
+      "en": "Atatürk Memorial Museum",
+      "tr": "Gaziantep Atatürk Anı Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m8",
+      "en": "Gaziantep Defence Panorama Museum",
+      "tr": "Gaziantep Savunması ve Kahramanlık Panorama Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m9",
+      "en": "Gaziantep Mevlevihane Vakıf Museum",
+      "tr": "Gaziantep Mevlevihanesi Vakıf Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m10",
+      "en": "Gaziantep Cultural History Museum",
+      "tr": "Gaziantep Kültür Tarihi Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m11",
+      "en": "Şahinbey National Struggle Museum",
+      "tr": "Şahinbey Milli Mücadele Müzesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "m12",
+      "en": "Medusa Glass Museum",
+      "tr": "Medusa Cam Eserler Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m13",
+      "en": "Ali İhsan Göğüş Museum & Research Centre",
+      "tr": "Ali İhsan Göğüş Müzesi ve Gaziantep Araştırmaları Merkezi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m14",
+      "en": "Islamic Science History Museum",
+      "tr": "İslam Bilim Tarihi Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m16",
+      "en": "Yaşayan Müze — Historic Customs Han",
+      "tr": "Yaşayan Müze — Tarihi Gümrük Han",
+      "kulturyolu": true
+    },
+    {
+      "id": "m17",
+      "en": "Gaziantep Zoology & Nature Museum",
+      "tr": "Gaziantep Zooloji ve Doğa Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m18",
+      "en": "July 15 Democracy Museum",
+      "tr": "15 Temmuz Demokrasi Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m20",
+      "en": "Soap & Molasses Museum",
+      "tr": "Sabun ve Pekmez Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "m22",
+      "en": "Devr-i Alem Money Museum",
+      "tr": "Devr-i Alem Para Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "ps5",
+      "en": "Yesemek Open Air Museum",
+      "tr": "Yesemek Açık Hava Müzesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "ps7",
+      "en": "25 Aralık Panorama Museum",
+      "tr": "25 Aralık Panorama Müzesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_8",
+      "en": "Pasha Bath / Bath Museum",
+      "tr": "Paşa Hamamı / Hamam Müzesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_22",
+      "en": "Mevlevi Center Museum",
+      "tr": "Mevlevihane Müzesi",
+      "kulturyolu": true
+    },
+    {
+      "id": "ky_32",
+      "en": "National Resistance Museum",
+      "tr": "Milli Mücadele Müzesi",
+      "kulturyolu": true
+    }
+  ],
+  "ancient_site": [
+    {
+      "id": "a1",
+      "en": "Zeugma-Belkıs Ancient City",
+      "tr": "Zeugma-Belkıs Antik Kenti",
+      "kulturyolu": false
+    },
+    {
+      "id": "a2",
+      "en": "Karkamış Ancient City",
+      "tr": "Karkamış Antik Kenti",
+      "kulturyolu": false
+    },
+    {
+      "id": "a4",
+      "en": "Rumkale Fortress",
+      "tr": "Rumkale",
+      "kulturyolu": false
+    },
+    {
+      "id": "a5",
+      "en": "Ravanda Castle",
+      "tr": "Ravanda Kalesi",
+      "kulturyolu": false
+    },
+    {
+      "id": "a6",
+      "en": "Dülük Baba / Doliche",
+      "tr": "Dülük Baba / Doliche",
+      "kulturyolu": false
+    }
+  ],
+  "photo_spots": [
+    {
+      "id": "ps1",
+      "en": "Castle Panorama",
+      "tr": "Kale Panoraması",
+      "kulturyolu": false
+    },
+    {
+      "id": "ps2",
+      "en": "Zeugma Silhouette",
+      "tr": "Zeugma Silüeti",
+      "kulturyolu": false
+    },
+    {
+      "id": "ps4",
+      "en": "Rumkale Euphrates View",
+      "tr": "Rumkale Fırat Manzarası",
+      "kulturyolu": false
+    }
+  ],
+  "historic_sites": [
+    {
+      "id": "l3",
+      "en": "Coppersmith Bazaar",
+      "tr": "Bakırcılar Çarşısı",
+      "kulturyolu": true,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "l7",
+      "en": "Şirvani Mosque",
+      "tr": "Şirvani Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "m15",
+      "en": "Gaziantep Bath Museum / Haluk Perk Collection",
+      "tr": "Gaziantep Hamam Müzesi / Haluk Perk Koleksiyonu",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "h1",
+      "en": "Şirvani Mosque",
+      "tr": "Şirvani Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h2",
+      "en": "Kurtuluş Mosque",
+      "tr": "Kurtuluş Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h3",
+      "en": "Ali Nacar Mosque",
+      "tr": "Ali Nacar Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h4",
+      "en": "Tahtani Mosque",
+      "tr": "Tahtani Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h5",
+      "en": "Nuri Mehmed Paşa Mosque",
+      "tr": "Nuri Mehmed Paşa Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h6",
+      "en": "Ömeriye Mosque",
+      "tr": "Ömeriye Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h7",
+      "en": "Boyacı Mosque",
+      "tr": "Boyacı Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h8",
+      "en": "Şeyh Fethullah Mosque & Complex",
+      "tr": "Şeyh Fethullah Camii ve Külliyesi",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h9",
+      "en": "İhsanbey (Esenbek) Mosque",
+      "tr": "İhsanbey (Esenbek) Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h10",
+      "en": "Hacı Nasır Mosque",
+      "tr": "Hacı Nasır Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h11",
+      "en": "Handaniye (Handan Bey) Mosque",
+      "tr": "Handaniye Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h12",
+      "en": "Eyüpoğlu Mosque",
+      "tr": "Eyüpoğlu Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h13",
+      "en": "Kılınçoğlu Mosque",
+      "tr": "Kılınçoğlu Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h14",
+      "en": "Ömer Şeyh Mosque",
+      "tr": "Ömer Şeyh Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h15",
+      "en": "Bostancı Mosque",
+      "tr": "Bostancı Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h16",
+      "en": "Kabasakal Mosque",
+      "tr": "Kabasakal Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h17",
+      "en": "Ahmet Çelebi Mosque",
+      "tr": "Ahmet Çelebi Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h18",
+      "en": "Alaybey (Gami Bey) Mosque",
+      "tr": "Alaybey Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h19",
+      "en": "Alaüddevle (Ali Dola) Mosque",
+      "tr": "Alaüddevle Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h20",
+      "en": "Tekke (Mevlevihane) Mosque",
+      "tr": "Tekke Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h21",
+      "en": "Karatarla Mosque",
+      "tr": "Karatarla Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h22",
+      "en": "Kozanlı Mosque",
+      "tr": "Kozanlı Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h23",
+      "en": "Hüseyin Pasha Mosque",
+      "tr": "Hüseyin Paşa Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h24",
+      "en": "Ağa (Ferruh Ağa) Mosque",
+      "tr": "Ağa Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h26",
+      "en": "Çınarlı Mosque",
+      "tr": "Çınarlı Camii",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "h27",
+      "en": "Hacı Veli Mosque",
+      "tr": "Hacı Veli Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "b1",
+      "en": "Toygar Hammam",
+      "tr": "Toygar Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b2",
+      "en": "Naip Hammam",
+      "tr": "Naip Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b3",
+      "en": "Tahtani Hammam",
+      "tr": "Tahtani Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b6",
+      "en": "Büyük Paşa Hammam",
+      "tr": "Büyük Paşa Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b7",
+      "en": "Göymen (Pazar) Hammam",
+      "tr": "Göymen Hamamı",
+      "kulturyolu": true,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b8",
+      "en": "Hamam-Konut (Bath-Residence)",
+      "tr": "Hamam-Konut",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b9",
+      "en": "Hüseyin Paşa (Tuğlu) Hammam",
+      "tr": "Hüseyin Paşa Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b10",
+      "en": "İki Kapılı (Beşaşer) Hammam",
+      "tr": "İki Kapılı Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b11",
+      "en": "Kale Hammam",
+      "tr": "Kale Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b12",
+      "en": "Keyvanbey Hammam",
+      "tr": "Keyvanbey Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b14",
+      "en": "Şeyh Fethullah Hammam",
+      "tr": "Şeyh Fethullah Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b15",
+      "en": "Tabak (Tannery) Hammam",
+      "tr": "Tabak Hamamı",
+      "kulturyolu": false,
+      "subcategory": "bath"
+    },
+    {
+      "id": "b4",
+      "en": "Pazarcık Han",
+      "tr": "Pazarcık Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b5",
+      "en": "Yüzükçü Han",
+      "tr": "Yüzükçü Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b16",
+      "en": "Anadolu Han",
+      "tr": "Anadolu Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b17",
+      "en": "Bayaz Han",
+      "tr": "Bayaz Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b18",
+      "en": "Büdeyri Han",
+      "tr": "Büdeyri Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b19",
+      "en": "Buğday (Wheat) Han",
+      "tr": "Buğday Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b20",
+      "en": "Güven Han",
+      "tr": "Güven Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b21",
+      "en": "Kumru (Pigeon) Han",
+      "tr": "Kumru Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b22",
+      "en": "Kürkçü (Furrier) Han",
+      "tr": "Kürkçü Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b23",
+      "en": "Millet Han",
+      "tr": "Millet Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b24",
+      "en": "Pürsefa Han",
+      "tr": "Pürsefa Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b25",
+      "en": "Sabuncu (Soap-Maker) Han",
+      "tr": "Sabuncu Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b26",
+      "en": "Şeker (Sugar) Han",
+      "tr": "Şeker Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b27",
+      "en": "Şıra (Must) Han",
+      "tr": "Şıra Hanı",
+      "kulturyolu": false,
+      "subcategory": "han"
+    },
+    {
+      "id": "b28",
+      "en": "Tuz (Salt) Han",
+      "tr": "Tuz Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b29",
+      "en": "Tütün (Tobacco) Han",
+      "tr": "Tütün Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b30",
+      "en": "Yemiş (Fruit) Han",
+      "tr": "Yemiş Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b31",
+      "en": "Yeni Han (Han-ı Cedid)",
+      "tr": "Yeni Hanı",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "b32",
+      "en": "Zincirli Bedesten",
+      "tr": "Zincirli Bedesten",
+      "kulturyolu": true,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "b33",
+      "en": "Kemikli Bedesten",
+      "tr": "Kemikli Bedesten",
+      "kulturyolu": true,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "b34",
+      "en": "Mecidiye Han",
+      "tr": "Mecidiye Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "mn5",
+      "en": "Aynalı Çarşı",
+      "tr": "Aynalı Çarşı",
+      "kulturyolu": false,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "ps3",
+      "en": "Bazaar Golden Hour",
+      "tr": "Çarşı Altın Saati",
+      "kulturyolu": false,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "ps6",
+      "en": "Millet Mosque Silhouette",
+      "tr": "Millet Camii Silüeti",
+      "kulturyolu": false,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "ky_1",
+      "en": "Commander Fountain",
+      "tr": "Kumandan Çeşmesi",
+      "kulturyolu": true,
+      "subcategory": "other"
+    },
+    {
+      "id": "ky_3",
+      "en": "Naib Bath",
+      "tr": "Naib Hamamı",
+      "kulturyolu": true,
+      "subcategory": "bath"
+    },
+    {
+      "id": "ky_9",
+      "en": "Hışva Inn",
+      "tr": "Hışva Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_10",
+      "en": "Büdeyri Inn",
+      "tr": "Büdeyri Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_11",
+      "en": "Göymen Bazaar Bath",
+      "tr": "Göymen Pazar Hamamı",
+      "kulturyolu": true,
+      "subcategory": "bath"
+    },
+    {
+      "id": "ky_12",
+      "en": "New Inn",
+      "tr": "Yeni Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_13",
+      "en": "Yüzükçü Inn",
+      "tr": "Yüzükçü Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_14",
+      "en": "Customs Inn",
+      "tr": "Gümrük Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_15",
+      "en": "Karagöz Mosque",
+      "tr": "Karagöz Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "ky_16",
+      "en": "Anadolu Inn",
+      "tr": "Anadolu Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_17",
+      "en": "Emir Ali Inn",
+      "tr": "Emir Ali Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_18",
+      "en": "Tobacco Inn",
+      "tr": "Tütün Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_19",
+      "en": "Kürkçü Inn",
+      "tr": "Kürkçü Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_20",
+      "en": "Pürsefa Inn",
+      "tr": "Pürsefa Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_21",
+      "en": "Grand Wheat Market",
+      "tr": "Büyük Buğday Pazarı",
+      "kulturyolu": true,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "ky_23",
+      "en": "Tiny Wheat Market",
+      "tr": "Küçük Buğday Pazarı",
+      "kulturyolu": true,
+      "subcategory": "bazaar"
+    },
+    {
+      "id": "ky_24",
+      "en": "Güven Inn",
+      "tr": "Güven Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_25",
+      "en": "Şahinbey Public Library",
+      "tr": "Şahinbey Halk Kütüphanesi",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_26",
+      "en": "Yemiş Inn",
+      "tr": "Yemiş Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_27",
+      "en": "Şire Inn",
+      "tr": "Şire Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_28",
+      "en": "Salt Inn",
+      "tr": "Tuz Han",
+      "kulturyolu": true,
+      "subcategory": "han"
+    },
+    {
+      "id": "ky_29",
+      "en": "Pişirici Kastel",
+      "tr": "Pişirici Kasteli",
+      "kulturyolu": true,
+      "subcategory": "other"
+    },
+    {
+      "id": "ky_30",
+      "en": "Sheikh Fethullah Mosque",
+      "tr": "Şeyh Fethullah Camii",
+      "kulturyolu": true,
+      "subcategory": "mosque"
+    },
+    {
+      "id": "ky_31",
+      "en": "Sheikh Bath",
+      "tr": "Şeyh Hamamı",
+      "kulturyolu": true,
+      "subcategory": "bath"
+    }
+  ]
+}

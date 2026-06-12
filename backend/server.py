@@ -372,6 +372,37 @@ async def seed_if_empty():
             {"$set": {"poi_count": poi_count, "quest_count": quest_count}},
         )
 
+
+async def seed_extra_assets():
+    """Seed the user-uploaded gaziantep_yemekleri + kultur_yolu_kategorize datasets."""
+    from extra_seeds import load_dishes, load_categorized_pois, _normalize
+
+    # Dishes (separate collection — they don't have GPS / aren't check-in POIs).
+    if await db.dishes.count_documents({"city_id": "gaziantep"}) == 0:
+        dishes = load_dishes()
+        if dishes:
+            await db.dishes.insert_many(dishes)
+            logger.info(f"Inserted {len(dishes)} Gaziantep dishes.")
+
+    # Categorized POIs (skip those already present by TR/EN name).
+    if await db.pois.count_documents({"city_id": "gaziantep", "source": "ky_cat"}) == 0:
+        existing = await db.pois.find(
+            {"city_id": "gaziantep"}, {"_id": 0, "name": 1, "name_tr": 1}
+        ).to_list(5000)
+        existing_names = set()
+        for e in existing:
+            if e.get("name_tr"):
+                existing_names.add(_normalize(e["name_tr"]))
+            if e.get("name"):
+                existing_names.add(_normalize(e["name"]))
+        cat_docs = load_categorized_pois(existing_names)
+        if cat_docs:
+            await db.pois.insert_many(cat_docs)
+            logger.info(f"Inserted {len(cat_docs)} categorized POIs from kultur_yolu_kategorize.")
+            # Refresh city poi_count
+            poi_count = await db.pois.count_documents({"city_id": "gaziantep"})
+            await db.cities.update_one({"id": "gaziantep"}, {"$set": {"poi_count": poi_count}})
+
 # ---------------- Routes ----------------
 
 @api_router.get("/")
@@ -786,6 +817,22 @@ async def leaderboard():
         })
     return out
 
+
+class Dish(BaseModel):
+    id: str
+    city_id: str
+    name: str
+    description: str
+    image: str
+    tags: List[str] = []
+
+
+@api_router.get("/cities/{city_id}/dishes", response_model=List[Dish])
+async def list_dishes(city_id: str):
+    docs = await db.dishes.find({"city_id": city_id}, {"_id": 0}).to_list(500)
+    return [Dish(**d) for d in docs]
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -799,6 +846,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def on_startup():
     await seed_if_empty()
+    await seed_extra_assets()
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

@@ -77,6 +77,7 @@ export const api = {
   },
   kulturYolu: (id: string) => jget<POI[]>(`/cities/${id}/kultur-yolu`),
   food: (id: string) => jget<POI[]>(`/cities/${id}/food`),
+  dishes: (id: string) => jget<{ id: string; city_id: string; name: string; description: string; image: string; tags: string[] }[]>(`/cities/${id}/dishes`),
   quests: (id: string, difficulty?: string) =>
     jget<Quest[]>(`/cities/${id}/quests${difficulty && difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`),
   quest: (id: string) => jget<Quest>(`/quests/${id}`),

@@ -1,0 +1,102 @@
+[
+    {
+        "isim": "Beyran Çorbası",
+        "aciklama": "Gaziantep's legendary breakfast soup — thinly sliced lamb, rice, garlic and red butter in a rich bone broth. Eaten at dawn.",
+        "denendi": false
+    },
+    {
+        "isim": "Yuvarlama",
+        "aciklama": "A warming winter stew of tiny hand-rolled meatballs and chickpeas simmered in lamb broth with dried herbs.",
+        "denendi": false
+    },
+    {
+        "isim": "Ekşili Köfte",
+        "aciklama": "Tangy meatball soup sharpened with pomegranate molasses and lemon — a delicate balance of sour and savory.",
+        "denendi": false
+    },
+    {
+        "isim": "Antep Kebabı",
+        "aciklama": "Minced lamb and tail fat hand-kneaded with red pepper paste, grilled over charcoal and served on flatbread with sumac onions.",
+        "denendi": true
+    },
+    {
+        "isim": "Ali Nazik Kebabı",
+        "aciklama": "Fire-roasted eggplant blended with garlic yogurt, crowned with sautéed spiced lamb chunks. A dish fit for a sultan.",
+        "denendi": false
+    },
+    {
+        "isim": "Simit Kebabı",
+        "aciklama": "Ground meat blended with onion and spices, shaped into thick rings coated with sesame seeds and grilled on skewers.",
+        "denendi": false
+    },
+    {
+        "isim": "Ciğer Kebabı",
+        "aciklama": "Thinly sliced lamb liver marinated in red pepper and cumin, flash-grilled and wrapped in thin flatbread — a beloved street snack.",
+        "denendi": false
+    },
+    {
+        "isim": "Patlıcan Kebabı",
+        "aciklama": "Alternating pieces of lamb and charred eggplant threaded on a skewer, basted with tomato and pepper sauce.",
+        "denendi": false
+    },
+    {
+        "isim": "Küşleme",
+        "aciklama": "A Gaziantep exclusive — whole cuts of lamb shoulder slow-roasted in a sealed clay pot with onion and spices until fall-apart tender.",
+        "denendi": false
+    },
+    {
+        "isim": "İçli Köfte",
+        "aciklama": "Crispy bulgur shell stuffed with spiced ground meat, pine nuts and walnuts — either fried or boiled in broth.",
+        "denendi": false
+    },
+    {
+        "isim": "Lahmacun",
+        "aciklama": "Paper-thin dough spread with a minced lamb, tomato and herb mixture, baked in a stone oven and rolled with onion and parsley.",
+        "denendi": true
+    },
+    {
+        "isim": "Katmer",
+        "aciklama": "Gossamer-thin dough layers folded over clotted cream (kaymak) and crushed pistachios, cooked on a griddle at dawn. Antep's most beloved breakfast.",
+        "denendi": false
+    },
+    {
+        "isim": "Fıstıklı Sarma",
+        "aciklama": "Wafer-thin pastry sheets hand-rolled around a filling of ground pistachio and sugar, soaked in light syrup.",
+        "denendi": false
+    },
+    {
+        "isim": "Firik Pilavı",
+        "aciklama": "Pilaf made from fire-dried green wheat (firik) with lamb, giving a distinctive smoky, nutty aroma. A Gaziantep staple.",
+        "denendi": false
+    },
+    {
+        "isim": "Antep Dolması",
+        "aciklama": "Tender vegetables (pepper, eggplant, squash) hollowed and filled with a spiced rice-and-lamb mixture, simmered in tomato broth until melt-in-mouth.",
+        "denendi": false
+    },
+    {
+        "isim": "Baklava",
+        "aciklama": "Dozens of hand-stretched phyllo layers, brushed with clarified butter, packed with fresh Antep pistachios and drenched in light syrup. The world standard.",
+        "denendi": false
+    },
+    {
+        "isim": "Künefe",
+        "aciklama": "Shredded wheat (kadayıf) sandwiching unsalted white cheese, baked in clarified butter until golden, soaked in syrup and topped with crushed pistachio.",
+        "denendi": false
+    },
+    {
+        "isim": "Şöbiyet",
+        "aciklama": "Similar to baklava but crispier — phyllo triangles filled with clotted cream (kaymak) and pistachio, fried rather than baked. A morning treat.",
+        "denendi": false
+    },
+    {
+        "isim": "Cevizli Sucuk",
+        "aciklama": "Whole walnuts threaded on string, dipped repeatedly in thickened grape must until they form a firm, chewy molasses log.",
+        "denendi": false
+    },
+    {
+        "isim": "Antep Pekmezi",
+        "aciklama": "Slow-reduced grape molasses, the backbone of Gaziantep cooking — drizzled on tahini, stirred into pastry dough, or eaten with bread for breakfast.",
+        "denendi": false
+    }
+]
