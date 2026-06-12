@@ -1,5 +1,5 @@
 -- CityQuest — Supabase schema
--- Run this once in https://app.supabase.com/project/ilrjaebpjsqklstqskyf/sql/new
+-- Run this once in https://supabase.com/dashboard/project/qhnmbctcdetpjsgjkzrw/sql/new
 -- Safe to re-run: every CREATE / POLICY is guarded with IF NOT EXISTS / DROP-then-CREATE.
 
 -- =====================================================================
