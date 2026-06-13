@@ -19,9 +19,8 @@ from datetime import datetime, timezone
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+# Mongo is only created when actually needed (the `repo` layer requests it lazily).
+# This avoids opening an idle Mongo connection when DATA_BACKEND=supabase.
 
 import repo  # data-access layer (selects Mongo vs Supabase via DATA_BACKEND env)
 from supabase_client import data_backend
@@ -328,6 +327,7 @@ def build_seed() -> Dict[str, Any]:
     return {"cities": cities, "pois": pois, "quests": quests}
 
 async def seed_if_empty():
+    db = repo._mongo()
     count = await db.cities.count_documents({})
     if count == 0:
         seed = build_seed()
@@ -379,7 +379,7 @@ async def seed_if_empty():
 async def seed_extra_assets():
     """Seed the user-uploaded gaziantep_yemekleri + kultur_yolu_kategorize datasets."""
     from extra_seeds import load_dishes, load_categorized_pois, _normalize
-
+    db = repo._mongo()
     # Dishes (separate collection — they don't have GPS / aren't check-in POIs).
     if await db.dishes.count_documents({"city_id": "gaziantep"}) == 0:
         dishes = load_dishes()
@@ -846,4 +846,5 @@ async def on_startup():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    # Mongo and Supabase clients are managed lazily; nothing to clean up here.
+    return

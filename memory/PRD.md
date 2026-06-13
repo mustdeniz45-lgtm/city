@@ -33,6 +33,12 @@ A worldwide gamified city guide that turns sightseeing into an XP-earning quest.
 - `GET /progress/{device_id}`, `POST /progress/check-in`
 - `GET /leaderboard`
 
+## Data Backend
+- **Active backend**: Supabase (Postgres) — `DATA_BACKEND=supabase` in `/app/backend/.env`
+- All 16 routes go through a single data-access layer at `/app/backend/repo.py` that can dispatch to either Mongo (legacy) or Supabase. To rollback to Mongo: set `DATA_BACKEND=mongo` and restart backend.
+- **Schema**: `/app/backend/supabase_schema_clean.sql` (apply via Supabase SQL editor). RLS enabled — content tables are world-readable; profile/progress writes restricted to auth.uid match (used post-Auth integration).
+- **One-time migration**: `cd /app/backend && python migrate_mongo_to_supabase.py` (copies cities/pois/dishes/quests/progress from Mongo into Supabase, idempotent via upsert).
+
 ## Design
 - Personality: Editorial Mobile LIGHT + Tactile gamification
 - Palette: Terracotta `#C85A40`, Ochre `#D9953A`, Olive `#6B705C` on warm off-white
