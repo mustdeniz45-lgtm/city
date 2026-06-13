@@ -13,12 +13,6 @@
       "kulturyolu": true
     },
     {
-      "id": "l9",
-      "en": "Bakircilar Bazaar",
-      "tr": "Bakırcılar Bazaarı",
-      "kulturyolu": false
-    },
-    {
       "id": "l10",
       "en": "Gaziantep Zoo",
       "tr": "Gaziantep Hayvanat Bahçesi",
@@ -40,24 +34,6 @@
       "id": "l14",
       "en": "Medusa Han",
       "tr": "Medusa Han",
-      "kulturyolu": false
-    },
-    {
-      "id": "l16",
-      "en": "Rumkale Fortress",
-      "tr": "Rumkale",
-      "kulturyolu": false
-    },
-    {
-      "id": "l17",
-      "en": "Ravanda Castle",
-      "tr": "Ravanda Kalesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "l18",
-      "en": "Karkamış Ancient City",
-      "tr": "Karkamış Antik Kenti",
       "kulturyolu": false
     },
     {
@@ -122,8 +98,8 @@
     },
     {
       "id": "l31",
-      "en": "Kavakl  Park",
-      "tr": "Kavakl k Parkı",
+      "en": "Kavaklı Park",
+      "tr": "Kavaklık Parkı",
       "kulturyolu": false
     },
     {
@@ -187,27 +163,9 @@
       "kulturyolu": false
     },
     {
-      "id": "mn1",
-      "en": "Hasan Süzer Mansion",
-      "tr": "Hasan Süzer Konağı",
-      "kulturyolu": false
-    },
-    {
-      "id": "mn2",
-      "en": "Kendirli Church",
-      "tr": "Kendirli Kilisesi",
-      "kulturyolu": false
-    },
-    {
       "id": "mn3",
       "en": "Surp Asdvadzadzin Church",
       "tr": "Surp Asdvadzadzin Kilisesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "mn4",
-      "en": "Medusa Han",
-      "tr": "Medusa Han",
       "kulturyolu": false
     },
     {
@@ -267,42 +225,6 @@
   ],
   "museums": [
     {
-      "id": "l2",
-      "en": "Zeugma Mosaic Museum",
-      "tr": "Zeugma Mozaik Müzesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "l5",
-      "en": "Hasan Süzer Ethnography Museum",
-      "tr": "Hasan Süzer Etnografya Müzesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "l6",
-      "en": "Emine Göğüş Culinary Museum",
-      "tr": "Emine Göğüş Mutfak Müzesi",
-      "kulturyolu": true
-    },
-    {
-      "id": "l12",
-      "en": "Gaziantep Archaeological Museum",
-      "tr": "Gaziantep Arkeoloji Müzesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "l20",
-      "en": "Gaziantep Toy Museum",
-      "tr": "Gaziantep Oyuncak Müzesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "a3",
-      "en": "Yesemek Open Air Museum",
-      "tr": "Yesemek Açık Hava Müzesi",
-      "kulturyolu": false
-    },
-    {
       "id": "m1",
       "en": "Zeugma Mosaic Museum",
       "tr": "Zeugma Mozaik Müzesi",
@@ -342,18 +264,6 @@
       "id": "m7",
       "en": "Atatürk Memorial Museum",
       "tr": "Gaziantep Atatürk Anı Müzesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "m8",
-      "en": "Gaziantep Defence Panorama Museum",
-      "tr": "Gaziantep Savunması ve Kahramanlık Panorama Müzesi",
-      "kulturyolu": false
-    },
-    {
-      "id": "m9",
-      "en": "Gaziantep Mevlevihane Vakıf Museum",
-      "tr": "Gaziantep Mevlevihanesi Vakıf Müzesi",
       "kulturyolu": false
     },
     {
@@ -417,7 +327,7 @@
       "kulturyolu": false
     },
     {
-      "id": "ps5",
+      "id": "a3",
       "en": "Yesemek Open Air Museum",
       "tr": "Yesemek Açık Hava Müzesi",
       "kulturyolu": false
@@ -438,12 +348,6 @@
       "id": "ky_22",
       "en": "Mevlevi Center Museum",
       "tr": "Mevlevihane Müzesi",
-      "kulturyolu": true
-    },
-    {
-      "id": "ky_32",
-      "en": "National Resistance Museum",
-      "tr": "Milli Mücadele Müzesi",
       "kulturyolu": true
     }
   ],
@@ -508,13 +412,6 @@
       "subcategory": "bazaar"
     },
     {
-      "id": "l7",
-      "en": "Şirvani Mosque",
-      "tr": "Şirvani Camii",
-      "kulturyolu": true,
-      "subcategory": "mosque"
-    },
-    {
       "id": "m15",
       "en": "Gaziantep Bath Museum / Haluk Perk Collection",
       "tr": "Gaziantep Hamam Müzesi / Haluk Perk Koleksiyonu",
@@ -525,7 +422,7 @@
       "id": "h1",
       "en": "Şirvani Mosque",
       "tr": "Şirvani Camii",
-      "kulturyolu": false,
+      "kulturyolu": true,
       "subcategory": "mosque"
     },
     {
@@ -711,13 +608,6 @@
       "subcategory": "bath"
     },
     {
-      "id": "b2",
-      "en": "Naip Hammam",
-      "tr": "Naip Hamamı",
-      "kulturyolu": false,
-      "subcategory": "bath"
-    },
-    {
       "id": "b3",
       "en": "Tahtani Hammam",
       "tr": "Tahtani Hamamı",
@@ -879,13 +769,6 @@
       "subcategory": "han"
     },
     {
-      "id": "b27",
-      "en": "Şıra (Must) Han",
-      "tr": "Şıra Hanı",
-      "kulturyolu": false,
-      "subcategory": "han"
-    },
-    {
       "id": "b28",
       "en": "Tuz (Salt) Han",
       "tr": "Tuz Hanı",
@@ -977,34 +860,6 @@
       "subcategory": "han"
     },
     {
-      "id": "ky_10",
-      "en": "Büdeyri Inn",
-      "tr": "Büdeyri Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
-      "id": "ky_11",
-      "en": "Göymen Bazaar Bath",
-      "tr": "Göymen Pazar Hamamı",
-      "kulturyolu": true,
-      "subcategory": "bath"
-    },
-    {
-      "id": "ky_12",
-      "en": "New Inn",
-      "tr": "Yeni Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
-      "id": "ky_13",
-      "en": "Yüzükçü Inn",
-      "tr": "Yüzükçü Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
       "id": "ky_14",
       "en": "Customs Inn",
       "tr": "Gümrük Han",
@@ -1019,37 +874,9 @@
       "subcategory": "mosque"
     },
     {
-      "id": "ky_16",
-      "en": "Anadolu Inn",
-      "tr": "Anadolu Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
       "id": "ky_17",
       "en": "Emir Ali Inn",
       "tr": "Emir Ali Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
-      "id": "ky_18",
-      "en": "Tobacco Inn",
-      "tr": "Tütün Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
-      "id": "ky_19",
-      "en": "Kürkçü Inn",
-      "tr": "Kürkçü Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
-      "id": "ky_20",
-      "en": "Pürsefa Inn",
-      "tr": "Pürsefa Han",
       "kulturyolu": true,
       "subcategory": "han"
     },
@@ -1068,23 +895,9 @@
       "subcategory": "bazaar"
     },
     {
-      "id": "ky_24",
-      "en": "Güven Inn",
-      "tr": "Güven Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
       "id": "ky_25",
       "en": "Şahinbey Public Library",
       "tr": "Şahinbey Halk Kütüphanesi",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
-      "id": "ky_26",
-      "en": "Yemiş Inn",
-      "tr": "Yemiş Han",
       "kulturyolu": true,
       "subcategory": "han"
     },
@@ -1096,25 +909,11 @@
       "subcategory": "han"
     },
     {
-      "id": "ky_28",
-      "en": "Salt Inn",
-      "tr": "Tuz Han",
-      "kulturyolu": true,
-      "subcategory": "han"
-    },
-    {
       "id": "ky_29",
       "en": "Pişirici Kastel",
       "tr": "Pişirici Kasteli",
       "kulturyolu": true,
       "subcategory": "other"
-    },
-    {
-      "id": "ky_30",
-      "en": "Sheikh Fethullah Mosque",
-      "tr": "Şeyh Fethullah Camii",
-      "kulturyolu": true,
-      "subcategory": "mosque"
     },
     {
       "id": "ky_31",
