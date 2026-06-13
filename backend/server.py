@@ -23,6 +23,9 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
+import repo  # data-access layer (selects Mongo vs Supabase via DATA_BACKEND env)
+from supabase_client import data_backend
+
 app = FastAPI(title="CityQuest API")
 api_router = APIRouter(prefix="/api")
 
@@ -53,9 +56,9 @@ class POI(BaseModel):
     image: str
     lat: float
     lng: float
-    rating: float = 4.5
-    xp_reward: int = 50
-    kultur_yolu: bool = False
+    rating: Optional[float] = 4.5
+    xp_reward: Optional[int] = 50
+    kultur_yolu: Optional[bool] = False
     ky_seq: Optional[int] = None
     name_tr: Optional[str] = None
 
@@ -411,12 +414,12 @@ async def root():
 
 @api_router.get("/cities", response_model=List[City])
 async def list_cities():
-    docs = await db.cities.find({}, {"_id": 0}).to_list(100)
+    docs = await repo.cities_list()
     return [City(**d) for d in docs]
 
 @api_router.get("/cities/{city_id}", response_model=City)
 async def get_city(city_id: str):
-    doc = await db.cities.find_one({"id": city_id}, {"_id": 0})
+    doc = await repo.cities_get(city_id)
     if not doc:
         raise HTTPException(404, "City not found")
     return City(**doc)
@@ -427,30 +430,23 @@ async def list_pois(
     category: Optional[str] = Query(None),
     kultur_yolu: Optional[bool] = Query(None),
 ):
-    q: Dict[str, Any] = {"city_id": city_id}
-    if category and category != "all":
-        q["category"] = category
-    if kultur_yolu is True:
-        q["kultur_yolu"] = True
-    docs = await db.pois.find(q, {"_id": 0}).sort([("ky_seq", 1)]).to_list(1000)
+    docs = await repo.pois_list(city_id, category=category, kultur_yolu=kultur_yolu)
     return [POI(**d) for d in docs]
 
 
 @api_router.get("/cities/{city_id}/kultur-yolu", response_model=List[POI])
 async def list_kultur_yolu(city_id: str):
-    docs = await db.pois.find(
-        {"city_id": city_id, "kultur_yolu": True}, {"_id": 0}
-    ).sort([("ky_seq", 1)]).to_list(1000)
+    docs = await repo.pois_kultur_yolu(city_id)
     return [POI(**d) for d in docs]
 
 @api_router.get("/cities/{city_id}/food", response_model=List[POI])
 async def list_food(city_id: str):
-    docs = await db.pois.find({"city_id": city_id, "category": "restaurant"}, {"_id": 0}).to_list(200)
+    docs = await repo.pois_food(city_id)
     return [POI(**d) for d in docs]
 
 @api_router.get("/pois/{poi_id}", response_model=POI)
 async def get_poi(poi_id: str):
-    doc = await db.pois.find_one({"id": poi_id}, {"_id": 0})
+    doc = await repo.pois_get(poi_id)
     if not doc:
         raise HTTPException(404, "POI not found")
     return POI(**doc)
@@ -475,7 +471,7 @@ class PoiCheckInResult(BaseModel):
 
 @api_router.post("/progress/poi-check-in", response_model=PoiCheckInResult)
 async def poi_check_in(payload: PoiCheckInPayload):
-    poi = await db.pois.find_one({"id": payload.poi_id}, {"_id": 0})
+    poi = await repo.pois_get(payload.poi_id)
     if not poi:
         raise HTTPException(404, "POI not found")
 
@@ -488,7 +484,7 @@ async def poi_check_in(payload: PoiCheckInPayload):
                 message=f"You're {pretty} from {poi['name']}. Walk within {CHECKIN_RADIUS_M} m to check in.",
             )
 
-    user = await db.progress.find_one({"device_id": payload.device_id}, {"_id": 0}) or {
+    user = await repo.progress_get(payload.device_id) or {
         "device_id": payload.device_id,
         "display_name": payload.display_name or "Traveler",
         "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
@@ -498,15 +494,14 @@ async def poi_check_in(payload: PoiCheckInPayload):
     user.setdefault("completed_quests", [])
     user.setdefault("badges", [])
     user.setdefault("check_ins", [])
-    user.setdefault("quest_progress", {})
+    user.setdefault("quest_progress", {}) or user.update({"quest_progress": {}})
+    if user.get("quest_progress") is None:
+        user["quest_progress"] = {}
 
     # Has the user already visited this POI in any quest context?
     already = any(payload.poi_id in (qp.get("visited") or []) for qp in user["quest_progress"].values())
 
-    quests = await db.quests.find(
-        {"city_id": poi["city_id"], "poi_ids": payload.poi_id},
-        {"_id": 0, "id": 1},
-    ).to_list(500)
+    quests = await repo.quests_for_poi(poi["city_id"], payload.poi_id)
     credited: List[str] = []
     for q in quests:
         qid = q["id"]
@@ -527,7 +522,7 @@ async def poi_check_in(payload: PoiCheckInPayload):
         user["display_name"] = payload.display_name
     user["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-    await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+    await repo.progress_upsert(payload.device_id, user)
 
     n = len(credited)
     if n == 0 and already:
@@ -548,22 +543,19 @@ async def poi_check_in(payload: PoiCheckInPayload):
 
 @api_router.get("/cities/{city_id}/quests", response_model=List[Quest])
 async def list_quests(city_id: str, difficulty: Optional[str] = Query(None)):
-    q: Dict[str, Any] = {"city_id": city_id}
-    if difficulty and difficulty != "all":
-        q["difficulty"] = difficulty
-    docs = await db.quests.find(q, {"_id": 0}).to_list(500)
+    docs = await repo.quests_list(city_id, difficulty=difficulty)
     return [Quest(**d) for d in docs]
 
 @api_router.get("/quests/{quest_id}", response_model=Quest)
 async def get_quest(quest_id: str):
-    doc = await db.quests.find_one({"id": quest_id}, {"_id": 0})
+    doc = await repo.quests_get(quest_id)
     if not doc:
         raise HTTPException(404, "Quest not found")
     return Quest(**doc)
 
 @api_router.get("/progress/{device_id}")
 async def get_progress(device_id: str):
-    doc = await db.progress.find_one({"device_id": device_id}, {"_id": 0})
+    doc = await repo.progress_get(device_id)
     if not doc:
         empty = {
             "device_id": device_id, "display_name": "Traveler",
@@ -578,18 +570,19 @@ async def get_progress(device_id: str):
     doc.setdefault("completed_quests", [])
     doc.setdefault("badges", [])
     doc.setdefault("check_ins", [])
-    doc.setdefault("quest_progress", {})
+    if doc.get("quest_progress") is None:
+        doc["quest_progress"] = {}
     doc.setdefault("avatar_uri", None)
     doc.update(get_level(doc.get("xp", 0)))
     return doc
 
 @api_router.post("/progress/check-in", response_model=CheckInResult)
 async def check_in(payload: CheckInPayload):
-    quest = await db.quests.find_one({"id": payload.quest_id}, {"_id": 0})
+    quest = await repo.quests_get(payload.quest_id)
     if not quest:
         raise HTTPException(404, "Quest not found")
 
-    user = await db.progress.find_one({"device_id": payload.device_id}, {"_id": 0}) or {
+    user = await repo.progress_get(payload.device_id) or {
         "device_id": payload.device_id,
         "display_name": payload.display_name or "Traveler",
         "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
@@ -599,6 +592,8 @@ async def check_in(payload: CheckInPayload):
     user.setdefault("completed_quests", [])
     user.setdefault("badges", [])
     user.setdefault("check_ins", [])
+    if user.get("quest_progress") is None:
+        user["quest_progress"] = {}
     user.setdefault("quest_progress", {})
 
     quest_pois: List[str] = list(quest.get("poi_ids") or [])
@@ -620,9 +615,6 @@ async def check_in(payload: CheckInPayload):
     visited: List[str] = list(qp.get("visited") or [])
 
     # GPS-distance enforcement: reject if the user is too far from the POI.
-    # Skipped when GPS coords are missing (e.g. web demo / permission denied),
-    # so the app remains functional without location while still hardening
-    # check-ins for real mobile users who grant location.
     if (
         payload.poi_id
         and payload.poi_id in quest_pois
@@ -630,10 +622,7 @@ async def check_in(payload: CheckInPayload):
         and payload.lat is not None
         and payload.lng is not None
     ):
-        poi_doc = await db.pois.find_one(
-            {"id": payload.poi_id, "city_id": quest["city_id"]},
-            {"_id": 0, "lat": 1, "lng": 1, "name": 1},
-        )
+        poi_doc = await repo.pois_get(payload.poi_id)
         if poi_doc and poi_doc.get("lat") is not None and poi_doc.get("lng") is not None:
             distance_m = haversine_m(payload.lat, payload.lng, poi_doc["lat"], poi_doc["lng"])
             if distance_m > CHECKIN_RADIUS_M:
@@ -668,7 +657,7 @@ async def check_in(payload: CheckInPayload):
 
     # Still locations to visit?
     if not all_visited:
-        await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+        await repo.progress_upsert(payload.device_id, user)
         lvl = get_level(user["xp"])
         remaining = total - len(visited)
         return CheckInResult(
@@ -681,7 +670,7 @@ async def check_in(payload: CheckInPayload):
     # All locations visited - handle trivia
     if has_trivia:
         if payload.trivia_answer_index is None:
-            await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+            await repo.progress_upsert(payload.device_id, user)
             lvl = get_level(user["xp"])
             return CheckInResult(
                 success=True, xp_earned=0, total_xp=user["xp"],
@@ -691,7 +680,7 @@ async def check_in(payload: CheckInPayload):
                 message="All locations visited. Answer the trivia to complete the quest.",
             )
         if payload.trivia_answer_index != quest["trivia"]["correct_index"]:
-            await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+            await repo.progress_upsert(payload.device_id, user)
             lvl = get_level(user["xp"])
             return CheckInResult(
                 success=False, xp_earned=0, total_xp=user["xp"],
@@ -710,16 +699,15 @@ async def check_in(payload: CheckInPayload):
         user["badges"].append(quest["badge_name"])
     user["quest_progress"].pop(payload.quest_id, None)
 
-    await db.progress.update_one({"device_id": payload.device_id}, {"$set": user}, upsert=True)
+    await repo.progress_upsert(payload.device_id, user)
 
     # City stamp check
     city_stamped = False
     stamped_city_name = None
-    city_quests = await db.quests.find({"city_id": quest["city_id"]}, {"_id": 0, "id": 1}).to_list(500)
-    city_qids = {q["id"] for q in city_quests}
+    city_qids = set(await repo.quests_ids_for_city(quest["city_id"]))
     if city_qids and city_qids.issubset(set(user["completed_quests"])):
         city_stamped = True
-        city_doc = await db.cities.find_one({"id": quest["city_id"]}, {"_id": 0, "name": 1})
+        city_doc = await repo.cities_get(quest["city_id"])
         stamped_city_name = city_doc.get("name") if city_doc else None
 
     new_lvl = get_level(user["xp"])
@@ -737,15 +725,14 @@ async def check_in(payload: CheckInPayload):
 
 @api_router.get("/progress/{device_id}/by-city")
 async def progress_by_city(device_id: str):
-    user = await db.progress.find_one({"device_id": device_id}, {"_id": 0}) or {}
+    user = await repo.progress_get(device_id) or {}
     completed_set = set(user.get("completed_quests", []))
-    check_ins = user.get("check_ins", [])
+    check_ins = user.get("check_ins") or []
 
-    cities = await db.cities.find({}, {"_id": 0}).to_list(100)
+    cities = await repo.cities_list()
     out = []
     for c in cities:
-        all_qs = await db.quests.find({"city_id": c["id"]}, {"_id": 0, "id": 1}).to_list(500)
-        all_q_ids = {q["id"] for q in all_qs}
+        all_q_ids = set(await repo.quests_ids_for_city(c["id"]))
         completed_in_city = completed_set & all_q_ids
         total = len(all_q_ids)
         done = len(completed_in_city)
@@ -774,34 +761,18 @@ async def progress_by_city(device_id: str):
 
 @api_router.post("/progress/{device_id}/profile")
 async def update_profile(device_id: str, payload: ProfileUpdatePayload):
-    update: Dict[str, Any] = {}
-    if payload.display_name is not None:
-        update["display_name"] = payload.display_name or "Traveler"
-    if payload.avatar_uri is not None:
-        update["avatar_uri"] = payload.avatar_uri  # may be "" to clear
-    if not update:
-        return {"ok": True, "updated": []}
-    update["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.progress.update_one(
-        {"device_id": device_id},
-        {
-            "$set": update,
-            "$setOnInsert": {
-                "device_id": device_id,
-                "xp": 0,
-                "completed_quests": [],
-                "badges": [],
-                "check_ins": [],
-            },
-        },
-        upsert=True,
+    updated = await repo.progress_profile_update(
+        device_id,
+        display_name=payload.display_name,
+        avatar_uri=payload.avatar_uri,
+        updated_at=datetime.now(timezone.utc).isoformat(),
     )
-    return {"ok": True, "updated": list(update.keys())}
+    return {"ok": True, "updated": updated}
 
 
 @api_router.get("/leaderboard")
 async def leaderboard():
-    docs = await db.progress.find({}, {"_id": 0}).sort("xp", -1).limit(50).to_list(50)
+    docs = await repo.progress_leaderboard(50)
     out = []
     for d in docs:
         lvl = get_level(d.get("xp", 0))
@@ -812,8 +783,8 @@ async def leaderboard():
             "xp": d.get("xp", 0),
             "level": lvl["level"],
             "title": lvl["title"],
-            "badges": len(d.get("badges", [])),
-            "quests": len(d.get("completed_quests", [])),
+            "badges": len(d.get("badges") or []),
+            "quests": len(d.get("completed_quests") or []),
         })
     return out
 
@@ -829,7 +800,7 @@ class Dish(BaseModel):
 
 @api_router.get("/cities/{city_id}/dishes", response_model=List[Dish])
 async def list_dishes(city_id: str):
-    docs = await db.dishes.find({"city_id": city_id}, {"_id": 0}).to_list(500)
+    docs = await repo.dishes_list(city_id)
     return [Dish(**d) for d in docs]
 
 
@@ -856,10 +827,6 @@ async def supabase_health():
 app.include_router(api_router)
 
 
-@api_router.get("/supabase/health-DUP")
-async def _dup():
-    return {}
-
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -870,6 +837,9 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup():
+    if data_backend() == "supabase":
+        logger.info("DATA_BACKEND=supabase → skipping Mongo seed.")
+        return
     await seed_if_empty()
     await seed_extra_assets()
 

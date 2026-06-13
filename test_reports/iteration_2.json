@@ -1,0 +1,39 @@
+{
+  "summary": "CityQuest Supabase backend regression — 29/29 pytest tests PASS (100%). Verified DATA_BACKEND=supabase is live: /api/supabase/health returns configured=true, cities_rows=4. Exact-count assertions match E1's spec: 164 Gaziantep POIs, 29 museum POIs, 57 Kultur Yolu sites (sorted by ky_seq asc), 20 dishes, 5 quests, 2 easy quests, leaderboard returns 50 rows sorted by xp desc. Full quest flow against q-gaz-1 works end-to-end on Supabase: GPS-good poi-gaz-1 check-in → awaiting_trivia=true → trivia_answer_index=0 → +75 XP + 'Mosaic Eye' badge + persisted in progress row. GPS-bad (0,0) correctly returns too_far=true with distance_m on both /api/progress/poi-check-in and /api/progress/check-in (anti-cheat ≤150 m). /api/progress/poi-check-in credits the matching quest (q-gaz-1) in quests_credited[]. /api/progress/{id}/by-city returns 4-city array with shape (total_quests, completed_quests, percent, completed, stamped_at). /api/progress/{id}/profile upserts display_name + avatar_uri for both new and existing rows. Pre-existing TEST_ok_142021ea user retrieved successfully. No backend issues found; Mongo→Supabase migration is functioning correctly across all 21 endpoints in scope.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_cityquest_supabase.py",
+    "/app/test_reports/pytest/supabase_results.xml"
+  ],
+  "action_items": [
+    "No backend action items — Supabase migration verified clean.",
+    "Open items from iteration_1 remain (frontend only): map-tab WebView web fallback, hide Skip-GPS after result, shadow*/pointerEvents deprecations."
+  ],
+  "critical_code_review_comments": [
+    "repo.py cleanly abstracts both backends; _sb_call wraps blocking supabase-py in asyncio.to_thread to keep event loop free. Good.",
+    "POIs sorted by ky_seq asc with nullsfirst=False in Supabase path — matches the Mongo .sort([('ky_seq',1)]) behavior on /kultur-yolu.",
+    "quests_for_poi uses jsonb contains (filter 'cs', json.dumps([poi_id])) — verified by full quest-credit flow.",
+    "progress_upsert hydrates NOT NULL defaults (xp=0, []/{} containers) before upsert on device_id — prevents constraint errors on first POI check-in.",
+    "/api/supabase/health is a smoke test only (counts cities). Safe to expose, returns no secrets.",
+    "Startup hook short-circuits Mongo seed when DATA_BACKEND=supabase — correct.",
+    "Server still imports motor + opens an AsyncIOMotorClient at module load even when Supabase mode is active (server.py L22-24). Not a bug but is dead overhead; consider lazy init or skip entirely if data_backend()=='supabase'. Low priority."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cityquest_supabase.py (new — 29 tests, ~11s, all pass)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "not tested this iteration (testing_type=backend only)"},
+  "seed_data_creation": "No manual seeding required — Supabase already contained 4 cities / 164 gaz POIs / 20 dishes / 14 quests / 50+ progress rows. Tests created several AUTO_TEST_<ts>_<rand> progress rows in the progress table that will appear on the leaderboard with xp=0 or xp=75 and display_name='Traveler'/'Halil Tester'/'Renamed'. Safe to leave; can be cleaned with: delete from progress where device_id like 'AUTO_TEST_%';",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Supabase backend fully verified. Regression suite: /app/backend/tests/test_cityquest_supabase.py (29 tests, ~11s). Public URL: https://local-explorer-game.preview.emergentagent.com. DATA_BACKEND=supabase in /app/backend/.env. Pre-existing test user: TEST_ok_142021ea. Trivia correct indices: q-gaz-1=0, q-gaz-2=2, q-gaz-3=1. GPS radius = 150 m. POI poi-gaz-1 is at (37.0734, 37.3818). To add new endpoint tests, follow the class-per-resource pattern in the suite; supabase-py upserts via repo.progress_upsert use on_conflict='device_id'.",
+  "rca_of_issue": "N/A — no issues found."
+}
