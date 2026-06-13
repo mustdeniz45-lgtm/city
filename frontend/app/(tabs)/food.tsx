@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View, TextInput } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,10 +8,14 @@ import { useApp } from "@/src/store";
 import { SkeletonList } from "@/src/components/Skeleton";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
+type Dish = { id: string; name: string; description: string; image: string; tags?: string[] };
+type Tab = "dishes" | "restaurants";
+
 export default function FoodScreen() {
   const { activeCityId } = useApp();
   const [food, setFood] = useState<POI[]>([]);
-  const [dishes, setDishes] = useState<{ id: string; name: string; description: string; image: string }[]>([]);
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [tab, setTab] = useState<Tab>("dishes");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,71 +28,154 @@ export default function FoodScreen() {
     } catch (e) { console.warn(e); }
     finally { setLoading(false); setRefreshing(false); }
   };
-  useEffect(() => { setLoading(true); load(); }, [activeCityId]);
+  useEffect(() => { setLoading(true); setQuery(""); load(); }, [activeCityId]);
 
-  const filtered = food.filter(f =>
-    !query.trim() || f.name.toLowerCase().includes(query.toLowerCase()) || f.description.toLowerCase().includes(query.toLowerCase())
+  const q = query.trim().toLowerCase();
+  const filteredFood = useMemo(
+    () => food.filter(f => !q || f.name.toLowerCase().includes(q) || f.description.toLowerCase().includes(q)),
+    [food, q]
   );
+  const filteredDishes = useMemo(
+    () => dishes.filter(d => !q || d.name.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)),
+    [dishes, q]
+  );
+
+  const placeholder = tab === "dishes" ? "Search dishes..." : "Search restaurants...";
+  const subtitle = tab === "dishes"
+    ? "Local flavors you have to try at least once."
+    : "Where locals (and us) actually eat.";
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="food-screen">
       <View style={styles.header}>
         <Text style={styles.kicker}>GASTRONOMY</Text>
         <Text style={styles.h1}>Iconic flavors</Text>
-        <Text style={styles.subtitle}>Curated restaurants and signature dishes.</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
+
+        {/* Segmented control */}
+        <View style={styles.segWrap} testID="food-segmented">
+          <SegButton
+            label="Dishes"
+            count={dishes.length}
+            icon="restaurant"
+            active={tab === "dishes"}
+            onPress={() => setTab("dishes")}
+            testID="seg-dishes"
+          />
+          <SegButton
+            label="Restaurants"
+            count={food.length}
+            icon="storefront"
+            active={tab === "restaurants"}
+            onPress={() => setTab("restaurants")}
+            testID="seg-restaurants"
+          />
+        </View>
+
         <View style={styles.searchBar} testID="food-search">
           <Ionicons name="search" size={18} color={colors.muted} />
           <TextInput
-            placeholder="Search restaurants..."
+            placeholder={placeholder}
             placeholderTextColor={colors.muted}
             value={query}
             onChangeText={setQuery}
             style={styles.searchInput}
+            returnKeyType="search"
           />
+          {query.length > 0 && (
+            <Pressable hitSlop={10} onPress={() => setQuery("")}>
+              <Ionicons name="close-circle" size={18} color={colors.muted} />
+            </Pressable>
+          )}
         </View>
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(f) => f.id}
-        renderItem={({ item }) => <FoodCard f={item} />}
-        ListHeaderComponent={
-          dishes.length > 0 && !query ? (
-            <View style={{ marginBottom: spacing.lg }}>
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>Traditional dishes</Text>
-                <Text style={styles.sectionSub}>{dishes.length} iconic flavors to try</Text>
-              </View>
-              <FlatList
-                data={dishes}
-                horizontal
-                keyExtractor={(d) => d.id}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
-                renderItem={({ item }) => (
-                  <View style={styles.dishCard} testID={`dish-card-${item.id}`}>
-                    <Image source={item.image} style={styles.dishImg} contentFit="cover" />
-                    <View style={styles.dishBody}>
-                      <Text style={styles.dishName} numberOfLines={1}>{item.name}</Text>
-                      <Text style={styles.dishDesc} numberOfLines={3}>{item.description}</Text>
-                    </View>
-                  </View>
-                )}
-              />
-              <Text style={styles.restaurantsHead}>Where to taste them</Text>
-            </View>
-          ) : null
-        }
-        contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-        ListEmptyComponent={loading ? <SkeletonList /> : <Text style={styles.empty}>No restaurants found.</Text>}
-      />
+      {tab === "dishes" ? (
+        <FlatList
+          key="dishes-list"
+          data={filteredDishes}
+          keyExtractor={(d) => d.id}
+          renderItem={({ item }) => <DishRow d={item} />}
+          contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+          ListEmptyComponent={
+            loading ? <SkeletonList />
+              : <Text style={styles.empty}>{q ? "No dishes match your search." : "No dishes for this city yet."}</Text>
+          }
+          ListFooterComponent={
+            filteredDishes.length > 0 && food.length > 0 && !q ? (
+              <Pressable style={styles.crossLink} onPress={() => setTab("restaurants")} testID="cross-link-restaurants">
+                <View>
+                  <Text style={styles.crossLinkKicker}>NEXT</Text>
+                  <Text style={styles.crossLinkTitle}>Where to taste them →</Text>
+                  <Text style={styles.crossLinkSub}>{food.length} curated restaurants</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={22} color={colors.brand} />
+              </Pressable>
+            ) : null
+          }
+        />
+      ) : (
+        <FlatList
+          key="restaurants-list"
+          data={filteredFood}
+          keyExtractor={(f) => f.id}
+          renderItem={({ item }) => <RestaurantCard f={item} />}
+          contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+          ListEmptyComponent={
+            loading ? <SkeletonList />
+              : <Text style={styles.empty}>{q ? "No restaurants match your search." : "No restaurants for this city yet."}</Text>
+          }
+        />
+      )}
     </View>
   );
 }
 
-function FoodCard({ f }: { f: POI }) {
+function SegButton({
+  label, count, icon, active, onPress, testID,
+}: {
+  label: string;
+  count: number;
+  icon: keyof typeof Ionicons.glyphMap;
+  active: boolean;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <Pressable onPress={onPress} style={[styles.segBtn, active && styles.segBtnActive]} testID={testID}>
+      <Ionicons name={icon} size={14} color={active ? colors.surface : colors.onSurfaceTertiary} />
+      <Text style={[styles.segLabel, active && styles.segLabelActive]}>{label}</Text>
+      <View style={[styles.segCount, active && styles.segCountActive]}>
+        <Text style={[styles.segCountText, active && styles.segCountTextActive]}>{count}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function DishRow({ d }: { d: Dish }) {
+  return (
+    <View style={styles.dishRow} testID={`dish-card-${d.id}`}>
+      <Image source={d.image} style={styles.dishRowImg} contentFit="cover" />
+      <View style={styles.dishRowBody}>
+        <Text style={styles.dishRowName} numberOfLines={1}>{d.name}</Text>
+        <Text style={styles.dishRowDesc} numberOfLines={3}>{d.description}</Text>
+        {!!d.tags?.length && (
+          <View style={styles.tagsRow}>
+            {d.tags.slice(0, 3).map((t) => (
+              <View key={t} style={styles.tagPill}><Text style={styles.tagText}>{t}</Text></View>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function RestaurantCard({ f }: { f: POI }) {
   const router = useRouter();
   return (
     <Pressable
@@ -123,8 +210,44 @@ const styles = StyleSheet.create({
   kicker: { fontSize: 11, letterSpacing: 2, fontWeight: "700", color: colors.brand },
   h1: { fontFamily: fonts.display, fontSize: 30, color: colors.onSurface, marginTop: 4 },
   subtitle: { color: colors.muted, fontSize: 14, marginBottom: spacing.md, marginTop: 4 },
+
+  // Segmented control
+  segWrap: {
+    flexDirection: "row",
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.pill,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  segBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    minHeight: 40,
+  },
+  segBtnActive: { backgroundColor: colors.brand, ...shadow.pill },
+  segLabel: { fontSize: 13, fontWeight: "700", color: colors.onSurfaceTertiary, letterSpacing: 0.3 },
+  segLabelActive: { color: colors.surface },
+  segCount: {
+    paddingHorizontal: 7, paddingVertical: 1, borderRadius: radius.pill,
+    backgroundColor: "rgba(0,0,0,0.06)", minWidth: 22, alignItems: "center",
+  },
+  segCountActive: { backgroundColor: "rgba(255,255,255,0.22)" },
+  segCountText: { fontSize: 11, fontWeight: "700", color: colors.onSurfaceTertiary },
+  segCountTextActive: { color: colors.surface },
+
   searchBar: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, height: 44 },
   searchInput: { flex: 1, fontSize: 14, color: colors.onSurface },
+
+  // Restaurant card
   card: { marginHorizontal: spacing.lg, flexDirection: "row", backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, overflow: "hidden", borderWidth: 1, borderColor: colors.border, ...shadow.card },
   cardImage: { width: 110, height: 130 },
   cardBody: { flex: 1, padding: spacing.md, justifyContent: "space-between" },
@@ -136,14 +259,43 @@ const styles = StyleSheet.create({
   xpBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, alignSelf: "flex-start" },
   xpText: { color: colors.brand, fontWeight: "700", fontSize: 11 },
   footerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sectionHead: { paddingHorizontal: spacing.lg, marginTop: spacing.md, marginBottom: spacing.sm },
-  sectionTitle: { fontFamily: fonts.display, fontSize: 22, color: colors.onSurface },
-  sectionSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
-  dishCard: { width: 220, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, overflow: "hidden", borderWidth: 1, borderColor: colors.border, ...shadow.pill },
-  dishImg: { width: "100%", height: 110 },
-  dishBody: { padding: spacing.md },
-  dishName: { fontFamily: fonts.display, fontSize: 15, color: colors.onSurface, marginBottom: 4 },
-  dishDesc: { color: colors.muted, fontSize: 11, lineHeight: 16 },
-  restaurantsHead: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface, paddingHorizontal: spacing.lg, marginTop: spacing.xl, marginBottom: 4 },
+
+  // Dish row (full-width card in dishes section)
+  dishRow: {
+    marginHorizontal: spacing.lg,
+    flexDirection: "row",
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow.card,
+  },
+  dishRowImg: { width: 110, height: 130 },
+  dishRowBody: { flex: 1, padding: spacing.md, justifyContent: "center", gap: 4 },
+  dishRowName: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface },
+  dishRowDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
+  tagPill: { backgroundColor: "#F2EFE8", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
+  tagText: { fontSize: 10, color: colors.onSurfaceTertiary, fontWeight: "600", letterSpacing: 0.2 },
+
+  // Cross-link
+  crossLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: "#FCE9E1",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  crossLinkKicker: { fontSize: 10, letterSpacing: 2, fontWeight: "700", color: colors.brand, marginBottom: 2 },
+  crossLinkTitle: { fontFamily: fonts.display, fontSize: 17, color: colors.onSurface },
+  crossLinkSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
+
   empty: { textAlign: "center", color: colors.muted, padding: spacing.xl },
 });
