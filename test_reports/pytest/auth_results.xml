@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="12" time="4.447" timestamp="2026-06-13T10:03:46.885127+00:00" hostname="agent-env-57096d25-3386-4302-9976-1fc450a4f879"><testcase classname="backend.tests.test_auth.TestAuthMe" name="test_me_no_token" time="0.248" /><testcase classname="backend.tests.test_auth.TestAuthMe" name="test_me_invalid_token_lenient" time="0.042" /><testcase classname="backend.tests.test_auth.TestAuthMe" name="test_me_valid_token" time="0.553" /><testcase classname="backend.tests.test_auth.TestLinkDevice" name="test_link_no_token_returns_401" time="0.040" /><testcase classname="backend.tests.test_auth.TestLinkDevice" name="test_link_brand_new_device_creates" time="0.667"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_auth.py:137: in test_link_brand_new_device_creates
+    assert r.status_code == 200, r.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_auth.TestLinkDevice" name="test_link_existing_device_without_user_id_links" time="0.805"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_auth.py:169: in test_link_existing_device_without_user_id_links
+    assert r.status_code == 200, r.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_auth.TestLinkDevice" name="test_link_idempotent_returns_already" time="0.315"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_auth.py:190: in test_link_idempotent_returns_already
+    assert r1.status_code == 200, r1.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_auth.TestLinkDevice" name="test_link_conflict_when_device_belongs_to_other_user" time="0.879"><failure message="AssertionError: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_auth.py:216: in test_link_conflict_when_device_belongs_to_other_user
+    assert r1.status_code == 200, r1.text
+E   AssertionError: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_auth.TestRegressionExistingRoutes" name="test_cities_list" time="0.186" /><testcase classname="backend.tests.test_auth.TestRegressionExistingRoutes" name="test_gaziantep_pois" time="0.206" /><testcase classname="backend.tests.test_auth.TestRegressionExistingRoutes" name="test_gaziantep_quests" time="0.177" /><testcase classname="backend.tests.test_auth.TestRegressionExistingRoutes" name="test_leaderboard" time="0.169" /></testsuite></testsuites>

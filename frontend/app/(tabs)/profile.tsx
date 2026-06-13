@@ -8,13 +8,15 @@ import * as Haptics from "expo-haptics";
 import { api, type LeaderEntry, type Progress, type CityProgress } from "@/src/api";
 import { useApp, getDisplayName, setDisplayName, getAvatarUri, setAvatarUri } from "@/src/store";
 import { listPostcards, removePostcard, type Postcard } from "@/src/postcards";
+import { useAuth } from "@/src/auth";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1598966739654-5e9a252d8c32?w=400&q=80";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { deviceId, progressVersion } = useApp();
+  const { deviceId, progressVersion, refreshProgress } = useApp();
+  const { user, signOut } = useAuth();
   const [progress, setProgress] = useState<Progress | null>(null);
   const [board, setBoard] = useState<LeaderEntry[]>([]);
   const [postcards, setPostcards] = useState<Postcard[]>([]);
@@ -187,6 +189,53 @@ export default function ProfileScreen() {
         <StatBox value={`${progress?.badges?.length ?? 0}`} label="Badges" />
         <StatBox value={`${progress?.xp ?? 0}`} label="Total XP" />
       </View>
+
+      <Section title="Account" testIdSuffix="account">
+        {user ? (
+          <View style={styles.accountRow} testID="account-signed-in">
+            <View style={styles.accountIcon}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            </View>
+            <View style={{ flex: 1, marginLeft: spacing.sm }}>
+              <Text style={styles.accountEmail} numberOfLines={1}>{user.email ?? "Signed in"}</Text>
+              <Text style={styles.accountSub}>Progress synced across devices</Text>
+            </View>
+            <Pressable
+              hitSlop={10}
+              onPress={() => {
+                Alert.alert("Sign out?", "Your progress stays on this device, but new XP won't sync.", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Sign out", style: "destructive", onPress: async () => {
+                      await signOut();
+                      refreshProgress();
+                    },
+                  },
+                ]);
+              }}
+              style={styles.signOutBtn}
+              testID="account-sign-out"
+            >
+              <Text style={styles.signOutText}>Sign out</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            style={styles.accountRow}
+            onPress={() => router.push("/auth/welcome")}
+            testID="account-sign-in-cta"
+          >
+            <View style={[styles.accountIcon, { backgroundColor: "#FCE9E1" }]}>
+              <Ionicons name="person-add" size={18} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1, marginLeft: spacing.sm }}>
+              <Text style={styles.accountTitle}>Save your progress</Text>
+              <Text style={styles.accountSub}>Sign in to back up XP & badges across devices</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+      </Section>
 
       <Section title="Passport" testIdSuffix="passport">
         <Pressable
@@ -405,4 +454,13 @@ const styles = StyleSheet.create({
   passportSummaryNum: { fontFamily: fonts.display, fontSize: 20, color: colors.brand },
   passportDotsRow: { flexDirection: "row", gap: 5 },
   passportDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.borderStrong },
+
+  // Account section
+  accountRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, ...shadow.pill },
+  accountIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#E8F4EE", alignItems: "center", justifyContent: "center" },
+  accountTitle: { fontFamily: fonts.display, fontSize: 15, color: colors.onSurface },
+  accountEmail: { fontSize: 14, color: colors.onSurface, fontWeight: "700" },
+  accountSub: { color: colors.muted, fontSize: 11, marginTop: 2 },
+  signOutBtn: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  signOutText: { color: colors.brand, fontWeight: "700", fontSize: 12, letterSpacing: 0.3 },
 });

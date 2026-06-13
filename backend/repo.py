@@ -247,6 +247,8 @@ async def progress_upsert(device_id: str, data: Dict[str, Any]) -> None:
             "display_name": data.get("display_name") or "Traveler",
         }
         merged = {**defaults, **data}
+        # Strip None values so Supabase preserves DB defaults / existing values.
+        merged = {k: v for k, v in merged.items() if v is not None}
         await _sb_call(
             lambda: sb.table("progress").upsert(merged, on_conflict="device_id").execute()
         )
@@ -311,3 +313,48 @@ async def progress_leaderboard(limit: int = 50) -> List[Dict[str, Any]]:
         )
         return res.data or []
     return await _mongo().progress.find({}, {"_id": 0}).sort("xp", -1).limit(limit).to_list(limit)
+
+
+async def progress_link_user(device_id: str, user_id: str) -> Dict[str, Any]:
+    """Attach `user_id` to the progress row for this device.
+
+    Behavior:
+      * If a row for the device exists with no `user_id` (or same one) → set it.
+      * If the row already belongs to a DIFFERENT user → abort (return conflict).
+      * If no row yet → create a fresh one keyed on both `device_id` + `user_id`.
+    Returns {"status": "linked"|"already"|"conflict"|"created", ...}.
+    """
+    existing = await progress_get(device_id)
+    if existing:
+        owner = existing.get("user_id")
+        if owner and owner != user_id:
+            return {"status": "conflict", "owner": owner}
+        if owner == user_id:
+            return {"status": "already", "device_id": device_id, "user_id": user_id}
+        if _is_supabase():
+            sb = get_supabase()
+            await _sb_call(
+                lambda: sb.table("progress")
+                .update({"user_id": user_id})
+                .eq("device_id", device_id)
+                .execute()
+            )
+        else:
+            await _mongo().progress.update_one(
+                {"device_id": device_id}, {"$set": {"user_id": user_id}}
+            )
+        return {"status": "linked", "device_id": device_id, "user_id": user_id}
+
+    # No row yet — seed one.
+    seed = {
+        "device_id": device_id,
+        "user_id": user_id,
+        "display_name": "Traveler",
+        "xp": 0,
+        "completed_quests": [],
+        "badges": [],
+        "check_ins": [],
+        "quest_progress": {},
+    }
+    await progress_upsert(device_id, seed)
+    return {"status": "created", "device_id": device_id, "user_id": user_id}

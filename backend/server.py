@@ -3,7 +3,7 @@ CityQuest backend — gamified worldwide city guide.
 - No-auth, device-id based user progress.
 - Seeds 4 cities (Gaziantep deep; Istanbul, Paris, Rome lighter) on startup.
 """
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -24,6 +24,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 import repo  # data-access layer (selects Mongo vs Supabase via DATA_BACKEND env)
 from supabase_client import data_backend
+from auth import get_current_user, get_optional_user, user_id_of
 
 app = FastAPI(title="CityQuest API")
 api_router = APIRouter(prefix="/api")
@@ -787,6 +788,43 @@ async def leaderboard():
             "quests": len(d.get("completed_quests") or []),
         })
     return out
+
+
+# ---------------- AUTH ROUTES ----------------
+
+class LinkDevicePayload(BaseModel):
+    device_id: str
+
+@api_router.post("/auth/link-device")
+async def link_device(
+    payload: LinkDevicePayload,
+    claims: Dict[str, Any] = Depends(get_current_user),
+):
+    """Attach the caller's `user_id` (from JWT) to the existing progress row
+    keyed on `device_id`, so anonymous XP/badges carry over to their account.
+    """
+    uid = user_id_of(claims)
+    if not uid:
+        raise HTTPException(401, "No user_id in token")
+    result = await repo.progress_link_user(payload.device_id, uid)
+    if result.get("status") == "conflict":
+        raise HTTPException(
+            409,
+            "This device is already linked to a different account.",
+        )
+    return result
+
+
+@api_router.get("/auth/me")
+async def auth_me(claims: Optional[Dict[str, Any]] = Depends(get_optional_user)):
+    if not claims:
+        return {"authenticated": False}
+    return {
+        "authenticated": True,
+        "user_id": claims.get("sub"),
+        "email": claims.get("email"),
+        "role": claims.get("role"),
+    }
 
 
 class Dish(BaseModel):

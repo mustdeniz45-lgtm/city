@@ -96,4 +96,13 @@ export const api = {
   progressByCity: (deviceId: string) => jget<CityProgress[]>(`/progress/${deviceId}/by-city`),
   updateProfile: (deviceId: string, payload: { display_name?: string; avatar_uri?: string | null }) =>
     jpost<{ ok: boolean }>(`/progress/${deviceId}/profile`, payload),
+  linkDevice: (token: string, deviceId: string) =>
+    fetch(`${BASE}/api/auth/link-device`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ device_id: deviceId }),
+    }).then(async (r) => {
+      if (!r.ok) throw new Error(`link-device failed: ${r.status}`);
+      return r.json() as Promise<{ status: string; user_id: string; device_id: string }>;
+    }),
 };
