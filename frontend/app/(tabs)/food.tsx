@@ -157,21 +157,32 @@ function SegButton({
 }
 
 function DishRow({ d }: { d: Dish }) {
+  const router = useRouter();
   return (
-    <View style={styles.dishRow} testID={`dish-card-${d.id}`}>
+    <Pressable
+      style={styles.dishRow}
+      onPress={() => router.push(`/dish/${d.id}`)}
+      testID={`dish-card-${d.id}`}
+    >
       <Image source={d.image} style={styles.dishRowImg} contentFit="cover" />
       <View style={styles.dishRowBody}>
         <Text style={styles.dishRowName} numberOfLines={1}>{d.name}</Text>
         <Text style={styles.dishRowDesc} numberOfLines={3}>{d.description}</Text>
-        {!!d.tags?.length && (
-          <View style={styles.tagsRow}>
-            {d.tags.slice(0, 3).map((t) => (
-              <View key={t} style={styles.tagPill}><Text style={styles.tagText}>{t}</Text></View>
-            ))}
+        <View style={styles.dishRowFoot}>
+          <View style={styles.xpBadge}>
+            <Ionicons name="flash" size={11} color={colors.brand} />
+            <Text style={styles.xpText}>+25 XP for trying</Text>
           </View>
-        )}
+          {!!d.tags?.length && (
+            <View style={styles.tagsRow}>
+              {d.tags.slice(0, 2).map((t) => (
+                <View key={t} style={styles.tagPill}><Text style={styles.tagText}>{t}</Text></View>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -275,7 +286,8 @@ const styles = StyleSheet.create({
   dishRowBody: { flex: 1, padding: spacing.md, justifyContent: "center", gap: 4 },
   dishRowName: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface },
   dishRowDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
+  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  dishRowFoot: { marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   tagPill: { backgroundColor: "#F2EFE8", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   tagText: { fontSize: 10, color: colors.onSurfaceTertiary, fontWeight: "600", letterSpacing: 0.2 },
 

@@ -482,6 +482,29 @@ class PoiCheckInResult(BaseModel):
     quests_credited: List[str] = []
     already_visited: bool = False
     message: str
+    xp_earned: int = 0
+    total_xp: Optional[int] = None
+    leveled_up: bool = False
+
+
+class DishTriedPayload(BaseModel):
+    device_id: str
+    dish_id: str
+    dish_name: Optional[str] = None
+    display_name: Optional[str] = None
+
+
+class DishTriedResult(BaseModel):
+    success: bool
+    already_tried: bool = False
+    xp_earned: int = 0
+    total_xp: int = 0
+    tried_dishes: List[str] = []
+    leveled_up: bool = False
+    message: str
+
+
+DISH_XP = 25
 
 
 @api_router.post("/progress/poi-check-in", response_model=PoiCheckInResult)
@@ -515,6 +538,9 @@ async def poi_check_in(payload: PoiCheckInPayload):
 
     # Has the user already visited this POI in any quest context?
     already = any(payload.poi_id in (qp.get("visited") or []) for qp in user["quest_progress"].values())
+    # Also check the standalone visits log (a POI can be visited outside of any quest)
+    visited_pois_ever = {ci.get("poi_id") for ci in (user.get("check_ins") or []) if ci.get("poi_id")}
+    is_first_visit = payload.poi_id not in visited_pois_ever and not already
 
     quests = await repo.quests_for_poi(poi["city_id"], payload.poi_id)
     credited: List[str] = []
@@ -526,6 +552,11 @@ async def poi_check_in(payload: PoiCheckInPayload):
         if payload.poi_id not in (qp.get("visited") or []):
             qp.setdefault("visited", []).append(payload.poi_id)
             credited.append(qid)
+
+    # Award the POI's xp_reward on FIRST visit (idempotent thanks to is_first_visit).
+    poi_xp = int(poi.get("xp_reward") or 0) if is_first_visit else 0
+    prev_level = get_level(user.get("xp", 0))["level"]
+    user["xp"] = user.get("xp", 0) + poi_xp
 
     user["check_ins"].append({
         "quest_id": None,
@@ -539,20 +570,32 @@ async def poi_check_in(payload: PoiCheckInPayload):
 
     await repo.progress_upsert(payload.device_id, user)
 
+    new_level = get_level(user["xp"])["level"]
+    leveled_up = new_level > prev_level
+
     n = len(credited)
+    parts: List[str] = []
+    if poi_xp > 0:
+        parts.append(f"+{poi_xp} XP")
     if n == 0 and already:
-        msg = f"You've already checked in at {poi['name']}."
+        parts.append(f"You've already checked in at {poi['name']}.")
     elif n == 0:
-        msg = f"Visit recorded at {poi['name']}!"
+        parts.append(f"Visit recorded at {poi['name']}!")
     elif n == 1:
-        msg = f"Visited {poi['name']}! Counted toward 1 quest."
+        parts.append(f"Visited {poi['name']}! Counted toward 1 quest.")
     else:
-        msg = f"Visited {poi['name']}! Counted toward {n} quests."
+        parts.append(f"Visited {poi['name']}! Counted toward {n} quests.")
+    msg = " — ".join(parts) if parts else "Visit recorded."
+    if leveled_up:
+        msg += f" 🎉 Leveled up to {get_level(user['xp'])['title']}!"
 
     return PoiCheckInResult(
         success=True, too_far=False,
         quests_credited=credited, already_visited=already and n == 0,
         message=msg,
+        xp_earned=poi_xp,
+        total_xp=user["xp"],
+        leveled_up=leveled_up,
     )
 
 
@@ -856,6 +899,73 @@ class Dish(BaseModel):
 async def list_dishes(city_id: str):
     docs = await repo.dishes_list(city_id)
     return [Dish(**d) for d in docs]
+
+
+@api_router.get("/dishes/{dish_id}", response_model=Dish)
+async def get_dish(dish_id: str):
+    # Dishes are a small set per city; scan the cached list lookup.
+    # Iterate all cities (we currently only have ~20 dishes for Gaziantep, others empty).
+    for c in await repo.cities_list():
+        for d in await repo.dishes_list(c["id"]):
+            if d["id"] == dish_id:
+                return Dish(**d)
+    raise HTTPException(404, "Dish not found")
+
+
+@api_router.post("/progress/dish-tried", response_model=DishTriedResult)
+async def dish_tried(payload: DishTriedPayload):
+    """Mark a dish as tasted. Awards +25 XP on first try (idempotent).
+    Stores tasted dish ids under `quest_progress.__dishes_tried` (a magic key
+    on the existing jsonb column so we don't need a schema change)."""
+    user = await repo.progress_get(payload.device_id) or {
+        "device_id": payload.device_id,
+        "display_name": payload.display_name or "Traveler",
+        "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
+        "quest_progress": {},
+    }
+    user.setdefault("xp", 0)
+    user.setdefault("completed_quests", [])
+    user.setdefault("badges", [])
+    user.setdefault("check_ins", [])
+    if user.get("quest_progress") is None:
+        user["quest_progress"] = {}
+    user.setdefault("quest_progress", {})
+
+    tried_list: List[str] = list(user["quest_progress"].get("__dishes_tried") or [])
+    already = payload.dish_id in tried_list
+
+    xp_earned = 0
+    leveled_up = False
+    if not already:
+        tried_list.append(payload.dish_id)
+        user["quest_progress"]["__dishes_tried"] = tried_list
+        xp_earned = DISH_XP
+        prev_level = get_level(user["xp"])["level"]
+        user["xp"] = int(user.get("xp") or 0) + xp_earned
+        leveled_up = get_level(user["xp"])["level"] > prev_level
+
+    if payload.display_name:
+        user["display_name"] = payload.display_name
+    user["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await repo.progress_upsert(payload.device_id, user)
+
+    name = payload.dish_name or payload.dish_id
+    if already:
+        msg = f"You've already tried {name}."
+    else:
+        msg = f"Tried {name}! +{xp_earned} XP"
+        if leveled_up:
+            msg += f" 🎉 Leveled up to {get_level(user['xp'])['title']}!"
+
+    return DishTriedResult(
+        success=True,
+        already_tried=already,
+        xp_earned=xp_earned,
+        total_xp=user["xp"],
+        tried_dishes=tried_list,
+        leveled_up=leveled_up,
+        message=msg,
+    )
 
 
 @api_router.get("/supabase/health")

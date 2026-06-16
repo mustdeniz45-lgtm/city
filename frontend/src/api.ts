@@ -102,6 +102,10 @@ export const api = {
   progressByCity: (deviceId: string) => jget<CityProgress[]>(`/progress/${deviceId}/by-city`),
   updateProfile: (deviceId: string, payload: { display_name?: string; avatar_uri?: string | null }) =>
     jpost<{ ok: boolean }>(`/progress/${deviceId}/profile`, payload),
+  dish: (id: string) => jget<{ id: string; city_id: string; name: string; description: string; image: string; tags: string[] }>(`/dishes/${id}`),
+  dishTried: (payload: { device_id: string; dish_id: string; dish_name?: string; display_name?: string }) =>
+    jpost<{ success: boolean; already_tried: boolean; xp_earned: number; total_xp: number; tried_dishes: string[]; leveled_up: boolean; message: string }>(
+      "/progress/dish-tried", payload),
   linkDevice: (token: string, deviceId: string) =>
     fetch(`${BASE}/api/auth/link-device`, {
       method: "POST",
