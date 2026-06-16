@@ -335,7 +335,7 @@ export default function ProfileScreen() {
             board.slice(0, 10).map((e, i) => (
               <View key={e.device_id} style={[styles.boardRow, i < board.length - 1 && styles.boardDivider, e.device_id === deviceId && styles.boardMe]}>
                 <Text style={styles.boardRank}>{i + 1}</Text>
-                {e.avatar_uri ? (
+                {e.avatar_uri && !/^file:\/\//.test(e.avatar_uri) ? (
                   <Image source={e.avatar_uri} style={styles.boardAvatar} contentFit="cover" />
                 ) : (
                   <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>

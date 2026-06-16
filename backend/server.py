@@ -812,6 +812,8 @@ async def link_device(
             409,
             "This device is already linked to a different account.",
         )
+    if result.get("status") == "error":
+        raise HTTPException(500, f"Failed to link device: {result.get('error', 'unknown')}")
     return result
 
 

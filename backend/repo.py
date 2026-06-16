@@ -318,34 +318,92 @@ async def progress_leaderboard(limit: int = 50) -> List[Dict[str, Any]]:
 async def progress_link_user(device_id: str, user_id: str) -> Dict[str, Any]:
     """Attach `user_id` to the progress row for this device.
 
-    Behavior:
-      * If a row for the device exists with no `user_id` (or same one) → set it.
-      * If the row already belongs to a DIFFERENT user → abort (return conflict).
-      * If no row yet → create a fresh one keyed on both `device_id` + `user_id`.
-    Returns {"status": "linked"|"already"|"conflict"|"created", ...}.
+    Because the schema enforces `unique(user_id)`, we must ensure at most one
+    row per user_id. If the user already has progress on a different device,
+    we **merge** that row into the new device's row (sum/union XP, badges,
+    check-ins, quest-progress) and delete the old row.
+
+    Returns one of:
+      {"status": "already"}   — nothing changed (already linked)
+      {"status": "linked"}    — user_id set on existing device row
+      {"status": "created"}   — fresh row created
+      {"status": "merged"}    — merged a prior row belonging to the same user
+      {"status": "conflict"}  — current device row already owned by someone else
     """
-    existing = await progress_get(device_id)
-    if existing:
-        owner = existing.get("user_id")
+    from postgrest.exceptions import APIError  # local import; only used in supabase path
+
+    existing_device = await progress_get(device_id)
+    if existing_device:
+        owner = existing_device.get("user_id")
         if owner and owner != user_id:
             return {"status": "conflict", "owner": owner}
+
+    # Find any OTHER row already owned by this user (one-user-many-devices case).
+    other: Optional[Dict[str, Any]] = None
+    if _is_supabase():
+        sb = get_supabase()
+        try:
+            res = await _sb_call(
+                lambda: sb.table("progress").select("*").eq("user_id", user_id).limit(2).execute()
+            )
+            for row in res.data or []:
+                if row.get("device_id") != device_id:
+                    other = row
+                    break
+        except APIError as e:
+            return {"status": "error", "error": str(e)}
+    else:
+        other = await _mongo().progress.find_one(
+            {"user_id": user_id, "device_id": {"$ne": device_id}}, {"_id": 0}
+        )
+
+    # If the user already has a separate row → MERGE that into this device's row.
+    if other:
+        target = existing_device or {
+            "device_id": device_id, "xp": 0,
+            "completed_quests": [], "badges": [], "check_ins": [], "quest_progress": {},
+        }
+        merged = _merge_progress(target, other, user_id, device_id)
+        try:
+            if _is_supabase():
+                sb = get_supabase()
+                # Delete the OLD row first to release the unique(user_id) slot.
+                await _sb_call(
+                    lambda: sb.table("progress").delete().eq("device_id", other["device_id"]).execute()
+                )
+            else:
+                await _mongo().progress.delete_one({"device_id": other["device_id"]})
+            await progress_upsert(device_id, merged)
+        except APIError as e:
+            return {"status": "error", "error": str(e)}
+        return {
+            "status": "merged",
+            "from_device": other["device_id"],
+            "to_device": device_id,
+            "user_id": user_id,
+        }
+
+    # No prior row for this user. Three simple paths.
+    if existing_device:
+        owner = existing_device.get("user_id")
         if owner == user_id:
             return {"status": "already", "device_id": device_id, "user_id": user_id}
-        if _is_supabase():
-            sb = get_supabase()
-            await _sb_call(
-                lambda: sb.table("progress")
-                .update({"user_id": user_id})
-                .eq("device_id", device_id)
-                .execute()
-            )
-        else:
-            await _mongo().progress.update_one(
-                {"device_id": device_id}, {"$set": {"user_id": user_id}}
-            )
+        # owner is None → set it
+        try:
+            if _is_supabase():
+                sb = get_supabase()
+                await _sb_call(
+                    lambda: sb.table("progress").update({"user_id": user_id}).eq("device_id", device_id).execute()
+                )
+            else:
+                await _mongo().progress.update_one(
+                    {"device_id": device_id}, {"$set": {"user_id": user_id}}
+                )
+        except APIError as e:
+            return {"status": "error", "error": str(e)}
         return {"status": "linked", "device_id": device_id, "user_id": user_id}
 
-    # No row yet — seed one.
+    # Fresh row.
     seed = {
         "device_id": device_id,
         "user_id": user_id,
@@ -356,5 +414,39 @@ async def progress_link_user(device_id: str, user_id: str) -> Dict[str, Any]:
         "check_ins": [],
         "quest_progress": {},
     }
-    await progress_upsert(device_id, seed)
+    try:
+        await progress_upsert(device_id, seed)
+    except APIError as e:
+        return {"status": "error", "error": str(e)}
     return {"status": "created", "device_id": device_id, "user_id": user_id}
+
+
+def _merge_progress(a: Dict[str, Any], b: Dict[str, Any], user_id: str, device_id: str) -> Dict[str, Any]:
+    """Fold `b` into `a`. Takes the union of arrays/maps and the MAX xp."""
+    def uniq(seq):
+        seen, out = set(), []
+        for x in seq or []:
+            k = x if isinstance(x, (str, int, float)) else id(x)
+            if k not in seen:
+                seen.add(k)
+                out.append(x)
+        return out
+
+    qp_a = a.get("quest_progress") or {}
+    qp_b = b.get("quest_progress") or {}
+    qp_merged: Dict[str, Any] = {}
+    for qid in set(list(qp_a.keys()) + list(qp_b.keys())):
+        visited = uniq(((qp_a.get(qid) or {}).get("visited") or []) + ((qp_b.get(qid) or {}).get("visited") or []))
+        qp_merged[qid] = {"visited": visited}
+
+    return {
+        "device_id": device_id,
+        "user_id": user_id,
+        "display_name": a.get("display_name") or b.get("display_name") or "Traveler",
+        "avatar_uri": a.get("avatar_uri") or b.get("avatar_uri"),
+        "xp": max(int(a.get("xp") or 0), int(b.get("xp") or 0)),
+        "completed_quests": uniq((a.get("completed_quests") or []) + (b.get("completed_quests") or [])),
+        "badges": uniq((a.get("badges") or []) + (b.get("badges") or [])),
+        "check_ins": (a.get("check_ins") or []) + (b.get("check_ins") or []),
+        "quest_progress": qp_merged,
+    }
