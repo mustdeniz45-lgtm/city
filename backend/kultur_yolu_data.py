@@ -67,6 +67,6 @@ KULTUR_YOLU = [
 KY_IMAGE_BY_CAT = {
     "museum":     "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=600&q=70",
     "historic":   "https://images.unsplash.com/photo-1591019479261-1a103585c559?w=600&q=70",
-    "must-see":   "https://images.unsplash.com/photo-1555992828-35627f3eea4d?w=600&q=70",
+    "must-see":   "https://images.unsplash.com/photo-1574586597013-29bd92dc1617?w=600&q=70",
     "restaurant": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=70",
 }
