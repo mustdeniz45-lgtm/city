@@ -38,8 +38,7 @@ export default function ExploreScreen() {
       } else {
         const [c, all] = await Promise.all([api.city(activeCityId), api.pois(activeCityId, category)]);
         setCity(c);
-        // Hide Kültür Yolu entries from generic categories to keep the feed curated.
-        p = category === "all" ? all.filter((x) => !x.kultur_yolu) : all;
+        p = all;
       }
       setPois(p);
     } catch (e) { console.warn(e); }

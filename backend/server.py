@@ -164,6 +164,66 @@ def get_level(xp: int) -> Dict[str, Any]:
 def _id() -> str:
     return str(uuid.uuid4())
 
+def _load_gaziantep_places(city_id: str) -> List[Dict[str, Any]]:
+    """Load Gaziantep places from the canonical JSON dataset.
+
+    This is the SINGLE SOURCE OF TRUTH for Gaziantep POIs. The same file is
+    used by `migrate_places_gaziantep.py` when populating Supabase.
+    """
+    import json as _json
+    import re as _re
+    path = ROOT_DIR / "seed_assets" / "places_gaziantep.json"
+    if not path.exists():
+        return []
+
+    CATEGORY_PRIORITY = ["museums", "landmarks", "restaurant/cafe", "nature", "historic"]
+    CATEGORY_MAP = {
+        "museums": "museum", "landmarks": "landmark",
+        "restaurant/cafe": "restaurant", "nature": "must-see", "historic": "historic",
+    }
+    FALLBACK = {
+        "landmark":   "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=600&q=70",
+        "museum":     "https://images.unsplash.com/photo-1565060169186-65f5fad44e21?w=600&q=70",
+        "historic":   "https://images.unsplash.com/photo-1545569310-50fee1e4b1c4?w=600&q=70",
+        "restaurant": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=600&q=70",
+        "must-see":   "https://images.unsplash.com/photo-1574586597013-29bd92dc1617?w=600&q=70",
+    }
+
+    def slug(s: str) -> str:
+        return _re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:60] or "poi"
+
+    def pick(cats: list) -> str:
+        cats = [c.lower() for c in (cats or [])]
+        for k in CATEGORY_PRIORITY:
+            if k in cats:
+                return CATEGORY_MAP[k]
+        return "must-see"
+
+    out: List[Dict[str, Any]] = []
+    for item in _json.loads(path.read_text()):
+        n = int(item.get("n") or 0)
+        cat = pick(item.get("categories") or [])
+        en = (item.get("en_name") or item.get("tr_name") or "Unnamed").strip()
+        out.append({
+            "id": f"poi-gaz-{n:03d}-{slug(en)}",
+            "city_id": city_id,
+            "name": en,
+            "name_tr": item.get("tr_name") or None,
+            "category": cat,
+            "description": (item.get("en_description") or item.get("tr_description") or "").strip(),
+            "image": item.get("image_url") or FALLBACK[cat],
+            "lat": float(item["latitude"]),
+            "lng": float(item["longitude"]),
+            "rating": 4.5,
+            "xp_reward": 40,
+            "kultur_yolu": True,
+            "ky_seq": n,
+            "source": "kultur_yolu_canonical",
+            "metadata": {"tr_description": item.get("tr_description")},
+        })
+    return out
+
+
 def build_seed() -> Dict[str, Any]:
     # Gaziantep POIs
     gaz = "gaziantep"
@@ -203,30 +263,8 @@ def build_seed() -> Dict[str, Any]:
     ]
 
     pois = []
-    # Gaziantep
-    pois += [
-        {"id":"poi-gaz-1","city_id":gaz,"name":"Zeugma Mosaic Museum","category":"museum",
-         "description":"Home to the iconic 'Gypsy Girl' mosaic and the world's largest collection of Roman mosaics.",
-         "image":"https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?w=800&q=80","lat":37.0734,"lng":37.3818,"rating":4.8,"xp_reward":90},
-        {"id":"poi-gaz-2","city_id":gaz,"name":"Gaziantep Castle","category":"historic",
-         "description":"A Roman-era hilltop fortress overlooking the old city, rebuilt after the 2023 earthquake.",
-         "image":"https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80","lat":37.0644,"lng":37.3822,"rating":4.5,"xp_reward":60},
-        {"id":"poi-gaz-3","city_id":gaz,"name":"Bakırcılar Çarşısı (Coppersmith Bazaar)","category":"must-see",
-         "description":"Centuries-old covered bazaar where copper artisans still hammer trays and pots by hand.",
-         "image":"https://images.unsplash.com/photo-1574586597013-29bd92dc1617?w=800&q=80","lat":37.0639,"lng":37.3791,"rating":4.7,"xp_reward":55},
-        {"id":"poi-gaz-4","city_id":gaz,"name":"Şirvani Mosque","category":"historic",
-         "description":"15th-century mosque with intricate mihrab carvings and serene courtyard.",
-         "image":"https://images.unsplash.com/photo-1591019479261-1a103585c559?w=800&q=80","lat":37.0631,"lng":37.3808,"rating":4.4,"xp_reward":45},
-        {"id":"poi-gaz-5","city_id":gaz,"name":"Emine Göğüş Cuisine Museum","category":"museum",
-         "description":"A culinary museum dedicated to the UNESCO-recognized Gaziantep gastronomy heritage.",
-         "image":"https://images.unsplash.com/photo-1567521464027-f127ff144326?w=800&q=80","lat":37.0648,"lng":37.3805,"rating":4.6,"xp_reward":70},
-        {"id":"poi-gaz-6","city_id":gaz,"name":"İmam Çağdaş Restaurant","category":"restaurant",
-         "description":"Legendary kebab and baklava house operating since 1887 in the old bazaar.",
-         "image":"https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=800&q=80","lat":37.0641,"lng":37.3795,"rating":4.9,"xp_reward":60},
-        {"id":"poi-gaz-7","city_id":gaz,"name":"Tahmis Coffee House","category":"restaurant",
-         "description":"Historic 17th-century coffee house serving menengiç coffee in a stone-vaulted hall.",
-         "image":"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80","lat":37.0640,"lng":37.3799,"rating":4.7,"xp_reward":45},
-    ]
+    # Gaziantep — loaded from the canonical JSON dataset (single source of truth).
+    pois += _load_gaziantep_places(gaz)
     # Istanbul
     pois += [
         {"id":"poi-ist-1","city_id":ist,"name":"Hagia Sophia","category":"landmark",
@@ -265,23 +303,23 @@ def build_seed() -> Dict[str, Any]:
     quests = [
         # Gaziantep
         {"id":"q-gaz-1","city_id":gaz,"title":"Mosaic Hunter","description":"Visit the Zeugma Mosaic Museum and find the Gypsy Girl.",
-         "difficulty":"easy","category":"museum","xp_reward":75,"poi_ids":["poi-gaz-1"],
+         "difficulty":"easy","category":"museum","xp_reward":75,"poi_ids":["poi-gaz-054-zeugma-mosaic-museum"],
          "cover_image":"https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?w=800&q=80","estimated_minutes":60,"badge_name":"Mosaic Eye",
          "trivia":{"question":"Which iconic mosaic is displayed at the Zeugma Museum?","options":["Gypsy Girl","Alexander Mosaic","Bird & Snake","Hercules"],"correct_index":0}},
-        {"id":"q-gaz-2","city_id":gaz,"title":"Baklava Master","description":"Taste authentic Antep baklava at İmam Çağdaş.",
-         "difficulty":"easy","category":"food","xp_reward":60,"poi_ids":["poi-gaz-6"],
-         "cover_image":"https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=800&q=80","estimated_minutes":30,"badge_name":"Baklava Master",
+        {"id":"q-gaz-2","city_id":gaz,"title":"Culinary Heritage","description":"Discover Gaziantep's UNESCO-recognized cuisine at Emine Göğüş Mutfak Müzesi.",
+         "difficulty":"easy","category":"museum","xp_reward":60,"poi_ids":["poi-gaz-014-emine-g-culinary-museum"],
+         "cover_image":"https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=800&q=80","estimated_minutes":30,"badge_name":"Cuisine Curator",
          "trivia":{"question":"Which nut traditionally fills Antep baklava?","options":["Walnut","Almond","Antep Pistachio","Hazelnut"],"correct_index":2}},
         {"id":"q-gaz-3","city_id":gaz,"title":"Coppersmith Wanderer","description":"Explore the Bakırcılar Bazaar and observe artisans at work.",
-         "difficulty":"medium","category":"must-see","xp_reward":100,"poi_ids":["poi-gaz-3","poi-gaz-7"],
+         "difficulty":"medium","category":"must-see","xp_reward":100,"poi_ids":["poi-gaz-029-coppersmiths-bazaar","poi-gaz-037-tahmis-coffee-house"],
          "cover_image":"https://images.unsplash.com/photo-1574586597013-29bd92dc1617?w=800&q=80","estimated_minutes":90,"badge_name":"Bazaar Explorer",
          "trivia":{"question":"What metal is the bazaar famous for?","options":["Silver","Copper","Bronze","Gold"],"correct_index":1}},
         {"id":"q-gaz-4","city_id":gaz,"title":"Castle of Antep","description":"Climb the Gaziantep Castle and discover its Roman roots.",
-         "difficulty":"medium","category":"historic","xp_reward":90,"poi_ids":["poi-gaz-2"],
+         "difficulty":"medium","category":"historic","xp_reward":90,"poi_ids":["poi-gaz-009-gaziantep-castle"],
          "cover_image":"https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80","estimated_minutes":75,"badge_name":"Castle Climber",
          "trivia":{"question":"Which empire originally built Gaziantep Castle?","options":["Ottoman","Hittite","Roman","Byzantine"],"correct_index":2}},
-        {"id":"q-gaz-5","city_id":gaz,"title":"Antep Heritage Trail","description":"Complete a full circuit of the old city's historic mosques and museums.",
-         "difficulty":"hard","category":"historic","xp_reward":150,"poi_ids":["poi-gaz-4","poi-gaz-5","poi-gaz-2"],
+        {"id":"q-gaz-5","city_id":gaz,"title":"Antep Heritage Trail","description":"Complete a full circuit of the old city's castle, culinary museum, and coffee houses.",
+         "difficulty":"hard","category":"historic","xp_reward":150,"poi_ids":["poi-gaz-009-gaziantep-castle","poi-gaz-014-emine-g-culinary-museum","poi-gaz-037-tahmis-coffee-house"],
          "cover_image":"https://images.unsplash.com/photo-1591019479261-1a103585c559?w=800&q=80","estimated_minutes":180,"badge_name":"Heritage Guardian",
          "trivia":{"question":"Which UNESCO designation does Gaziantep hold?","options":["Music","Gastronomy","Architecture","Crafts"],"correct_index":1}},
         # Istanbul
@@ -328,6 +366,15 @@ def build_seed() -> Dict[str, Any]:
     return {"cities": cities, "pois": pois, "quests": quests}
 
 async def seed_if_empty():
+    """Legacy Mongo seed. Not used when DATA_BACKEND=supabase (which is now the default).
+
+    Seeds:
+      * 4 cities (Gaziantep + Istanbul/Paris/Rome stubs)
+      * Istanbul/Paris/Rome inline POIs + quests
+      * Gaziantep POIs from `seed_assets/places_gaziantep.json` (canonical 97 places)
+      * Gaziantep dishes from `seed_assets/gaziantep_yemekleri.json`
+      * Gaziantep quests (id-remapped to the canonical place ids)
+    """
     db = repo._mongo()
     count = await db.cities.count_documents({})
     if count == 0:
@@ -338,36 +385,11 @@ async def seed_if_empty():
             await db.pois.insert_many([dict(p) for p in seed["pois"]])
         if seed["quests"]:
             await db.quests.insert_many([dict(q) for q in seed["quests"]])
-        logger.info("Base seed complete.")
+        logger.info("Base seed (cities + Istanbul/Paris/Rome content) complete.")
     else:
         logger.info(f"DB already seeded: {count} cities")
 
-    # Kültür Yolu seed (idempotent)
-    ky_count = await db.pois.count_documents({"city_id": "gaziantep", "kultur_yolu": True})
-    if ky_count == 0:
-        from kultur_yolu_data import KULTUR_YOLU, KY_IMAGE_BY_CAT
-        docs = []
-        for item in KULTUR_YOLU:
-            cat = item["cat"]
-            docs.append({
-                "id": f"poi-gaz-ky-{item['n']:02d}",
-                "city_id": "gaziantep",
-                "name": item["en"],
-                "name_tr": item["tr"],
-                "category": cat,
-                "description": f"Site #{item['n']} on the Gaziantep Kultur Yolu (Culture Path) - {item['tr']}.",
-                "image": KY_IMAGE_BY_CAT.get(cat, KY_IMAGE_BY_CAT["historic"]),
-                "lat": item["lat"],
-                "lng": item["lng"],
-                "rating": 4.4,
-                "xp_reward": 25,
-                "kultur_yolu": True,
-                "ky_seq": item["n"],
-            })
-        await db.pois.insert_many(docs)
-        logger.info(f"Inserted {len(docs)} Kultur Yolu sites.")
-
-    # Refresh poi/quest counts on every startup so cities reflect KY additions
+    # Refresh poi/quest counts on every startup
     for c in await db.cities.find({}, {"_id": 0}).to_list(50):
         poi_count = await db.pois.count_documents({"city_id": c["id"]})
         quest_count = await db.quests.count_documents({"city_id": c["id"]})
@@ -378,34 +400,15 @@ async def seed_if_empty():
 
 
 async def seed_extra_assets():
-    """Seed the user-uploaded gaziantep_yemekleri + kultur_yolu_kategorize datasets."""
-    from extra_seeds import load_dishes, load_categorized_pois, _normalize
+    """Seed dishes (Mongo-only). Gaziantep places are loaded from the canonical
+    `places_gaziantep.json` already during `seed_if_empty()` via `build_seed()`."""
+    from extra_seeds import load_dishes
     db = repo._mongo()
-    # Dishes (separate collection — they don't have GPS / aren't check-in POIs).
     if await db.dishes.count_documents({"city_id": "gaziantep"}) == 0:
         dishes = load_dishes()
         if dishes:
             await db.dishes.insert_many(dishes)
             logger.info(f"Inserted {len(dishes)} Gaziantep dishes.")
-
-    # Categorized POIs (skip those already present by TR/EN name).
-    if await db.pois.count_documents({"city_id": "gaziantep", "source": "ky_cat"}) == 0:
-        existing = await db.pois.find(
-            {"city_id": "gaziantep"}, {"_id": 0, "name": 1, "name_tr": 1}
-        ).to_list(5000)
-        existing_names = set()
-        for e in existing:
-            if e.get("name_tr"):
-                existing_names.add(_normalize(e["name_tr"]))
-            if e.get("name"):
-                existing_names.add(_normalize(e["name"]))
-        cat_docs = load_categorized_pois(existing_names)
-        if cat_docs:
-            await db.pois.insert_many(cat_docs)
-            logger.info(f"Inserted {len(cat_docs)} categorized POIs from kultur_yolu_kategorize.")
-            # Refresh city poi_count
-            poi_count = await db.pois.count_documents({"city_id": "gaziantep"})
-            await db.cities.update_one({"id": "gaziantep"}, {"$set": {"poi_count": poi_count}})
 
 # ---------------- Routes ----------------
 
