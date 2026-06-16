@@ -81,6 +81,29 @@ async def cities_set_counts(city_id: str, poi_count: int, quest_count: int) -> N
 
 # ---------------- POIs ----------------
 
+# Maps a single-category filter to the raw category names used in the source
+# JSON (`metadata.raw_categories`). This lets a single POI surface under
+# multiple filters (e.g. Gaziantep Castle in BOTH Landmarks & Museums).
+_FILTER_TO_RAW = {
+    "landmark":   "landmarks",
+    "museum":     "museums",
+    "historic":   "historic",
+    "restaurant": "restaurant/cafe",
+    "must-see":   "nature",
+}
+
+
+def _matches_category(row: Dict[str, Any], category: str) -> bool:
+    if row.get("category") == category:
+        return True
+    raw_needle = _FILTER_TO_RAW.get(category)
+    if raw_needle:
+        raw_list = ((row.get("metadata") or {}).get("raw_categories")) or []
+        if raw_needle in raw_list:
+            return True
+    return False
+
+
 async def pois_list(
     city_id: str,
     category: Optional[str] = None,
@@ -90,21 +113,27 @@ async def pois_list(
         sb = get_supabase()
 
         def run():
+            # Don't apply category filter in SQL — we filter in Python so
+            # multi-category items appear under each of their listed buckets.
             q = sb.table("pois").select("*").eq("city_id", city_id)
-            if category and category != "all":
-                q = q.eq("category", category)
             if kultur_yolu is True:
                 q = q.eq("kultur_yolu", True)
             return q.order("ky_seq", desc=False, nullsfirst=False).limit(2000).execute()
 
         res = await _sb_call(run)
-        return res.data or []
+        rows = res.data or []
+        if category and category != "all":
+            rows = [r for r in rows if _matches_category(r, category)]
+        return rows
+
+    # Mongo fallback
     q: Dict[str, Any] = {"city_id": city_id}
-    if category and category != "all":
-        q["category"] = category
     if kultur_yolu is True:
         q["kultur_yolu"] = True
-    return await _mongo().pois.find(q, {"_id": 0}).sort([("ky_seq", 1)]).to_list(2000)
+    rows = await _mongo().pois.find(q, {"_id": 0}).sort([("ky_seq", 1)]).to_list(2000)
+    if category and category != "all":
+        rows = [r for r in rows if _matches_category(r, category)]
+    return rows
 
 
 async def pois_kultur_yolu(city_id: str) -> List[Dict[str, Any]]:
