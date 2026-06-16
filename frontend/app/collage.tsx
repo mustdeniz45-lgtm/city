@@ -6,7 +6,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
@@ -28,6 +28,7 @@ const FRAMES: { id: Frame; label: string }[] = [
 
 export default function CollageScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ photo?: string; poi_name?: string }>();
   const { activeCityId, deviceId } = useApp();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [frame, setFrame] = useState<Frame>("postcard");
@@ -37,6 +38,18 @@ export default function CollageScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const shotRef = useRef<ViewShot>(null);
+
+  // Preload photo + caption when launched from a POI's "Make postcard" action.
+  useEffect(() => {
+    if (typeof params.photo === "string" && params.photo) {
+      setPhotoUri(params.photo);
+    }
+    if (typeof params.poi_name === "string" && params.poi_name && !caption) {
+      setCaption(params.poi_name);
+    }
+    // We only want this on first mount with these params.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     api.city(activeCityId).then(setCity).catch(console.warn);

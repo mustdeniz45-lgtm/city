@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { api, type POI } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
+import { addPhoto, listPhotos, removePhoto, type PlacePhoto } from "@/src/photos";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -24,10 +26,85 @@ export default function POIDetail() {
   const { deviceId, refreshProgress } = useApp();
   const [poi, setPoi] = useState<POI | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photos, setPhotos] = useState<PlacePhoto[]>([]);
 
   useEffect(() => {
     api.poi(id).then(setPoi).catch(console.warn);
   }, [id]);
+
+  const loadPhotos = useCallback(async () => {
+    if (id) setPhotos(await listPhotos(id));
+  }, [id]);
+  useEffect(() => { loadPhotos(); }, [loadPhotos]);
+  useFocusEffect(useCallback(() => { loadPhotos(); }, [loadPhotos]));
+
+  const onAddPhoto = useCallback(async (source: "camera" | "library") => {
+    if (!poi) return;
+    try {
+      let res;
+      if (source === "camera") {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert("Camera permission denied", "Enable camera access in Settings to take photos.");
+          return;
+        }
+        res = await ImagePicker.launchCameraAsync({
+          quality: 0.85, allowsEditing: false, base64: Platform.OS === "web",
+        });
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert("Library permission denied", "Enable photo access in Settings to attach photos.");
+          return;
+        }
+        res = await ImagePicker.launchImageLibraryAsync({
+          quality: 0.85, allowsEditing: false, base64: Platform.OS === "web",
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        });
+      }
+      if (res.canceled || !res.assets?.length) return;
+      const asset = res.assets[0];
+      await addPhoto({
+        poi_id: poi.id, poi_name: poi.name,
+        sourceUri: asset.uri, base64: asset.base64 ?? null,
+      });
+      await loadPhotos();
+      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    } catch (e: any) {
+      Alert.alert("Couldn't add photo", e?.message ?? "Please try again.");
+    }
+  }, [poi, loadPhotos]);
+
+  const onChoosePhotoSource = useCallback(() => {
+    if (!poi) return;
+    if (Platform.OS === "web") {
+      onAddPhoto("library");
+      return;
+    }
+    Alert.alert(`Add a photo of ${poi.name}`, "Pick a source:", [
+      { text: "Take photo", onPress: () => onAddPhoto("camera") },
+      { text: "Choose from library", onPress: () => onAddPhoto("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [poi, onAddPhoto]);
+
+  const onMakePostcard = useCallback((photo: PlacePhoto) => {
+    router.push({
+      pathname: "/collage",
+      params: {
+        photo: photo.uri,
+        poi_name: photo.poi_name,
+        photo_id: photo.id,
+      },
+    });
+  }, [router]);
+
+  const onDeletePhoto = useCallback((p: PlacePhoto) => {
+    Alert.alert("Delete photo?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => { await removePhoto(p.id); await loadPhotos(); } },
+    ]);
+  }, [loadPhotos]);
 
   const handleCheckIn = async () => {
     if (!poi) return;
@@ -158,6 +235,14 @@ export default function POIDetail() {
           {/* Location & access — populated from canonical dataset when available */}
           <LocationCard poi={poi} />
 
+          {/* My Photos — user-attached photos for this place */}
+          <PhotosSection
+            photos={photos}
+            onAdd={onChoosePhotoSource}
+            onMakePostcard={onMakePostcard}
+            onDelete={onDeletePhoto}
+          />
+
           {isFood ? (
             <ComingSoon icon="restaurant-outline" title="Menu highlights" subtitle="Signature dishes and price range — coming soon." />
           ) : (
@@ -227,6 +312,66 @@ function LocationCard({ poi }: { poi: POI }) {
   );
 }
 
+
+function PhotosSection({
+  photos, onAdd, onMakePostcard, onDelete,
+}: {
+  photos: PlacePhoto[];
+  onAdd: () => void;
+  onMakePostcard: (p: PlacePhoto) => void;
+  onDelete: (p: PlacePhoto) => void;
+}) {
+  return (
+    <View style={styles.photosCard} testID="poi-photos-section">
+      <View style={styles.photosHead}>
+        <View style={styles.csIcon}>
+          <Ionicons name="camera" size={16} color={colors.brand} />
+        </View>
+        <Text style={styles.photosTitle}>Your photos</Text>
+        <Pressable onPress={onAdd} style={styles.photosAddBtn} testID="add-photo-btn">
+          <Ionicons name="add" size={14} color={colors.surface} />
+          <Text style={styles.photosAddText}>Add photo</Text>
+        </Pressable>
+      </View>
+      {photos.length === 0 ? (
+        <Text style={styles.photosEmpty}>
+          Snap a photo to remember this place — turn it into a postcard later!
+        </Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 10, paddingTop: 4 }}
+        >
+          {photos.map((p) => (
+            <View key={p.id} style={styles.photoCell} testID={`photo-${p.id}`}>
+              <Image source={p.uri} style={styles.photoImg} contentFit="cover" />
+              <View style={styles.photoOverlay}>
+                <Pressable
+                  onPress={() => onMakePostcard(p)}
+                  style={[styles.photoAction, styles.photoActionPrimary]}
+                  testID={`postcard-from-photo-${p.id}`}
+                >
+                  <Ionicons name="share-social" size={11} color={colors.surface} />
+                  <Text style={styles.photoActionText}>Postcard</Text>
+                </Pressable>
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => onDelete(p)}
+                  style={styles.photoDeleteBtn}
+                  testID={`delete-photo-${p.id}`}
+                >
+                  <Ionicons name="trash" size={12} color="#fff" />
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
 function ComingSoon({ icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
   return (
     <View style={styles.csCard}>
@@ -286,4 +431,19 @@ const styles = StyleSheet.create({
   locMono: { fontVariant: ["tabular-nums"], color: colors.muted, fontSize: 12, letterSpacing: 0.3 },
   locBtn: { marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.md, paddingVertical: 10, borderRadius: radius.pill, alignSelf: "flex-start" },
   locBtnText: { color: colors.surface, fontWeight: "700", fontSize: 13, letterSpacing: 0.3 },
+
+  // Photos section
+  photosCard: { marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  photosHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: spacing.sm },
+  photosTitle: { fontFamily: fonts.display, fontSize: 16, color: colors.onSurface, flex: 1 },
+  photosAddBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.brand, paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.pill },
+  photosAddText: { color: colors.surface, fontWeight: "700", fontSize: 11, letterSpacing: 0.3 },
+  photosEmpty: { color: colors.muted, fontSize: 12.5, lineHeight: 18, paddingVertical: spacing.sm },
+  photoCell: { position: "relative", width: 120, height: 150, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.surfaceTertiary },
+  photoImg: { width: "100%", height: "100%" },
+  photoOverlay: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 4 },
+  photoAction: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 8, paddingVertical: 5, borderRadius: radius.pill },
+  photoActionPrimary: { backgroundColor: colors.brand },
+  photoActionText: { color: colors.surface, fontWeight: "700", fontSize: 10, letterSpacing: 0.2 },
+  photoDeleteBtn: { backgroundColor: "rgba(0,0,0,0.55)", width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
 });
