@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -154,7 +154,10 @@ export default function POIDetail() {
           </View>
 
           <ComingSoon icon="time-outline" title="Opening hours" subtitle="Daily schedule + holiday closures arriving soon." />
-          <ComingSoon icon="location-outline" title="Location & access" subtitle="Address, nearest transit, entry fee — coming soon." />
+
+          {/* Location & access — populated from canonical dataset when available */}
+          <LocationCard poi={poi} />
+
           {isFood ? (
             <ComingSoon icon="restaurant-outline" title="Menu highlights" subtitle="Signature dishes and price range — coming soon." />
           ) : (
@@ -167,6 +170,59 @@ export default function POIDetail() {
           </View>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+function LocationCard({ poi }: { poi: POI }) {
+  const md = (poi.metadata ?? {}) as { address?: string | null; plus_code?: string | null };
+  const address = md.address;
+  const plusCode = md.plus_code;
+
+  // Always-available "Open in Maps" link using the POI coordinates.
+  const mapsUrl =
+    Platform.OS === "ios"
+      ? `https://maps.apple.com/?q=${encodeURIComponent(poi.name)}&ll=${poi.lat},${poi.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lng}&query_place_id=${encodeURIComponent(poi.name)}`;
+
+  if (!address && !plusCode) {
+    return (
+      <ComingSoon
+        icon="location-outline"
+        title="Location & access"
+        subtitle="Address, nearest transit, entry fee — coming soon."
+      />
+    );
+  }
+
+  return (
+    <View style={styles.locCard} testID="poi-location-card">
+      <View style={styles.locHead}>
+        <View style={styles.csIcon}>
+          <Ionicons name="location" size={16} color={colors.brand} />
+        </View>
+        <Text style={styles.locTitle}>Location & access</Text>
+      </View>
+      {!!address && (
+        <View style={styles.locRow}>
+          <Ionicons name="navigate-outline" size={14} color={colors.muted} style={{ marginTop: 2 }} />
+          <Text style={styles.locText}>{address}</Text>
+        </View>
+      )}
+      {!!plusCode && (
+        <View style={styles.locRow}>
+          <Ionicons name="grid-outline" size={14} color={colors.muted} style={{ marginTop: 2 }} />
+          <Text style={[styles.locText, styles.locMono]}>{plusCode}</Text>
+        </View>
+      )}
+      <Pressable
+        onPress={() => Linking.openURL(mapsUrl)}
+        style={styles.locBtn}
+        testID="open-in-maps"
+      >
+        <Ionicons name="map" size={14} color={colors.surface} />
+        <Text style={styles.locBtnText}>Open in Maps</Text>
+      </Pressable>
     </View>
   );
 }
@@ -220,4 +276,14 @@ const styles = StyleSheet.create({
 
   coordCard: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.lg, alignSelf: "center", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.surfaceTertiary, borderRadius: radius.pill },
   coordText: { color: colors.muted, fontSize: 12, fontWeight: "600", letterSpacing: 0.3 },
+
+  // Location & access card (when metadata.address / metadata.plus_code present)
+  locCard: { marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  locHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
+  locTitle: { fontFamily: fonts.display, fontSize: 16, color: colors.onSurface, flex: 1 },
+  locRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
+  locText: { flex: 1, fontSize: 13.5, color: colors.onSurface, lineHeight: 19 },
+  locMono: { fontVariant: ["tabular-nums"], color: colors.muted, fontSize: 12, letterSpacing: 0.3 },
+  locBtn: { marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.md, paddingVertical: 10, borderRadius: radius.pill, alignSelf: "flex-start" },
+  locBtnText: { color: colors.surface, fontWeight: "700", fontSize: 13, letterSpacing: 0.3 },
 });

@@ -61,6 +61,7 @@ class POI(BaseModel):
     kultur_yolu: Optional[bool] = False
     ky_seq: Optional[int] = None
     name_tr: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class TriviaQuestion(BaseModel):
     question: str
@@ -199,27 +200,37 @@ def _load_gaziantep_places(city_id: str) -> List[Dict[str, Any]]:
                 return CATEGORY_MAP[k]
         return "must-see"
 
+    raw = _json.loads(path.read_text())
+    items = raw.get("places", raw) if isinstance(raw, dict) else raw
+
     out: List[Dict[str, Any]] = []
-    for item in _json.loads(path.read_text()):
-        n = int(item.get("n") or 0)
+    for item in items:
+        # The v3 file uses `n`, the v4 file uses `id`.
+        seq = int(item.get("id") or item.get("n") or 0)
         cat = pick(item.get("categories") or [])
         en = (item.get("en_name") or item.get("tr_name") or "Unnamed").strip()
+        image = (item.get("image_url") or "").strip() or FALLBACK[cat]
         out.append({
-            "id": f"poi-gaz-{n:03d}-{slug(en)}",
+            "id": f"poi-gaz-{seq:03d}-{slug(en)}",
             "city_id": city_id,
             "name": en,
             "name_tr": item.get("tr_name") or None,
             "category": cat,
             "description": (item.get("en_description") or item.get("tr_description") or "").strip(),
-            "image": item.get("image_url") or FALLBACK[cat],
+            "image": image,
             "lat": float(item["latitude"]),
             "lng": float(item["longitude"]),
             "rating": 4.5,
             "xp_reward": 40,
             "kultur_yolu": True,
-            "ky_seq": n,
+            "ky_seq": seq,
             "source": "kultur_yolu_canonical",
-            "metadata": {"tr_description": item.get("tr_description")},
+            "metadata": {
+                "tr_description": item.get("tr_description"),
+                "raw_categories": item.get("categories"),
+                "address": (item.get("address") or "").strip() or None,
+                "plus_code": (item.get("plus_code") or "").strip() or None,
+            },
         })
     return out
 

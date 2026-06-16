@@ -66,9 +66,9 @@ def slugify(s: str) -> str:
 
 
 def build_row(item: dict) -> dict:
-    n = int(item.get("n") or 0)
+    n = int(item.get("id") or item.get("n") or 0)  # v4 uses `id`, v3 used `n`
     cat = pick_category(item.get("categories") or [])
-    image = item.get("image_url") or FALLBACK_IMAGES[cat]
+    image = (item.get("image_url") or "").strip() or FALLBACK_IMAGES[cat]
     en = (item.get("en_name") or item.get("tr_name") or "Unnamed").strip()
     return {
         "id": f"poi-gaz-{n:03d}-{slugify(en)}",
@@ -88,6 +88,8 @@ def build_row(item: dict) -> dict:
         "metadata": {
             "tr_description": item.get("tr_description"),
             "raw_categories": item.get("categories"),
+            "address": (item.get("address") or "").strip() or None,
+            "plus_code": (item.get("plus_code") or "").strip() or None,
         },
     }
 
@@ -110,7 +112,8 @@ def main():
     if not DATA.exists():
         print(f"❌ Missing source file: {DATA}")
         sys.exit(1)
-    data = json.loads(DATA.read_text())
+    raw = json.loads(DATA.read_text())
+    data = raw.get("places", raw) if isinstance(raw, dict) else raw
     rows = [build_row(x) for x in data]
     rows = [r for r in rows if r["lat"] is not None and r["lng"] is not None]
     print(f"📥 {len(rows)} places loaded from {DATA.name}")

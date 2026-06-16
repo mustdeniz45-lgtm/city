@@ -25,6 +25,12 @@ export type POI = {
   description: string; image: string; lat: number; lng: number;
   rating: number; xp_reward: number;
   kultur_yolu?: boolean; ky_seq?: number | null; name_tr?: string | null;
+  metadata?: {
+    address?: string | null;
+    plus_code?: string | null;
+    tr_description?: string | null;
+    raw_categories?: string[] | null;
+  } | null;
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };
 export type Quest = {
