@@ -142,7 +142,7 @@ export default function MapScreen() {
                 Kültür Yolu {showKY ? "ON" : "OFF"}
               </Text>
               <Text style={[styles.kyToggleSub, showKY && { color: "rgba(255,255,255,0.85)" }]}>
-                53 sites · walking route
+                {kyPois.length} sites · walking route
               </Text>
             </View>
           </Pressable>
