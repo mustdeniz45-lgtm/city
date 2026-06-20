@@ -106,27 +106,80 @@ export default function POIDetail() {
     ]);
   }, [loadPhotos]);
 
+  const [locPerm, setLocPerm] = useState<{ status: Location.PermissionStatus; canAskAgain: boolean } | null>(null);
+
+  // Probe location permission on mount + each focus so the check-in button can reflect the current state.
+  const refreshLocPerm = useCallback(async () => {
+    try {
+      const r = await Location.getForegroundPermissionsAsync();
+      setLocPerm({ status: r.status, canAskAgain: r.canAskAgain });
+    } catch { /* unsupported (e.g. web with no API) */ }
+  }, []);
+  useEffect(() => { refreshLocPerm(); }, [refreshLocPerm]);
+  useFocusEffect(useCallback(() => { refreshLocPerm(); }, [refreshLocPerm]));
+
   const handleCheckIn = async () => {
     if (!poi) return;
+    // STEP 1: Ensure location permission is granted. Check-in REQUIRES GPS.
+    let perm = await Location.getForegroundPermissionsAsync();
+    if (perm.status !== "granted") {
+      if (perm.canAskAgain) {
+        // Show a brief pre-permission explanation, then trigger the native prompt.
+        const proceed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            "Enable GPS to check in",
+            `CityQuest verifies you're within 150 m of ${poi.name} using your device's location. Your coordinates are only sent to confirm check-ins — never shared with other users.`,
+            [
+              { text: "Not now", style: "cancel", onPress: () => resolve(false) },
+              { text: "Enable", onPress: () => resolve(true) },
+            ],
+          );
+        });
+        if (!proceed) return;
+        const r = await Location.requestForegroundPermissionsAsync();
+        setLocPerm({ status: r.status, canAskAgain: r.canAskAgain });
+        if (r.status !== "granted") {
+          // User just denied — politely stop. If they tap the button again with canAskAgain still true, we'll ask once more.
+          return;
+        }
+        perm = r;
+      } else {
+        // Permanently denied. Send them to Settings (don't dead-end).
+        Alert.alert(
+          "Location is off",
+          `Check-ins require GPS so we can verify you're within 150 m of ${poi.name}. Open Settings to allow location access for CityQuest.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    }
+
     setBusy(true);
     try {
+      // STEP 2: Read coordinates with a strict timeout — refuse the call if we can't.
       let coords: { lat: number; lng: number } | null = null;
-      const { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
-      let ok = status === "granted";
-      if (!ok && canAskAgain) {
-        const r = await Location.requestForegroundPermissionsAsync();
-        ok = r.status === "granted";
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      } catch (e) { console.warn("loc", e); }
+
+      if (!coords) {
+        Alert.alert(
+          "Couldn't read your location",
+          "We need a clear GPS fix to verify the 150 m radius. Step outside or near a window and try again.",
+          [{ text: "OK" }],
+        );
+        return;
       }
-      if (ok) {
-        try {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-        } catch (e) { console.warn("loc", e); }
-      }
+
+      // STEP 3: Backend re-verifies the 150 m radius and rejects anything outside.
       const name = await getDisplayName();
       const r = await api.poiCheckIn({
         device_id: deviceId, poi_id: poi.id,
-        lat: coords?.lat, lng: coords?.lng,
+        lat: coords.lat, lng: coords.lng,
         display_name: name,
       });
       if (r.too_far) {
@@ -203,9 +256,40 @@ export default function POIDetail() {
               disabled={busy}
               testID="poi-checkin"
             >
-              <Ionicons name="location" size={16} color="#FFF" />
-              <Text style={styles.primaryBtnText}>{busy ? "Checking in..." : "Check in here"}</Text>
+              <Ionicons
+                name={locPerm?.status === "granted" ? "location" : "location-outline"}
+                size={16}
+                color="#FFF"
+              />
+              <Text style={styles.primaryBtnText}>
+                {busy
+                  ? "Checking in..."
+                  : locPerm?.status === "granted"
+                    ? "Check in here"
+                    : "Enable GPS to check in"}
+              </Text>
             </Pressable>
+            {locPerm && locPerm.status !== "granted" && (
+              <Pressable
+                style={styles.gpsHint}
+                onPress={() => {
+                  if (locPerm.canAskAgain) {
+                    handleCheckIn();
+                  } else {
+                    Linking.openSettings();
+                  }
+                }}
+                testID="poi-gps-hint"
+              >
+                <Ionicons name="alert-circle" size={13} color={colors.brand} />
+                <Text style={styles.gpsHintText}>
+                  {locPerm.canAskAgain
+                    ? "Tap to allow location — required to check in"
+                    : "Location is off. Open Settings → allow location for CityQuest"}
+                </Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.brand} />
+              </Pressable>
+            )}
             <View style={styles.actionsRow}>
               <Pressable
                 style={styles.secondaryBtn}
@@ -412,6 +496,19 @@ const styles = StyleSheet.create({
   secondaryBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.brand, backgroundColor: "#FCE9E1" },
   secondaryBtnText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
   checkInHint: { color: colors.muted, fontSize: 11, marginTop: 4, textAlign: "center", lineHeight: 16 },
+  gpsHint: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FCE9E1",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "#F5C7B4",
+  },
+  gpsHintText: { flex: 1, fontSize: 11.5, color: colors.brand, fontWeight: "600" },
 
   csCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.lg, padding: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   csIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#FCE9E1", alignItems: "center", justifyContent: "center" },
