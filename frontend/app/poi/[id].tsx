@@ -27,6 +27,19 @@ export default function POIDetail() {
   const [poi, setPoi] = useState<POI | null>(null);
   const [busy, setBusy] = useState(false);
   const [photos, setPhotos] = useState<PlacePhoto[]>([]);
+  const [visited, setVisited] = useState(false);
+
+  // Detect if this POI is already checked in by the user
+  const checkVisitedStatus = useCallback(async () => {
+    if (!deviceId || !id) return;
+    try {
+      const p = await api.progress(deviceId);
+      const visitedIds = new Set((p.check_ins || []).map((ci: any) => ci.poi_id).filter(Boolean));
+      setVisited(visitedIds.has(id));
+    } catch {}
+  }, [deviceId, id]);
+  useEffect(() => { checkVisitedStatus(); }, [checkVisitedStatus]);
+  useFocusEffect(useCallback(() => { checkVisitedStatus(); }, [checkVisitedStatus]));
 
   useEffect(() => {
     api.poi(id).then(setPoi).catch(console.warn);
@@ -188,6 +201,7 @@ export default function POIDetail() {
         return;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setVisited(true);
       refreshProgress();
       const credited = r.quests_credited?.length ?? 0;
       Alert.alert(
@@ -251,25 +265,27 @@ export default function POIDetail() {
 
           <View style={styles.actions}>
             <Pressable
-              style={[styles.primaryBtn, busy && { opacity: 0.6 }]}
+              style={[styles.primaryBtn, (busy || visited) && { opacity: visited ? 0.95 : 0.6 }, visited && { backgroundColor: "#2E8B57" }]}
               onPress={handleCheckIn}
-              disabled={busy}
+              disabled={busy || visited}
               testID="poi-checkin"
             >
               <Ionicons
-                name={locPerm?.status === "granted" ? "location" : "location-outline"}
+                name={visited ? "checkmark-circle" : (locPerm?.status === "granted" ? "location" : "location-outline")}
                 size={16}
                 color="#FFF"
               />
               <Text style={styles.primaryBtnText}>
-                {busy
-                  ? "Checking in..."
-                  : locPerm?.status === "granted"
-                    ? "Check in here"
-                    : "Enable GPS to check in"}
+                {visited
+                  ? "Checked in ✓"
+                  : busy
+                    ? "Checking in..."
+                    : locPerm?.status === "granted"
+                      ? "Check in here"
+                      : "Enable GPS to check in"}
               </Text>
             </Pressable>
-            {locPerm && locPerm.status !== "granted" && (
+            {locPerm && locPerm.status !== "granted" && !visited && (
               <Pressable
                 style={styles.gpsHint}
                 onPress={() => {

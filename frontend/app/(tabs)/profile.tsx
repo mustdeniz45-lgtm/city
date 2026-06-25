@@ -337,13 +337,15 @@ export default function ProfileScreen() {
                 <Text style={styles.boardRank}>{i + 1}</Text>
                 {e.avatar_uri && !/^file:\/\//.test(e.avatar_uri) ? (
                   <Image source={e.avatar_uri} style={styles.boardAvatar} contentFit="cover" />
+                ) : ((deviceId === e.device_id && avatar && !/^file:\/\//.test(avatar)) ? (
+                  <Image source={avatar} style={styles.boardAvatar} contentFit="cover" />
                 ) : (
                   <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
                     <Text style={styles.boardAvatarInitial}>
                       {(e.display_name?.[0] ?? "T").toUpperCase()}
                     </Text>
                   </View>
-                )}
+                ))}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.boardName} numberOfLines={1}>
                     {e.display_name} {e.device_id === deviceId ? "(you)" : ""}
