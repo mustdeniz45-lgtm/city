@@ -12,13 +12,28 @@ type Dish = { id: string; name: string; description: string; image: string; tags
 type Tab = "dishes" | "restaurants";
 
 export default function FoodScreen() {
-  const { activeCityId } = useApp();
+  const { activeCityId, deviceId, progressVersion } = useApp();
   const [food, setFood] = useState<POI[]>([]);
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [tab, setTab] = useState<Tab>("dishes");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [tried, setTried] = useState<Set<string>>(new Set());
+  const [visited, setVisited] = useState<Set<string>>(new Set());
+
+  const loadProgress = async () => {
+    if (!deviceId) return;
+    try {
+      const p = await api.progress(deviceId);
+      const ci = new Set<string>();
+      (p.check_ins || []).forEach((c: any) => { if (c.poi_id) ci.add(c.poi_id); });
+      setVisited(ci);
+      const triedList = ((p.quest_progress as any) || {})["__dishes_tried"] || [];
+      setTried(new Set(Array.isArray(triedList) ? triedList : []));
+    } catch {}
+  };
+  useEffect(() => { loadProgress(); }, [deviceId, progressVersion]);
 
   const load = async () => {
     try {
@@ -95,7 +110,7 @@ export default function FoodScreen() {
           key="dishes-list"
           data={filteredDishes}
           keyExtractor={(d) => d.id}
-          renderItem={({ item }) => <DishRow d={item} />}
+          renderItem={({ item }) => <DishRow d={item} tried={tried.has(item.id)} />}
           contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
@@ -121,7 +136,7 @@ export default function FoodScreen() {
           key="restaurants-list"
           data={filteredFood}
           keyExtractor={(f) => f.id}
-          renderItem={({ item }) => <RestaurantCard f={item} />}
+          renderItem={({ item }) => <RestaurantCard f={item} visited={visited.has(item.id)} />}
           contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
@@ -156,7 +171,7 @@ function SegButton({
   );
 }
 
-function DishRow({ d }: { d: Dish }) {
+function DishRow({ d, tried }: { d: Dish; tried: boolean }) {
   const router = useRouter();
   return (
     <Pressable
@@ -166,7 +181,15 @@ function DishRow({ d }: { d: Dish }) {
     >
       <Image source={d.image} style={styles.dishRowImg} contentFit="cover" />
       <View style={styles.dishRowBody}>
-        <Text style={styles.dishRowName} numberOfLines={1}>{d.name}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={styles.dishRowName} numberOfLines={1}>{d.name}</Text>
+          {tried && (
+            <View style={styles.triedBadge}>
+              <Ionicons name="checkmark-circle" size={10} color="#fff" />
+              <Text style={styles.triedText}>TRIED</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.dishRowDesc} numberOfLines={3}>{d.description}</Text>
         <View style={styles.dishRowFoot}>
           <View style={styles.xpBadge}>
@@ -186,7 +209,7 @@ function DishRow({ d }: { d: Dish }) {
   );
 }
 
-function RestaurantCard({ f }: { f: POI }) {
+function RestaurantCard({ f, visited }: { f: POI; visited: boolean }) {
   const router = useRouter();
   return (
     <Pressable
@@ -209,6 +232,12 @@ function RestaurantCard({ f }: { f: POI }) {
             <Ionicons name="flash" size={11} color={colors.brand} />
             <Text style={styles.xpText}>+{f.xp_reward} XP for visiting</Text>
           </View>
+          {visited && (
+            <View style={styles.triedBadge}>
+              <Ionicons name="checkmark-circle" size={10} color="#fff" />
+              <Text style={styles.triedText}>VISITED</Text>
+            </View>
+          )}
           <Ionicons name="chevron-forward" size={14} color={colors.muted} />
         </View>
       </View>
@@ -287,6 +316,8 @@ const styles = StyleSheet.create({
   dishRowName: { fontFamily: fonts.display, fontSize: 18, color: colors.onSurface },
   dishRowDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  triedBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#2E8B57", paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.pill },
+  triedText: { color: "#fff", fontWeight: "800", fontSize: 9, letterSpacing: 0.5 },
   dishRowFoot: { marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   tagPill: { backgroundColor: "#F2EFE8", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   tagText: { fontSize: 10, color: colors.onSurfaceTertiary, fontWeight: "600", letterSpacing: 0.2 },

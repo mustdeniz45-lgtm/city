@@ -20,13 +20,25 @@ const CATEGORIES = [
 ];
 
 export default function ExploreScreen() {
-  const { activeCityId } = useApp();
+  const { activeCityId, deviceId, progressVersion } = useApp();
   const [city, setCity] = useState<City | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [category, setCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [visited, setVisited] = useState<Set<string>>(new Set());
   const router = useRouter();
+
+  const loadVisited = async () => {
+    if (!deviceId) return;
+    try {
+      const p = await api.progress(deviceId);
+      const ids = new Set<string>();
+      (p.check_ins || []).forEach((ci: any) => { if (ci.poi_id) ids.add(ci.poi_id); });
+      setVisited(ids);
+    } catch {}
+  };
+  useEffect(() => { loadVisited(); }, [deviceId, progressVersion]);
 
   const load = async () => {
     try {
@@ -83,7 +95,7 @@ export default function ExploreScreen() {
             </ScrollView>
           </View>
         }
-        renderItem={({ item }) => <POICard poi={item} />}
+        renderItem={({ item }) => <POICard poi={item} visited={visited.has(item.id)} />}
         contentContainerStyle={{ paddingBottom: 120 }}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
@@ -93,7 +105,7 @@ export default function ExploreScreen() {
   );
 }
 
-function POICard({ poi }: { poi: POI }) {
+function POICard({ poi, visited }: { poi: POI; visited: boolean }) {
   const router = useRouter();
   return (
     <Pressable
@@ -122,6 +134,12 @@ function POICard({ poi }: { poi: POI }) {
             <Ionicons name="flash" size={11} color={colors.brand} />
             <Text style={styles.xpText}>+{poi.xp_reward} XP</Text>
           </View>
+          {visited && (
+            <View style={styles.visitedBadge}>
+              <Ionicons name="checkmark-circle" size={11} color="#fff" />
+              <Text style={styles.visitedText}>VISITED</Text>
+            </View>
+          )}
           <View style={styles.openHint}>
             <Text style={styles.openHintText}>View details</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.muted} />
@@ -158,4 +176,6 @@ const styles = StyleSheet.create({
   openHint: { flexDirection: "row", alignItems: "center", gap: 2 },
   openHintText: { color: colors.muted, fontSize: 12, fontWeight: "600" },
   empty: { textAlign: "center", color: colors.muted, padding: spacing.xl },
+});
+ed, padding: spacing.xl },
 });
