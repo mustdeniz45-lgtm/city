@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   xpText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
   openHint: { flexDirection: "row", alignItems: "center", gap: 2 },
   openHintText: { color: colors.muted, fontSize: 12, fontWeight: "600" },
+  visitedBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#16A34A", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
+  visitedText: { color: "#FFF", fontWeight: "800", fontSize: 10, letterSpacing: 0.5 },
   empty: { textAlign: "center", color: colors.muted, padding: spacing.xl },
-});
-ed, padding: spacing.xl },
 });

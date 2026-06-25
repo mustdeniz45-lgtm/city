@@ -26,11 +26,13 @@ const FRAMES: { id: Frame; label: string }[] = [
   { id: "xp",       label: "XP Card"  },
 ];
 
+const MAX_PHOTOS = 6;
+
 export default function CollageScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ photo?: string; poi_name?: string }>();
   const { activeCityId, deviceId } = useApp();
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [frame, setFrame] = useState<Frame>("postcard");
   const [caption, setCaption] = useState("");
   const [city, setCity] = useState<City | null>(null);
@@ -42,12 +44,11 @@ export default function CollageScreen() {
   // Preload photo + caption when launched from a POI's "Make postcard" action.
   useEffect(() => {
     if (typeof params.photo === "string" && params.photo) {
-      setPhotoUri(params.photo);
+      setPhotoUris([params.photo]);
     }
     if (typeof params.poi_name === "string" && params.poi_name && !caption) {
       setCaption(params.poi_name);
     }
-    // We only want this on first mount with these params.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -57,7 +58,7 @@ export default function CollageScreen() {
     getAvatarUri().then(setAvatarUri).catch(console.warn);
   }, [activeCityId, deviceId]);
 
-  // ----- permissions helpers -----
+  // ----- permission helpers -----
 
   const ensureMediaLibrary = async (): Promise<boolean> => {
     const { status, canAskAgain } = await MediaLibrary.getPermissionsAsync();
@@ -79,7 +80,13 @@ export default function CollageScreen() {
 
   // ----- photo picking -----
 
+  const remaining = () => Math.max(0, MAX_PHOTOS - photoUris.length);
+
   const takePhoto = async () => {
+    if (remaining() === 0) {
+      Alert.alert("Max reached", `You can add up to ${MAX_PHOTOS} photos. Remove one to add a new shot.`);
+      return;
+    }
     const { status, canAskAgain } = await ImagePicker.getCameraPermissionsAsync();
     let ok = status === "granted";
     if (!ok && canAskAgain) {
@@ -94,17 +101,20 @@ export default function CollageScreen() {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.9,
-      aspect: [4, 5],
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      setPhotoUris((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
   const pickFromLibrary = async () => {
+    if (remaining() === 0) {
+      Alert.alert("Max reached", `You can add up to ${MAX_PHOTOS} photos. Remove one to add a new shot.`);
+      return;
+    }
     const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
     let ok = status === "granted";
     if (!ok && canAskAgain) {
@@ -118,16 +128,28 @@ export default function CollageScreen() {
       ]);
       return;
     }
+    const left = remaining();
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.9,
-      aspect: [4, 5],
+      allowsMultipleSelection: left > 1,
+      selectionLimit: left,
+      quality: 0.85,
     });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets?.length) {
+      const added = result.assets.map((a) => a.uri).slice(0, left);
+      setPhotoUris((prev) => [...prev, ...added].slice(0, MAX_PHOTOS));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+  };
+
+  const removePhoto = (idx: number) => {
+    setPhotoUris((prev) => prev.filter((_, i) => i !== idx));
+    Haptics.selectionAsync();
+  };
+
+  const clearAll = () => {
+    setPhotoUris([]);
+    setCaption("");
   };
 
   // ----- capture + save + share -----
@@ -154,7 +176,7 @@ export default function CollageScreen() {
   };
 
   const saveToGallery = async () => {
-    if (!photoUri) return;
+    if (photoUris.length === 0) return;
     setBusy(true);
     try {
       const ok = await ensureMediaLibrary();
@@ -174,7 +196,7 @@ export default function CollageScreen() {
   };
 
   const share = async () => {
-    if (!photoUri) return;
+    if (photoUris.length === 0) return;
     setBusy(true);
     try {
       const uri = await capture();
@@ -195,6 +217,8 @@ export default function CollageScreen() {
   };
 
   // ----- render -----
+
+  const hasPhotos = photoUris.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surfaceInverse }} testID="collage-screen">
@@ -218,7 +242,7 @@ export default function CollageScreen() {
               style={styles.canvasShadow}
             >
               <PostcardCanvas
-                photoUri={photoUri}
+                photoUris={photoUris}
                 frame={frame}
                 cityName={city?.name ?? "Your City"}
                 country={city?.country ?? ""}
@@ -231,23 +255,66 @@ export default function CollageScreen() {
             </ViewShot>
           </View>
 
-          {!photoUri && (
-            <View style={styles.pickerBlock}>
-              <Text style={styles.kicker}>STEP 1 — ADD A PHOTO</Text>
-              <View style={styles.pickerRow}>
-                <Pressable style={styles.pickBtn} onPress={takePhoto} testID="collage-take-photo">
-                  <Ionicons name="camera" size={22} color="#FFF" />
-                  <Text style={styles.pickBtnText}>Take photo</Text>
+          {/* Photo strip (selected) + Add buttons */}
+          <View style={styles.stripBlock} testID="photo-strip">
+            <View style={styles.stripHeader}>
+              <Text style={styles.kicker}>
+                {hasPhotos ? `PHOTOS · ${photoUris.length} / ${MAX_PHOTOS}` : "STEP 1 — ADD PHOTOS (UP TO 6)"}
+              </Text>
+              {hasPhotos && (
+                <Pressable hitSlop={10} onPress={clearAll} testID="strip-clear">
+                  <Text style={styles.stripClear}>Clear all</Text>
                 </Pressable>
-                <Pressable style={[styles.pickBtn, styles.pickBtnAlt]} onPress={pickFromLibrary} testID="collage-pick-photo">
-                  <Ionicons name="images" size={22} color={colors.brand} />
-                  <Text style={[styles.pickBtnText, { color: colors.brand }]}>From library</Text>
-                </Pressable>
-              </View>
+              )}
             </View>
-          )}
 
-          {photoUri && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.stripRow}
+            >
+              {photoUris.map((u, i) => (
+                <View key={`${u}_${i}`} style={styles.stripThumbWrap}>
+                  <Image source={u} style={styles.stripThumb} contentFit="cover" />
+                  <Pressable
+                    onPress={() => removePhoto(i)}
+                    style={styles.stripRemove}
+                    hitSlop={8}
+                    testID={`strip-remove-${i}`}
+                  >
+                    <Ionicons name="close" size={14} color="#FFF" />
+                  </Pressable>
+                  <View style={styles.stripIndex}>
+                    <Text style={styles.stripIndexText}>{i + 1}</Text>
+                  </View>
+                </View>
+              ))}
+              {remaining() > 0 && (
+                <>
+                  <Pressable
+                    onPress={pickFromLibrary}
+                    style={styles.stripAddTile}
+                    testID="strip-add-library"
+                  >
+                    <Ionicons name="images" size={22} color="#FFF" />
+                    <Text style={styles.stripAddText}>From library</Text>
+                    <Text style={styles.stripAddHint}>up to {remaining()} more</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={takePhoto}
+                    style={[styles.stripAddTile, styles.stripAddTileAlt]}
+                    testID="strip-add-camera"
+                  >
+                    <Ionicons name="camera" size={22} color={colors.brand} />
+                    <Text style={[styles.stripAddText, { color: colors.brand }]}>Take photo</Text>
+                    <Text style={[styles.stripAddHint, { color: colors.brand, opacity: 0.7 }]}>camera</Text>
+                  </Pressable>
+                </>
+              )}
+            </ScrollView>
+          </View>
+
+          {hasPhotos && (
             <>
               <Text style={[styles.kicker, { paddingHorizontal: spacing.lg, marginTop: spacing.xl }]}>STEP 2 — CHOOSE FRAME</Text>
               <ScrollView
@@ -288,12 +355,12 @@ export default function CollageScreen() {
               <View style={styles.actionRow}>
                 <Pressable
                   style={[styles.actionBtn, styles.actionAlt, busy && { opacity: 0.5 }]}
-                  onPress={() => { setPhotoUri(null); setCaption(""); }}
+                  onPress={clearAll}
                   disabled={busy}
                   testID="collage-replace"
                 >
                   <Ionicons name="refresh" size={18} color="#FFF" />
-                  <Text style={styles.actionText}>Replace photo</Text>
+                  <Text style={styles.actionText}>Reset</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.actionBtn, styles.actionSave, busy && { opacity: 0.5 }]}
@@ -344,7 +411,7 @@ function SocialBadge({ icon, label }: { icon: any; label: string }) {
 // =================== POSTCARD CANVAS ===================
 
 type CanvasProps = {
-  photoUri: string | null;
+  photoUris: string[];
   frame: Frame;
   cityName: string;
   country: string;
@@ -366,12 +433,96 @@ function PostcardCanvas(p: CanvasProps) {
   );
 }
 
-function PhotoOrPlaceholder({ uri }: { uri: string | null }) {
-  if (uri) return <Image source={uri} style={{ width: "100%", height: "100%" }} contentFit="cover" />;
+/**
+ * Adaptive photo montage that lays out 1-6 photos in a balanced grid.
+ *  1 → full bleed
+ *  2 → side-by-side
+ *  3 → one big + two stacked
+ *  4 → 2×2 grid
+ *  5 → one big + 2×2 grid
+ *  6 → 3×2 grid
+ */
+function PhotoMontage({ uris, gap = 4 }: { uris: string[]; gap?: number }) {
+  if (uris.length === 0) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#2A2722" }}>
+        <Ionicons name="image-outline" size={48} color="#666" />
+        <Text style={{ color: "#888", marginTop: 8 }}>Add photos to preview</Text>
+      </View>
+    );
+  }
+  const Img = ({ uri, style }: { uri: string; style?: any }) => (
+    <View style={[{ overflow: "hidden", backgroundColor: "#1A1816" }, style]}>
+      <Image source={uri} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+    </View>
+  );
+
+  if (uris.length === 1) {
+    return <Img uri={uris[0]} style={{ flex: 1 }} />;
+  }
+  if (uris.length === 2) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", gap }}>
+        <Img uri={uris[0]} style={{ flex: 1 }} />
+        <Img uri={uris[1]} style={{ flex: 1 }} />
+      </View>
+    );
+  }
+  if (uris.length === 3) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", gap }}>
+        <Img uri={uris[0]} style={{ flex: 1.4 }} />
+        <View style={{ flex: 1, gap }}>
+          <Img uri={uris[1]} style={{ flex: 1 }} />
+          <Img uri={uris[2]} style={{ flex: 1 }} />
+        </View>
+      </View>
+    );
+  }
+  if (uris.length === 4) {
+    return (
+      <View style={{ flex: 1, gap }}>
+        <View style={{ flex: 1, flexDirection: "row", gap }}>
+          <Img uri={uris[0]} style={{ flex: 1 }} />
+          <Img uri={uris[1]} style={{ flex: 1 }} />
+        </View>
+        <View style={{ flex: 1, flexDirection: "row", gap }}>
+          <Img uri={uris[2]} style={{ flex: 1 }} />
+          <Img uri={uris[3]} style={{ flex: 1 }} />
+        </View>
+      </View>
+    );
+  }
+  if (uris.length === 5) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", gap }}>
+        <Img uri={uris[0]} style={{ flex: 1.3 }} />
+        <View style={{ flex: 1, gap }}>
+          <View style={{ flex: 1, flexDirection: "row", gap }}>
+            <Img uri={uris[1]} style={{ flex: 1 }} />
+            <Img uri={uris[2]} style={{ flex: 1 }} />
+          </View>
+          <View style={{ flex: 1, flexDirection: "row", gap }}>
+            <Img uri={uris[3]} style={{ flex: 1 }} />
+            <Img uri={uris[4]} style={{ flex: 1 }} />
+          </View>
+        </View>
+      </View>
+    );
+  }
+  // 6
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#2A2722" }}>
-      <Ionicons name="image-outline" size={48} color="#666" />
-      <Text style={{ color: "#888", marginTop: 8 }}>Add a photo to preview</Text>
+    <View style={{ flex: 1, gap }}>
+      <View style={{ flex: 1, flexDirection: "row", gap }}>
+        <Img uri={uris[0]} style={{ flex: 1 }} />
+        <Img uri={uris[1]} style={{ flex: 1 }} />
+        <Img uri={uris[2]} style={{ flex: 1 }} />
+      </View>
+      <View style={{ flex: 1, flexDirection: "row", gap }}>
+        <Img uri={uris[3]} style={{ flex: 1 }} />
+        <Img uri={uris[4]} style={{ flex: 1 }} />
+        <Img uri={uris[5]} style={{ flex: 1 }} />
+      </View>
     </View>
   );
 }
@@ -380,7 +531,7 @@ function PostcardFrame(p: CanvasProps) {
   return (
     <View style={{ flex: 1, backgroundColor: "#F5EFE3", padding: 14 }}>
       <View style={{ flex: 1, overflow: "hidden", borderRadius: 4 }}>
-        <PhotoOrPlaceholder uri={p.photoUri} />
+        <PhotoMontage uris={p.photoUris} />
       </View>
       <View style={{ position: "absolute", top: 14, left: 14, right: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
         <View style={{ backgroundColor: "rgba(28,26,23,0.85)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4 }}>
@@ -406,7 +557,7 @@ function PolaroidFrame(p: CanvasProps) {
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF", paddingTop: 16, paddingHorizontal: 16, paddingBottom: 60, transform: [{ rotate: "-1.5deg" }], ...shadow.card }}>
       <View style={{ flex: 1, overflow: "hidden", backgroundColor: "#000" }}>
-        <PhotoOrPlaceholder uri={p.photoUri} />
+        <PhotoMontage uris={p.photoUris} gap={3} />
       </View>
       <View style={{ position: "absolute", bottom: 12, left: 0, right: 0, alignItems: "center", paddingHorizontal: 16 }}>
         <Text style={{ fontFamily: Platform.select({ ios: "Snell Roundhand", android: "cursive", default: "serif" }), fontSize: 18, color: "#1A1816", textAlign: "center" }} numberOfLines={1}>
@@ -421,7 +572,7 @@ function PolaroidFrame(p: CanvasProps) {
 function MagazineFrame(p: CanvasProps) {
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <PhotoOrPlaceholder uri={p.photoUri} />
+      <PhotoMontage uris={p.photoUris} gap={2} />
       <LinearGradient
         colors={["rgba(0,0,0,0.05)", "rgba(0,0,0,0.85)"]}
         style={StyleSheet.absoluteFill}
@@ -444,7 +595,7 @@ function XPFrame(p: CanvasProps) {
   return (
     <View style={{ flex: 1, backgroundColor: "#1A1816" }}>
       <View style={{ flex: 1 }}>
-        <PhotoOrPlaceholder uri={p.photoUri} />
+        <PhotoMontage uris={p.photoUris} gap={2} />
         <LinearGradient
           colors={["rgba(0,0,0,0.05)", "rgba(28,26,23,0.95)"]}
           style={StyleSheet.absoluteFill}
@@ -503,11 +654,20 @@ const styles = StyleSheet.create({
 
   kicker: { color: "#D9953A", fontSize: 10, letterSpacing: 2.5, fontWeight: "800", marginBottom: spacing.sm },
 
-  pickerBlock: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
-  pickerRow: { flexDirection: "row", gap: spacing.md },
-  pickBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.brand, paddingVertical: spacing.md, borderRadius: radius.pill },
-  pickBtnAlt: { backgroundColor: "rgba(200,90,64,0.12)", borderWidth: 1, borderColor: colors.brand },
-  pickBtnText: { color: "#FFF", fontWeight: "700", fontSize: 14 },
+  // Photo strip
+  stripBlock: { paddingHorizontal: spacing.lg, marginTop: spacing.md },
+  stripHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  stripClear: { color: "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: "700", letterSpacing: 1, textDecorationLine: "underline" },
+  stripRow: { gap: spacing.sm, paddingVertical: 4, paddingRight: spacing.lg },
+  stripThumbWrap: { width: 80, height: 100, borderRadius: radius.md, overflow: "visible", position: "relative" },
+  stripThumb: { width: 80, height: 100, borderRadius: radius.md, backgroundColor: "#2A2722" },
+  stripRemove: { position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: "#C85A40", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.surfaceInverse },
+  stripIndex: { position: "absolute", bottom: 4, left: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: "rgba(0,0,0,0.6)" },
+  stripIndexText: { color: "#FFF", fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  stripAddTile: { width: 80, height: 100, borderRadius: radius.md, alignItems: "center", justifyContent: "center", backgroundColor: colors.brand, gap: 2 },
+  stripAddTileAlt: { backgroundColor: "rgba(200,90,64,0.12)", borderWidth: 1, borderColor: colors.brand },
+  stripAddText: { color: "#FFF", fontSize: 11, fontWeight: "700", marginTop: 2 },
+  stripAddHint: { color: "rgba(255,255,255,0.85)", fontSize: 9, fontWeight: "600" },
 
   frameRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.sm },
   frameChip: { flexShrink: 0, height: 36, paddingHorizontal: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.05)" },

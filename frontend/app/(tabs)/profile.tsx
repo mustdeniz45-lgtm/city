@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
+import * as FileSystem from "expo-file-system/legacy";
 import { api, type LeaderEntry, type Progress, type CityProgress } from "@/src/api";
 import { useApp, getDisplayName, setDisplayName, getAvatarUri, setAvatarUri } from "@/src/store";
 import { listPostcards, removePostcard, type Postcard } from "@/src/postcards";
@@ -105,10 +106,19 @@ export default function ProfileScreen() {
           });
         } catch (e) { console.warn("blob->data", e); }
       }
+      // On native, convert local file:// URI to base64 data URI so it can be
+      // synced to the cloud + shown on the leaderboard for everyone.
+      let cloudUri = uri;
+      if (Platform.OS !== "web" && uri.startsWith("file:")) {
+        try {
+          const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          cloudUri = `data:image/jpeg;base64,${b64}`;
+        } catch (e) { console.warn("file->base64", e); }
+      }
       await setAvatarUri(uri);
       setAvatar(uri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (deviceId) api.updateProfile(deviceId, { avatar_uri: uri }).catch(console.warn);
+      if (deviceId) api.updateProfile(deviceId, { avatar_uri: cloudUri }).catch(console.warn);
     }
   };
 
@@ -332,32 +342,45 @@ export default function ProfileScreen() {
           {board.length === 0 ? (
             <Text style={styles.emptyText}>No travelers yet. Be the first!</Text>
           ) : (
-            board.slice(0, 10).map((e, i) => (
-              <View key={e.device_id} style={[styles.boardRow, i < board.length - 1 && styles.boardDivider, e.device_id === deviceId && styles.boardMe]}>
-                <Text style={styles.boardRank}>{i + 1}</Text>
-                {e.avatar_uri && !/^file:\/\//.test(e.avatar_uri) ? (
-                  <Image source={e.avatar_uri} style={styles.boardAvatar} contentFit="cover" />
-                ) : ((deviceId === e.device_id && avatar && !/^file:\/\//.test(avatar)) ? (
-                  <Image source={avatar} style={styles.boardAvatar} contentFit="cover" />
-                ) : (
-                  <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
-                    <Text style={styles.boardAvatarInitial}>
-                      {(e.display_name?.[0] ?? "T").toUpperCase()}
+            board.slice(0, 10).map((e, i) => {
+              const isMe = e.device_id === deviceId;
+              // Pick the best available avatar:
+              //  - For the current user, prefer the local avatar (works even if it's file://).
+              //  - For other rows, only use cross-device URIs (https / data:); skip file:// because
+              //    the file lives on someone else's phone.
+              let renderUri: string | null = null;
+              if (isMe && avatar) renderUri = avatar;
+              else if (e.avatar_uri && !/^file:\/\//i.test(e.avatar_uri)) renderUri = e.avatar_uri;
+              return (
+                <View key={e.device_id} style={[styles.boardRow, i < board.length - 1 && styles.boardDivider, isMe && styles.boardMe]}>
+                  <Text style={[styles.boardRank, i === 0 && { color: "#D9953A" }]}>{i + 1}</Text>
+                  {renderUri ? (
+                    <Image source={renderUri} style={styles.boardAvatar} contentFit="cover" />
+                  ) : (
+                    <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
+                      <Text style={styles.boardAvatarInitial}>
+                        {(e.display_name?.[0] ?? "T").toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  {i < 3 && (
+                    <View style={[styles.boardMedal, i === 0 && { backgroundColor: "#D9953A" }, i === 1 && { backgroundColor: "#B6B6B6" }, i === 2 && { backgroundColor: "#CD7F32" }]}>
+                      <Ionicons name="trophy" size={10} color="#FFF" />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.boardName} numberOfLines={1}>
+                      {e.display_name} {isMe ? "(you)" : ""}
                     </Text>
+                    <Text style={styles.boardMeta}>Lvl {e.level} · {e.title}</Text>
                   </View>
-                ))}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.boardName} numberOfLines={1}>
-                    {e.display_name} {e.device_id === deviceId ? "(you)" : ""}
-                  </Text>
-                  <Text style={styles.boardMeta}>Lvl {e.level} · {e.title}</Text>
+                  <View style={styles.boardXp}>
+                    <Ionicons name="flash" size={12} color={colors.brand} />
+                    <Text style={styles.boardXpText}>{e.xp}</Text>
+                  </View>
                 </View>
-                <View style={styles.boardXp}>
-                  <Ionicons name="flash" size={12} color={colors.brand} />
-                  <Text style={styles.boardXpText}>{e.xp}</Text>
-                </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       </Section>
@@ -413,6 +436,7 @@ const styles = StyleSheet.create({
   boardAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.border },
   boardAvatarFallback: { alignItems: "center", justifyContent: "center", backgroundColor: colors.brandTertiary },
   boardAvatarInitial: { color: "#FFF", fontFamily: fonts.display, fontSize: 16 },
+  boardMedal: { position: "absolute", left: 38, top: 8, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.surface },
   boardName: { fontWeight: "700", color: colors.onSurface, fontSize: 14 },
   boardMeta: { color: colors.muted, fontSize: 11, marginTop: 2 },
   boardXp: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
