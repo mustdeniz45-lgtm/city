@@ -532,9 +532,17 @@ async def poi_check_in(payload: PoiCheckInPayload):
     user.setdefault("completed_quests", [])
     user.setdefault("badges", [])
     user.setdefault("check_ins", [])
-    user.setdefault("quest_progress", {}) or user.update({"quest_progress": {}})
     if user.get("quest_progress") is None:
         user["quest_progress"] = {}
+    # Normalize legacy entries that stored visited POIs as a bare list
+    # (older clients) into the {visited: [...]} shape used today.
+    qp_dict = user["quest_progress"] if isinstance(user.get("quest_progress"), dict) else {}
+    user["quest_progress"] = qp_dict
+    for _qid, _val in list(qp_dict.items()):
+        if isinstance(_val, list):
+            qp_dict[_qid] = {"visited": _val}
+        elif not isinstance(_val, dict):
+            qp_dict[_qid] = {"visited": []}
 
     # Has the user already visited this POI in any quest context?
     already = any(payload.poi_id in (qp.get("visited") or []) for qp in user["quest_progress"].values())
@@ -653,6 +661,14 @@ async def check_in(payload: CheckInPayload):
     if user.get("quest_progress") is None:
         user["quest_progress"] = {}
     user.setdefault("quest_progress", {})
+    # Normalize legacy entries that stored visited POIs as a bare list
+    qp_dict = user["quest_progress"] if isinstance(user.get("quest_progress"), dict) else {}
+    user["quest_progress"] = qp_dict
+    for _qid, _val in list(qp_dict.items()):
+        if isinstance(_val, list):
+            qp_dict[_qid] = {"visited": _val}
+        elif not isinstance(_val, dict):
+            qp_dict[_qid] = {"visited": []}
 
     quest_pois: List[str] = list(quest.get("poi_ids") or [])
     total = len(quest_pois)

@@ -30,6 +30,12 @@ export type POI = {
     plus_code?: string | null;
     tr_description?: string | null;
     raw_categories?: string[] | null;
+    phone?: string | null;
+    google_rating?: number | null;
+    review_count?: number | null;
+    working_hours?: string | null;
+    google_maps_url?: string | null;
+    specialty?: string | null;
   } | null;
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };

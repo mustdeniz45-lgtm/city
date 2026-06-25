@@ -344,17 +344,27 @@ export default function POIDetail() {
 }
 
 function LocationCard({ poi }: { poi: POI }) {
-  const md = (poi.metadata ?? {}) as { address?: string | null; plus_code?: string | null };
+  const md = (poi.metadata ?? {}) as {
+    address?: string | null; plus_code?: string | null; phone?: string | null;
+    working_hours?: string | null; google_maps_url?: string | null;
+    specialty?: string | null; google_rating?: number | null; review_count?: number | null;
+  };
   const address = md.address;
   const plusCode = md.plus_code;
+  const phone = md.phone;
+  const hours = md.working_hours;
+  const specialty = md.specialty;
+  const gRating = md.google_rating;
+  const reviews = md.review_count;
 
   // Always-available "Open in Maps" link using the POI coordinates.
-  const mapsUrl =
-    Platform.OS === "ios"
+  const mapsUrl = md.google_maps_url ??
+    (Platform.OS === "ios"
       ? `https://maps.apple.com/?q=${encodeURIComponent(poi.name)}&ll=${poi.lat},${poi.lng}`
-      : `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lng}&query_place_id=${encodeURIComponent(poi.name)}`;
+      : `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lng}&query_place_id=${encodeURIComponent(poi.name)}`);
 
-  if (!address && !plusCode) {
+  const hasAny = address || plusCode || phone || hours || specialty || gRating;
+  if (!hasAny) {
     return (
       <ComingSoon
         icon="location-outline"
@@ -372,11 +382,44 @@ function LocationCard({ poi }: { poi: POI }) {
         </View>
         <Text style={styles.locTitle}>Location & access</Text>
       </View>
+      {!!specialty && (
+        <View style={styles.locRow}>
+          <Ionicons name="ribbon-outline" size={14} color={colors.brand} style={{ marginTop: 2 }} />
+          <Text style={[styles.locText, { fontWeight: "700", color: colors.onSurface }]}>
+            Specialty: <Text style={{ fontWeight: "400" }}>{specialty}</Text>
+          </Text>
+        </View>
+      )}
+      {!!gRating && (
+        <View style={styles.locRow}>
+          <Ionicons name="star" size={14} color="#C09030" style={{ marginTop: 2 }} />
+          <Text style={styles.locText}>
+            <Text style={{ fontWeight: "700" }}>{gRating.toFixed(1)}</Text>
+            {reviews ? `  ·  ${reviews.toLocaleString()} Google reviews` : "  ·  Google rating"}
+          </Text>
+        </View>
+      )}
+      {!!hours && (
+        <View style={styles.locRow}>
+          <Ionicons name="time-outline" size={14} color={colors.muted} style={{ marginTop: 2 }} />
+          <Text style={styles.locText}>{hours}</Text>
+        </View>
+      )}
       {!!address && (
         <View style={styles.locRow}>
           <Ionicons name="navigate-outline" size={14} color={colors.muted} style={{ marginTop: 2 }} />
           <Text style={styles.locText}>{address}</Text>
         </View>
+      )}
+      {!!phone && (
+        <Pressable
+          onPress={() => Linking.openURL(`tel:${phone.replace(/\s+/g, "")}`)}
+          style={styles.locRow}
+          testID="poi-call"
+        >
+          <Ionicons name="call-outline" size={14} color={colors.brand} style={{ marginTop: 2 }} />
+          <Text style={[styles.locText, { color: colors.brand, fontWeight: "700" }]}>{phone}</Text>
+        </Pressable>
       )}
       {!!plusCode && (
         <View style={styles.locRow}>
