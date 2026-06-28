@@ -90,6 +90,11 @@ _FILTER_TO_RAW = {
     "historic":   "historic",
     "restaurant": "restaurant/cafe",
     "must-see":   "nature",
+    # KY subcategories introduced June-2026 with the v2 dataset
+    "mosque":     "mosques",
+    "han":        "hans",
+    "bath":       "bath",
+    "open-air":   "open air museum",
 }
 
 

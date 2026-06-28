@@ -1,12 +1,12 @@
 [
     {
         "isim": "Beyran Çorbası",
-        "aciklama": "Gaziantep's legendary breakfast soup — thinly sliced lamb, rice, garlic and red butter in a rich bone broth. Eaten at dawn.",
+        "aciklama": "Gaziantep's legendary breakfast soup — shredded lamb, rice, garlic, and red pepper butter in a rich bone broth. Traditionally eaten at dawn.",
         "denendi": false
     },
     {
         "isim": "Yuvarlama",
-        "aciklama": "A warming winter stew of tiny hand-rolled meatballs and chickpeas simmered in lamb broth with dried herbs.",
+        "aciklama": "A festive Gaziantep dish featuring tiny, hand-rolled rice and meat dumplings with chickpeas, simmered in a creamy warm yogurt broth and drizzled with mint oil.",
         "denendi": false
     },
     {
@@ -16,7 +16,7 @@
     },
     {
         "isim": "Antep Kebabı",
-        "aciklama": "Minced lamb and tail fat hand-kneaded with red pepper paste, grilled over charcoal and served on flatbread with sumac onions.",
+        "aciklama": "Hand-minced lamb and tail fat seasoned simply with salt and red capsicum peppers, grilled over charcoal and served on flatbread.",
         "denendi": true
     },
     {
@@ -26,22 +26,22 @@
     },
     {
         "isim": "Simit Kebabı",
-        "aciklama": "Ground meat blended with onion and spices, shaped into thick rings coated with sesame seeds and grilled on skewers.",
+        "aciklama": "A unique Gaziantep kebab where minced lamb is kneaded with fine bulgur wheat (locally called 'simit'), fresh mint, and spices, then grilled on skewers.",
         "denendi": false
     },
     {
         "isim": "Ciğer Kebabı",
-        "aciklama": "Thinly sliced lamb liver marinated in red pepper and cumin, flash-grilled and wrapped in thin flatbread — a beloved street snack.",
+        "aciklama": "Small cubes of lamb liver and tail fat seasoned with cumin and chili, quickly grilled on skewers and wrapped in thin lavaş flatbread.",
         "denendi": false
     },
     {
         "isim": "Patlıcan Kebabı",
-        "aciklama": "Alternating pieces of lamb and charred eggplant threaded on a skewer, basted with tomato and pepper sauce.",
+        "aciklama": "Alternating pieces of sliced eggplant and hand-minced lamb meatballs threaded on a skewer and charred over open coals.",
         "denendi": false
     },
     {
         "isim": "Küşleme",
-        "aciklama": "A Gaziantep exclusive — whole cuts of lamb shoulder slow-roasted in a sealed clay pot with onion and spices until fall-apart tender.",
+        "aciklama": "Gaziantep’s most prized meat delicacy — exceptionally tender lamb tenderloin, lightly seasoned and quickly grilled over charcoal to melt-in-your-mouth perfection.",
         "denendi": false
     },
     {
@@ -51,12 +51,12 @@
     },
     {
         "isim": "Lahmacun",
-        "aciklama": "Paper-thin dough spread with a minced lamb, tomato and herb mixture, baked in a stone oven and rolled with onion and parsley.",
+        "aciklama": "Paper-thin dough spread with a mixture of minced lamb, garlic, tomatoes, and herbs (no onion), baked in a stone oven.",
         "denendi": true
     },
     {
         "isim": "Katmer",
-        "aciklama": "Gossamer-thin dough layers folded over clotted cream (kaymak) and crushed pistachios, cooked on a griddle at dawn. Antep's most beloved breakfast.",
+        "aciklama": "Gossamer-thin dough layers folded over clotted cream (kaymak) and crushed pistachios, baked until crispy. Antep's most beloved breakfast sweet.",
         "denendi": false
     },
     {
@@ -71,7 +71,17 @@
     },
     {
         "isim": "Antep Dolması",
-        "aciklama": "Tender vegetables (pepper, eggplant, squash) hollowed and filled with a spiced rice-and-lamb mixture, simmered in tomato broth until melt-in-mouth.",
+        "aciklama": "Sun-dried vegetables (eggplant and pepper) hollowed and filled with a spiced rice-and-lamb mixture, simmered in a tangy sumac and tomato broth.",
+        "denendi": false
+    },
+    {
+        "isim": "Nohut Dürümü",
+        "aciklama": "A popular Gaziantep street food featuring tender, spiced boiled chickpeas wrapped in warm flatbread with fresh onions, parsley, and lemon.",
+        "denendi": false
+    },
+    {
+        "isim": "Şiveydiz",
+        "aciklama": "A traditional Gaziantep stew made with tender lamb, fresh green garlic, leeks, and chickpeas in a rich, tangy yogurt sauce.",
         "denendi": false
     },
     {
@@ -86,17 +96,12 @@
     },
     {
         "isim": "Şöbiyet",
-        "aciklama": "Similar to baklava but crispier — phyllo triangles filled with clotted cream (kaymak) and pistachio, fried rather than baked. A morning treat.",
+        "aciklama": "Phyllo pastry triangles filled with a rich milk-and-semolina cream (or kaymak) and pistachios, baked to golden perfection and soaked in sweet syrup.",
         "denendi": false
     },
     {
         "isim": "Cevizli Sucuk",
         "aciklama": "Whole walnuts threaded on string, dipped repeatedly in thickened grape must until they form a firm, chewy molasses log.",
-        "denendi": false
-    },
-    {
-        "isim": "Antep Pekmezi",
-        "aciklama": "Slow-reduced grape molasses, the backbone of Gaziantep cooking — drizzled on tahini, stirred into pastry dough, or eaten with bread for breakfast.",
         "denendi": false
     }
 ]
