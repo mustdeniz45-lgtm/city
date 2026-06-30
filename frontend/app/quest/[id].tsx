@@ -243,6 +243,13 @@ export default function QuestDetail() {
                     <View style={styles.reqTrack}>
                       <View style={[styles.reqFill, { width: `${pct * 100}%`, backgroundColor: done ? colors.success : diffColor }]} />
                     </View>
+                    <SuggestionsRow
+                      item={p}
+                      pickCount={Math.max(1, Math.min(p.need, 6))}
+                      onTap={(c) =>
+                        router.push(c.kind === "dish" ? `/dish/${c.id}` : `/poi/${c.id}`)
+                      }
+                    />
                   </View>
                 );
               })}
@@ -459,6 +466,82 @@ function iconForReq(type: string, key: string): any {
   return "checkmark-circle-outline";
 }
 
+function shuffleArr<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function SuggestionsRow({
+  item,
+  pickCount,
+  onTap,
+}: {
+  item: import("@/src/api").RequirementItem;
+  pickCount: number;
+  onTap: (c: import("@/src/api").CandidateSummary) => void;
+}) {
+  const all = item.candidates || [];
+  // Initial pick: unvisited first (so the user gets fresh ideas), then visited.
+  const initialPick = (): string[] => {
+    const unv = shuffleArr(all.filter((c) => !c.visited));
+    const v = shuffleArr(all.filter((c) => c.visited));
+    return [...unv, ...v].slice(0, pickCount).map((c) => c.id);
+  };
+  const [picked, setPicked] = useState<string[]>(initialPick());
+  // Re-pick when candidates pool changes
+  useEffect(() => { setPicked(initialPick()); /* eslint-disable-next-line */ }, [all.length]);
+  const reshuffle = () => {
+    Haptics.selectionAsync();
+    setPicked(initialPick());
+  };
+  const cards = picked
+    .map((id) => all.find((c) => c.id === id))
+    .filter(Boolean) as import("@/src/api").CandidateSummary[];
+  if (all.length === 0) return null;
+  const canShuffle = all.length > pickCount;
+  return (
+    <View style={styles.suggWrap}>
+      <View style={styles.suggHeader}>
+        <Text style={styles.suggLabel}>SUGGESTED · {all.length} options</Text>
+        {canShuffle && (
+          <Pressable onPress={reshuffle} hitSlop={8} style={styles.suggShuffle} testID={`shuffle-${item.key}`}>
+            <Ionicons name="shuffle" size={12} color={colors.brand} />
+            <Text style={styles.suggShuffleText}>Shuffle</Text>
+          </Pressable>
+        )}
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggRow}>
+        {cards.map((c) => (
+          <Pressable
+            key={c.id}
+            onPress={() => onTap(c)}
+            style={[styles.suggCard, c.visited && styles.suggCardDone]}
+            testID={`suggest-${c.id}`}
+          >
+            <View style={styles.suggImg}>
+              {c.image ? (
+                <Image source={c.image} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+              ) : (
+                <Ionicons name={c.kind === "dish" ? "restaurant" : "image-outline"} size={20} color={colors.muted} />
+              )}
+              {c.visited && (
+                <View style={styles.suggBadge}>
+                  <Ionicons name="checkmark" size={10} color="#FFF" />
+                </View>
+              )}
+            </View>
+            <Text style={styles.suggName} numberOfLines={2}>{c.name}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 
 function Meta({ icon, text }: { icon: any; text: string }) {
   return (
@@ -497,6 +580,17 @@ const styles = StyleSheet.create({
   reqFill: { height: "100%", borderRadius: 3 },
   exploreCTA: { marginTop: spacing.xl, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.pill },
   exploreCTAText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
+  suggWrap: { marginTop: spacing.sm },
+  suggHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs },
+  suggLabel: { color: colors.muted, fontSize: 9, letterSpacing: 1.5, fontWeight: "800" },
+  suggShuffle: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: "rgba(200,90,64,0.10)", borderWidth: 1, borderColor: "rgba(200,90,64,0.4)" },
+  suggShuffleText: { color: colors.brand, fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
+  suggRow: { gap: spacing.sm, paddingVertical: spacing.xs },
+  suggCard: { width: 92, alignItems: "center" },
+  suggCardDone: { opacity: 0.6 },
+  suggImg: { width: 92, height: 92, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  suggBadge: { position: "absolute", top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.success, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.surface },
+  suggName: { marginTop: 4, color: colors.text, fontSize: 11, fontWeight: "600", textAlign: "center" },
 
   poiRow: { marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...shadow.pill },
   poiRowDone: { borderColor: colors.success, backgroundColor: "#F2F6F2" },

@@ -39,10 +39,15 @@ export type POI = {
   } | null;
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };
+export type CandidateSummary = {
+  id: string; kind: "poi" | "dish"; name: string; image: string;
+  category?: string; visited: boolean;
+};
 export type RequirementItem = {
   key: string; label: string;
   type: "specific" | "category" | "dishes" | "check_ins" | "ky_all" | "legacy";
   current: number; need: number; poi_id?: string;
+  candidates?: CandidateSummary[];
 };
 export type QuestRequirements = {
   min_check_ins?: number;

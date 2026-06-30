@@ -633,25 +633,37 @@ def _lift_quest(doc: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _poi_matches_group(p: Dict[str, Any], group: Dict[str, Any]) -> bool:
-    """True iff POI satisfies one bucket in a category_groups entry."""
-    if "from_ids" in group:
-        return p["id"] in (group.get("from_ids") or [])
-    if "from_category" in group:
-        return p.get("category") == group["from_category"]
-    if "from_raw" in group:
-        raw_list = ((p.get("metadata") or {}).get("raw_categories")) or []
-        return group["from_raw"] in raw_list
-    return False
+def _poi_summary(p: Dict[str, Any], visited_ids: set) -> Dict[str, Any]:
+    return {
+        "id": p["id"],
+        "kind": "poi",
+        "name": p.get("name") or "",
+        "image": p.get("image") or "",
+        "category": p.get("category") or "",
+        "visited": p["id"] in visited_ids,
+    }
+
+
+def _dish_summary(d: Dict[str, Any], tried_ids: set) -> Dict[str, Any]:
+    return {
+        "id": d["id"],
+        "kind": "dish",
+        "name": d.get("name") or "",
+        "image": d.get("image") or "",
+        "visited": d["id"] in tried_ids,
+    }
 
 
 def evaluate_quest_progress(
     quest_row: Dict[str, Any],
     user: Dict[str, Any],
     city_pois: List[Dict[str, Any]],
+    city_dishes: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Return {satisfied, progress[]} for the given quest + user.
-    Each progress entry: {key, label, type, current, need, [poi_id]}.
+    Each progress entry: {key, label, type, current, need, candidates[], [poi_id]}.
+    `candidates` is the pool of POIs/dishes that satisfy this requirement,
+    used by the UI to render suggested places + a shuffle button.
     """
     lifted = _lift_quest(quest_row)
     req = lifted.get("requirements") or {}
@@ -662,32 +674,51 @@ def evaluate_quest_progress(
     tried_dishes = set(qp.get("__dishes_tried") or [])
 
     poi_map = {p["id"]: p for p in city_pois}
-    visited_pois = [poi_map[i] for i in visited_ids if i in poi_map]
+    city_dishes = city_dishes or []
 
     progress: List[Dict[str, Any]] = []
     ok = True
 
     # 1. Specific POIs — all required
     for pid in (req.get("specific_pois") or []):
-        p = poi_map.get(pid)
-        name = (p or {}).get("name", pid)
+        p = poi_map.get(pid) or {"id": pid, "name": pid}
         done = pid in visited_ids
         progress.append({
-            "key": f"specific_{pid}", "label": name, "type": "specific",
-            "current": 1 if done else 0, "need": 1, "poi_id": pid,
+            "key": f"specific_{pid}",
+            "label": p.get("name", pid),
+            "type": "specific",
+            "current": 1 if done else 0,
+            "need": 1,
+            "poi_id": pid,
+            "candidates": [_poi_summary(p, visited_ids)] if p.get("category") is not None else [],
         })
         if not done:
             ok = False
 
     # 2. Category groups
     for g in req.get("category_groups") or []:
-        n = sum(1 for p in visited_pois if _poi_matches_group(p, g))
+        # Build candidate pool from the group's filter
+        if "from_ids" in g:
+            pool = [poi_map[i] for i in (g.get("from_ids") or []) if i in poi_map]
+        elif "from_category" in g:
+            pool = [p for p in city_pois if p.get("category") == g["from_category"]]
+        elif "from_raw" in g:
+            pool = [
+                p for p in city_pois
+                if g["from_raw"] in (((p.get("metadata") or {}).get("raw_categories")) or [])
+            ]
+        else:
+            pool = []
+
+        n = sum(1 for p in pool if p["id"] in visited_ids)
         need = int(g.get("need", 0))
         progress.append({
             "key": g.get("key") or "group",
             "label": g.get("label") or g.get("key") or "Visits",
             "type": "category",
-            "current": min(n, need), "need": need,
+            "current": min(n, need),
+            "need": need,
+            "candidates": [_poi_summary(p, visited_ids) for p in pool],
         })
         if n < need:
             ok = False
@@ -697,8 +728,12 @@ def evaluate_quest_progress(
     if dishes_min:
         n = len(tried_dishes)
         progress.append({
-            "key": "dishes", "label": "Local dishes tried", "type": "dishes",
-            "current": min(n, dishes_min), "need": dishes_min,
+            "key": "dishes",
+            "label": "Local dishes tried",
+            "type": "dishes",
+            "current": min(n, dishes_min),
+            "need": dishes_min,
+            "candidates": [_dish_summary(d, tried_dishes) for d in city_dishes],
         })
         if n < dishes_min:
             ok = False
@@ -708,8 +743,12 @@ def evaluate_quest_progress(
     if min_ci:
         n = len(visited_ids)
         progress.append({
-            "key": "check_ins", "label": "Places checked-in", "type": "check_ins",
-            "current": min(n, min_ci), "need": min_ci,
+            "key": "check_ins",
+            "label": "Places checked-in",
+            "type": "check_ins",
+            "current": min(n, min_ci),
+            "need": min_ci,
+            "candidates": [_poi_summary(p, visited_ids) for p in city_pois[:50]],
         })
         if n < min_ci:
             ok = False
@@ -720,8 +759,12 @@ def evaluate_quest_progress(
         ky_total = len(ky_pois)
         visited_ky = sum(1 for p in ky_pois if p["id"] in visited_ids)
         progress.append({
-            "key": "ky_all", "label": "Kültür Yolu places", "type": "ky_all",
-            "current": visited_ky, "need": ky_total,
+            "key": "ky_all",
+            "label": "Kültür Yolu places",
+            "type": "ky_all",
+            "current": visited_ky,
+            "need": ky_total,
+            "candidates": [_poi_summary(p, visited_ids) for p in ky_pois],
         })
         if visited_ky < ky_total:
             ok = False
@@ -729,10 +772,12 @@ def evaluate_quest_progress(
     # Legacy: no v2 requirements, fall back to old poi_ids semantics
     if not progress and quest_row.get("poi_ids"):
         ids = list(quest_row.get("poi_ids") or [])
+        legacy_pool = [poi_map[i] for i in ids if i in poi_map]
         n = sum(1 for i in ids if i in visited_ids)
         progress.append({
             "key": "legacy", "label": "Visits", "type": "legacy",
             "current": n, "need": len(ids),
+            "candidates": [_poi_summary(p, visited_ids) for p in legacy_pool],
         })
         if n < len(ids):
             ok = False
@@ -791,7 +836,8 @@ async def get_quest_progress(quest_id: str, device_id: str = Query(...)):
         "quest_progress": {},
     }
     pois = await repo.pois_list(quest["city_id"])
-    result = evaluate_quest_progress(quest, user, pois)
+    dishes = await repo.dishes_list(quest["city_id"])
+    result = evaluate_quest_progress(quest, user, pois, city_dishes=dishes)
     return {
         "quest_id": quest_id,
         "completed": quest_id in (user.get("completed_quests") or []),
