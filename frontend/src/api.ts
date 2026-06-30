@@ -39,11 +39,28 @@ export type POI = {
   } | null;
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };
+export type RequirementItem = {
+  key: string; label: string;
+  type: "specific" | "category" | "dishes" | "check_ins" | "ky_all" | "legacy";
+  current: number; need: number; poi_id?: string;
+};
+export type QuestRequirements = {
+  min_check_ins?: number;
+  specific_pois?: string[];
+  category_groups?: { key: string; need: number; label: string; from_category?: string; from_raw?: string; from_ids?: string[] }[];
+  dishes_min?: number;
+  ky_visit_all?: boolean;
+};
 export type Quest = {
   id: string; city_id: string; title: string; description: string;
   difficulty: "easy" | "medium" | "hard"; category: string;
   xp_reward: number; poi_ids: string[]; cover_image: string;
   estimated_minutes: number; badge_name?: string; trivia?: Trivia;
+  requirements?: QuestRequirements | null;
+};
+export type QuestProgressResponse = {
+  quest_id: string; completed: boolean; satisfied: boolean;
+  progress: RequirementItem[];
 };
 export type Progress = {
   device_id: string; display_name: string; xp: number;
@@ -93,6 +110,8 @@ export const api = {
   quests: (id: string, difficulty?: string) =>
     jget<Quest[]>(`/cities/${id}/quests${difficulty && difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`),
   quest: (id: string) => jget<Quest>(`/quests/${id}`),
+  questProgress: (id: string, deviceId: string) =>
+    jget<QuestProgressResponse>(`/quests/${id}/progress?device_id=${encodeURIComponent(deviceId)}`),
   poi: (id: string) => jget<POI>(`/pois/${id}`),
   poiCheckIn: (payload: { device_id: string; poi_id: string; lat?: number; lng?: number; display_name?: string }) =>
     jpost<{ success: boolean; too_far: boolean; distance_m: number | null; quests_credited: string[]; already_visited: boolean; message: string }>(

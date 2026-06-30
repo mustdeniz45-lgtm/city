@@ -81,6 +81,10 @@ class Quest(BaseModel):
     estimated_minutes: int = 60
     badge_name: Optional[str] = None
     trivia: Optional[TriviaQuestion] = None
+    # Flexible requirements for v2 quests (mosques=N, museums=N, dishes=N, etc.).
+    # Stored inside the `trivia` JSONB column as `trivia.requirements` (since we
+    # cannot add a column at runtime). Lifted to the top level by `_lift_quest`.
+    requirements: Optional[Dict[str, Any]] = None
 
 class CheckInPayload(BaseModel):
     device_id: str
@@ -576,6 +580,10 @@ async def poi_check_in(payload: PoiCheckInPayload):
         user["display_name"] = payload.display_name
     user["updated_at"] = datetime.now(timezone.utc).isoformat()
 
+    # Re-evaluate ALL city quests now that this POI was visited.
+    new_quest_ids, quest_xp = await _recompute_quest_completion(user, poi["city_id"])
+    credited.extend(new_quest_ids)
+
     await repo.progress_upsert(payload.device_id, user)
 
     new_level = get_level(user["xp"])["level"]
@@ -607,17 +615,189 @@ async def poi_check_in(payload: PoiCheckInPayload):
     )
 
 
+def _lift_quest(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract `trivia.requirements` to top-level `requirements` and strip the
+    nested copy so the returned `trivia` is a clean TriviaQuestion (or None).
+    """
+    out = dict(doc)
+    triv = out.get("trivia") or None
+    if isinstance(triv, dict):
+        triv = dict(triv)
+        reqs = triv.pop("requirements", None)
+        if reqs:
+            out["requirements"] = reqs
+        # If only the embedded requirements remained (no real question), null trivia
+        if not triv.get("question"):
+            triv = None
+        out["trivia"] = triv
+    return out
+
+
+def _poi_matches_group(p: Dict[str, Any], group: Dict[str, Any]) -> bool:
+    """True iff POI satisfies one bucket in a category_groups entry."""
+    if "from_ids" in group:
+        return p["id"] in (group.get("from_ids") or [])
+    if "from_category" in group:
+        return p.get("category") == group["from_category"]
+    if "from_raw" in group:
+        raw_list = ((p.get("metadata") or {}).get("raw_categories")) or []
+        return group["from_raw"] in raw_list
+    return False
+
+
+def evaluate_quest_progress(
+    quest_row: Dict[str, Any],
+    user: Dict[str, Any],
+    city_pois: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Return {satisfied, progress[]} for the given quest + user.
+    Each progress entry: {key, label, type, current, need, [poi_id]}.
+    """
+    lifted = _lift_quest(quest_row)
+    req = lifted.get("requirements") or {}
+    visited_ids = {
+        ci.get("poi_id") for ci in (user.get("check_ins") or []) if ci.get("poi_id")
+    }
+    qp = user.get("quest_progress") or {}
+    tried_dishes = set(qp.get("__dishes_tried") or [])
+
+    poi_map = {p["id"]: p for p in city_pois}
+    visited_pois = [poi_map[i] for i in visited_ids if i in poi_map]
+
+    progress: List[Dict[str, Any]] = []
+    ok = True
+
+    # 1. Specific POIs — all required
+    for pid in (req.get("specific_pois") or []):
+        p = poi_map.get(pid)
+        name = (p or {}).get("name", pid)
+        done = pid in visited_ids
+        progress.append({
+            "key": f"specific_{pid}", "label": name, "type": "specific",
+            "current": 1 if done else 0, "need": 1, "poi_id": pid,
+        })
+        if not done:
+            ok = False
+
+    # 2. Category groups
+    for g in req.get("category_groups") or []:
+        n = sum(1 for p in visited_pois if _poi_matches_group(p, g))
+        need = int(g.get("need", 0))
+        progress.append({
+            "key": g.get("key") or "group",
+            "label": g.get("label") or g.get("key") or "Visits",
+            "type": "category",
+            "current": min(n, need), "need": need,
+        })
+        if n < need:
+            ok = False
+
+    # 3. Dishes
+    dishes_min = int(req.get("dishes_min") or 0)
+    if dishes_min:
+        n = len(tried_dishes)
+        progress.append({
+            "key": "dishes", "label": "Local dishes tried", "type": "dishes",
+            "current": min(n, dishes_min), "need": dishes_min,
+        })
+        if n < dishes_min:
+            ok = False
+
+    # 4. Minimum check-ins (welcome quest)
+    min_ci = int(req.get("min_check_ins") or 0)
+    if min_ci:
+        n = len(visited_ids)
+        progress.append({
+            "key": "check_ins", "label": "Places checked-in", "type": "check_ins",
+            "current": min(n, min_ci), "need": min_ci,
+        })
+        if n < min_ci:
+            ok = False
+
+    # 5. ky_visit_all
+    if req.get("ky_visit_all"):
+        ky_pois = [p for p in city_pois if p.get("kultur_yolu")]
+        ky_total = len(ky_pois)
+        visited_ky = sum(1 for p in ky_pois if p["id"] in visited_ids)
+        progress.append({
+            "key": "ky_all", "label": "Kültür Yolu places", "type": "ky_all",
+            "current": visited_ky, "need": ky_total,
+        })
+        if visited_ky < ky_total:
+            ok = False
+
+    # Legacy: no v2 requirements, fall back to old poi_ids semantics
+    if not progress and quest_row.get("poi_ids"):
+        ids = list(quest_row.get("poi_ids") or [])
+        n = sum(1 for i in ids if i in visited_ids)
+        progress.append({
+            "key": "legacy", "label": "Visits", "type": "legacy",
+            "current": n, "need": len(ids),
+        })
+        if n < len(ids):
+            ok = False
+
+    return {"satisfied": ok and bool(progress), "progress": progress}
+
+
+async def _recompute_quest_completion(
+    user: Dict[str, Any], city_id: str
+) -> tuple[List[str], int]:
+    """Re-evaluate every quest in the city for the user; auto-complete any whose
+    requirements are now satisfied and credit XP. Returns (newly_completed, xp_added).
+    """
+    quests = await repo.quests_list(city_id)
+    pois = await repo.pois_list(city_id)
+    user.setdefault("completed_quests", [])
+    user.setdefault("quest_progress", {})
+
+    new_ids: List[str] = []
+    xp_added = 0
+    for q in quests:
+        if q["id"] in user["completed_quests"]:
+            continue
+        result = evaluate_quest_progress(q, user, pois)
+        if result["satisfied"]:
+            new_ids.append(q["id"])
+            user["completed_quests"].append(q["id"])
+            xp_added += int(q.get("xp_reward") or 0)
+    if xp_added:
+        user["xp"] = int(user.get("xp") or 0) + xp_added
+    return new_ids, xp_added
+
+
+
 @api_router.get("/cities/{city_id}/quests", response_model=List[Quest])
 async def list_quests(city_id: str, difficulty: Optional[str] = Query(None)):
     docs = await repo.quests_list(city_id, difficulty=difficulty)
-    return [Quest(**d) for d in docs]
+    return [Quest(**_lift_quest(d)) for d in docs]
 
 @api_router.get("/quests/{quest_id}", response_model=Quest)
 async def get_quest(quest_id: str):
     doc = await repo.quests_get(quest_id)
     if not doc:
         raise HTTPException(404, "Quest not found")
-    return Quest(**doc)
+    return Quest(**_lift_quest(doc))
+
+
+@api_router.get("/quests/{quest_id}/progress")
+async def get_quest_progress(quest_id: str, device_id: str = Query(...)):
+    """Return live, fine-grained progress for a quest+device pair."""
+    quest = await repo.quests_get(quest_id)
+    if not quest:
+        raise HTTPException(404, "Quest not found")
+    user = await repo.progress_get(device_id) or {
+        "device_id": device_id, "xp": 0, "completed_quests": [], "check_ins": [],
+        "quest_progress": {},
+    }
+    pois = await repo.pois_list(quest["city_id"])
+    result = evaluate_quest_progress(quest, user, pois)
+    return {
+        "quest_id": quest_id,
+        "completed": quest_id in (user.get("completed_quests") or []),
+        "satisfied": result["satisfied"],
+        "progress": result["progress"],
+    }
 
 @api_router.get("/progress/{device_id}")
 async def get_progress(device_id: str):
@@ -958,6 +1138,10 @@ async def dish_tried(payload: DishTriedPayload):
         xp_earned = DISH_XP
         prev_level = get_level(user["xp"])["level"]
         user["xp"] = int(user.get("xp") or 0) + xp_earned
+
+        # Recompute flexible quest completion (e.g. Culinary Deep Dive)
+        await _recompute_quest_completion(user, "gaziantep")
+
         leveled_up = get_level(user["xp"])["level"] > prev_level
 
     if payload.display_name:

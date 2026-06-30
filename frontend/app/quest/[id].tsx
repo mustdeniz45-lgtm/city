@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
-import { api, type Quest, type POI, type CheckInResult } from "@/src/api";
+import { api, type Quest, type POI, type CheckInResult, type QuestProgressResponse } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
 import { colors, difficultyColor, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -44,6 +44,7 @@ export default function QuestDetail() {
   const [busy, setBusy] = useState(false);
   const [activePoiId, setActivePoiId] = useState<string | null>(null);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [reqProgress, setReqProgress] = useState<QuestProgressResponse | null>(null);
 
   // Read (but don't request) current GPS — if already granted, fetch a single fix
   // so each POI card can show a live "~XX m away" badge.
@@ -82,6 +83,13 @@ export default function QuestDetail() {
               setPhase("trivia");
             }
           }
+        }
+        // For flexible v2 quests (requirements-based), fetch live category progress.
+        if (deviceId && q.requirements) {
+          try {
+            const rp = await api.questProgress(id, deviceId);
+            setReqProgress(rp);
+          } catch (e) { console.warn("req progress", e); }
         }
       } catch (e) { console.warn(e); }
     })();
@@ -197,6 +205,57 @@ export default function QuestDetail() {
         <View style={styles.body}>
           <Text style={styles.sectionLabel}>ABOUT</Text>
           <Text style={styles.desc}>{quest.description}</Text>
+
+          {quest.requirements && reqProgress && (
+            <View style={{ marginTop: spacing.lg }}>
+              <View style={styles.progressHead}>
+                <Text style={styles.sectionLabel}>OBJECTIVES</Text>
+                {reqProgress.completed ? (
+                  <View style={[styles.distancePill, styles.distancePillIn]}>
+                    <Ionicons name="checkmark-circle" size={11} color={colors.success} />
+                    <Text style={[styles.distanceText, { color: colors.success }]}>Completed</Text>
+                  </View>
+                ) : reqProgress.satisfied ? (
+                  <View style={[styles.distancePill, styles.distancePillIn]}>
+                    <Ionicons name="trophy" size={11} color={colors.success} />
+                    <Text style={[styles.distanceText, { color: colors.success }]}>Ready to claim</Text>
+                  </View>
+                ) : null}
+              </View>
+              {reqProgress.progress.map((p) => {
+                const done = p.current >= p.need;
+                const pct = p.need === 0 ? 0 : Math.min(1, p.current / p.need);
+                return (
+                  <View key={p.key} style={styles.reqRow}>
+                    <View style={styles.reqHead}>
+                      <View style={[styles.reqIcon, done && { backgroundColor: colors.success }]}>
+                        <Ionicons
+                          name={done ? "checkmark" : iconForReq(p.type, p.key)}
+                          size={14}
+                          color={done ? "#FFF" : colors.brand}
+                        />
+                      </View>
+                      <Text style={[styles.reqLabel, done && { color: colors.muted }]} numberOfLines={1}>
+                        {p.label}
+                      </Text>
+                      <Text style={[styles.reqCount, done && { color: colors.success }]}>{p.current}/{p.need}</Text>
+                    </View>
+                    <View style={styles.reqTrack}>
+                      <View style={[styles.reqFill, { width: `${pct * 100}%`, backgroundColor: done ? colors.success : diffColor }]} />
+                    </View>
+                  </View>
+                );
+              })}
+              <Pressable
+                onPress={() => router.push("/(tabs)/explore")}
+                style={styles.exploreCTA}
+                testID="quest-explore-cta"
+              >
+                <Ionicons name="compass" size={16} color="#FFF" />
+                <Text style={styles.exploreCTAText}>Find places to visit</Text>
+              </Pressable>
+            </View>
+          )}
 
           {total > 0 && (
             <View style={styles.progressBar}>
@@ -386,6 +445,21 @@ export default function QuestDetail() {
   );
 }
 
+function iconForReq(type: string, key: string): any {
+  if (type === "dishes") return "restaurant";
+  if (type === "check_ins") return "location";
+  if (type === "ky_all") return "footsteps";
+  if (key === "mosque") return "moon-outline";
+  if (key === "han") return "business-outline";
+  if (key === "bath") return "water-outline";
+  if (key === "museum") return "library-outline";
+  if (key === "landmark") return "flag-outline";
+  if (key === "ancient") return "hourglass-outline";
+  if (key === "nature") return "leaf-outline";
+  return "checkmark-circle-outline";
+}
+
+
 function Meta({ icon, text }: { icon: any; text: string }) {
   return (
     <View style={styles.metaItem}>
@@ -414,6 +488,15 @@ const styles = StyleSheet.create({
   progressCount: { fontSize: 12, fontWeight: "700", color: colors.onSurfaceTertiary, marginBottom: spacing.sm },
   progressTrack: { height: 6, backgroundColor: colors.surfaceTertiary, borderRadius: 3, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 3 },
+  reqRow: { marginTop: spacing.md },
+  reqHead: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
+  reqIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center", marginRight: spacing.sm },
+  reqLabel: { flex: 1, color: colors.text, fontSize: 14, fontWeight: "600" },
+  reqCount: { color: colors.muted, fontWeight: "800", fontSize: 13, marginLeft: spacing.sm },
+  reqTrack: { height: 5, backgroundColor: colors.surfaceTertiary, borderRadius: 3, overflow: "hidden" },
+  reqFill: { height: "100%", borderRadius: 3 },
+  exploreCTA: { marginTop: spacing.xl, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.pill },
+  exploreCTAText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
 
   poiRow: { marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...shadow.pill },
   poiRowDone: { borderColor: colors.success, backgroundColor: "#F2F6F2" },
