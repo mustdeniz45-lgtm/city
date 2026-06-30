@@ -30,13 +30,11 @@ EMINE_GOGUS = "poi-gaz-014-emine-g-culinary-museum"
 TAHMIS_COFFEE = "poi-gaz-037-tahmis-coffee-house"
 
 # Curated pools for non-tag categories
+# Ancient sites = the 3 canonical archaeological sites of the Gaziantep region
 ANCIENT_POOL = [
-    "poi-gaz-082-zeugma-belk-s-ancient-city",
-    "poi-gaz-083-yesemek-open-air-museum",
-    "poi-gaz-061-karkam-ancient-city",
-    "poi-gaz-084-d-l-k-baba-doliche",
-    "poi-gaz-059-rumkale-fortress",
-    "poi-gaz-060-ravanda-castle",
+    "poi-gaz-083-yesemek-open-air-museum",      # KY #83 — Yesemek
+    "poi-gaz-082-zeugma-belk-s-ancient-city",   # KY #82 — Zeugma
+    "poi-gaz-061-karkam-ancient-city",          # KY #61 — Karkamış
 ]
 
 NATURE_POOL = [
@@ -201,7 +199,7 @@ QUESTS = [
     },
     {
         "id": "q-gaz-110", "title": "The Complete Pilgrim",
-        "description": "An epic journey across the city: 8 landmarks, 8 museums, 4 ancient sites, 7 mosques and 15 local dishes.",
+        "description": "An epic journey across the city: 8 landmarks, 8 museums, 3 ancient sites, 7 mosques and 15 local dishes.",
         "difficulty": "hard", "category": "must-see",
         "xp_reward": 900, "estimated_minutes": 2160,
         "badge_name": "Antep Pilgrim", "cover_image": COVER["pilgrim"],
@@ -209,7 +207,7 @@ QUESTS = [
             "category_groups": [
                 {"key": "landmark", "need": 8, "from_category": "landmark", "label": "Landmarks"},
                 {"key": "museum",   "need": 8, "from_category": "museum",   "label": "Museums"},
-                {"key": "ancient",  "need": 4, "from_ids": ANCIENT_POOL,    "label": "Ancient Sites"},
+                {"key": "ancient",  "need": 3, "from_ids": ANCIENT_POOL,    "label": "Ancient Sites"},
                 {"key": "mosque",   "need": 7, "from_raw": "mosques",       "label": "Mosques"},
             ],
             "dishes_min": 15,
