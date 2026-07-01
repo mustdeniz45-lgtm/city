@@ -1,0 +1,15 @@
+{
+  "summary": "Scoped backend-only regression for the Kültür Yolu Champion quest (q-gaz-111) fix. All 3 required assertions pass: (1) quest definition now has exactly one category_group {key:'ky53', need:53, from_ids length=53, all IDs starting poi-gaz-0, none of the forbidden ky_seq>53 IDs present, ky_visit_all absent}; (2) /progress with device_id=demo returns a single progress entry with label 'Kültür Yolu places', current=0, need=53, candidates length=53 and every candidate id is canonical (starts with poi-gaz-0); (3) real device dev_1781112987199_80ro378w returns current=41 (<= 53) against need=53, confirming counting is now scoped to the 53 canonical POIs rather than 96. 7/7 pytest tests pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": ["/app/backend/tests/test_quest_ky53.py", "/app/test_reports/pytest/quest_ky53.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": ["/app/backend/tests/test_quest_ky53.py"],
+  "success_rate": {"backend": "100%", "frontend": "not tested (scoped to backend per request)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "q-gaz-111 fix verified. Real device dev_1781112987199_80ro378w progress: current=41/53 (was previously counted against 96). Test file /app/backend/tests/test_quest_ky53.py is a stable regression for this quest.",
+  "rca_of_issue": "N/A — validating fix, not diagnosing new bug."
+}

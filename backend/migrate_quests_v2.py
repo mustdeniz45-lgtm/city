@@ -216,20 +216,32 @@ QUESTS = [
     },
     {
         "id": "q-gaz-111", "title": "Kültür Yolu Champion",
-        "description": "Walk every single Kültür Yolu stop in the city. The ultimate Gaziantep accomplishment.",
+        "description": "Walk every one of the 53 canonical Kültür Yolu stops in Gaziantep. The ultimate accomplishment.",
         "difficulty": "hard", "category": "historic",
         "xp_reward": 2000, "estimated_minutes": 4320,
         "badge_name": "Kültür Yolu Champion", "cover_image": COVER["champion"],
-        "requirements": {"ky_visit_all": True},
+        # Requirement rebuilt at seed-time from live DB (ky_seq 1..53). See __main__.
+        "requirements": {"ky53_canonical": True},
         "trivia": None,
     },
 ]
 
 
-def build_trivia_blob(q: dict) -> dict | None:
+def build_trivia_blob(q: dict, ky53_ids: list[str] | None = None) -> dict | None:
     """Embed `requirements` inside the trivia JSONB column (since we can't
-    add a column). Optional `trivia` question is preserved if provided."""
-    req = q.get("requirements") or {}
+    add a column). Optional `trivia` question is preserved if provided.
+    Expands the special `ky53_canonical: true` shortcut into a real
+    `from_ids` category_group at seed-time.
+    """
+    req = dict(q.get("requirements") or {})
+    if req.pop("ky53_canonical", False):
+        assert ky53_ids and len(ky53_ids) == 53, "ky53_ids must be exactly 53 IDs"
+        req["category_groups"] = [{
+            "key": "ky53",
+            "need": 53,
+            "from_ids": ky53_ids,
+            "label": "Kültür Yolu places",
+        }]
     blob = dict(q.get("trivia") or {})
     blob["requirements"] = req
     return blob or None
@@ -240,6 +252,22 @@ def main():
     sb = get_supabase()
     if sb is None:
         print("❌ Supabase not configured")
+        return
+
+    # Load the canonical 53 KY POIs (ky_seq 1..53) — used by Q-111
+    ky53_rows = (
+        sb.table("pois")
+        .select("id,ky_seq")
+        .eq("city_id", CITY_ID)
+        .eq("kultur_yolu", True)
+        .lte("ky_seq", 53)
+        .order("ky_seq")
+        .execute()
+        .data or []
+    )
+    ky53_ids = [r["id"] for r in ky53_rows]
+    if len(ky53_ids) != 53:
+        print(f"⚠️  Expected 53 canonical KY POIs, got {len(ky53_ids)}. Q-111 may not seed.")
         return
 
     existing = sb.table("quests").select("id,title").eq("city_id", CITY_ID).execute().data or []
@@ -265,7 +293,7 @@ def main():
             "cover_image": q["cover_image"],
             "estimated_minutes": q["estimated_minutes"],
             "badge_name": q.get("badge_name"),
-            "trivia": build_trivia_blob(q),
+            "trivia": build_trivia_blob(q, ky53_ids=ky53_ids),
         }
         if dry:
             req = q.get("requirements") or {}
