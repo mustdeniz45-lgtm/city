@@ -1308,7 +1308,7 @@ async def list_reviews(poi_id: str, limit: int = Query(50, le=100)):
         return []
     devs = list({r["device_id"] for r in rows})
     profiles = {p["device_id"]: p for p in
-        (sb.table("progress").select("device_id,display_name,avatar_uri,xp,title,level")
+        (sb.table("progress").select("device_id,display_name,avatar_uri,xp")
          .in_("device_id", devs).execute().data or [])}
     return [{**r, "author": profiles.get(r["device_id"], {})} for r in rows]
 
