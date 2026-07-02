@@ -145,4 +145,31 @@ export const api = {
       if (!r.ok) throw new Error(`link-device failed: ${r.status}`);
       return r.json() as Promise<{ status: string; user_id: string; device_id: string }>;
     }),
+  // CityQuest Verified Score (CVS)
+  cvs: (poiId: string) => jget<CVSResponse>(`/pois/${poiId}/cvs`),
+  reviewEligibility: (poiId: string, deviceId: string) =>
+    jget<{ eligible: boolean; window_hours: number; reason: string | null }>(
+      `/pois/${poiId}/reviews/eligibility?device_id=${encodeURIComponent(deviceId)}`
+    ),
+  reviews: (poiId: string) => jget<ReviewRow[]>(`/pois/${poiId}/reviews`),
+  submitReview: (poiId: string, payload: {
+    device_id: string; overall: number;
+    dimensions: Record<string, number>; comment?: string;
+  }) => jpost<{ ok: boolean; review: ReviewRow }>(`/pois/${poiId}/reviews`, payload),
+};
+
+export type CVSResponse = {
+  cvs: number; confidence: "high" | "medium" | "low";
+  review_count: number; verified_count: number;
+  cq_score: number | null; google_score: number;
+  user_trust_score: number;
+  dimensions: Record<string, number | null>;
+  breakdown_weights: { cityquest: number; trust: number; google: number };
+};
+export type ReviewRow = {
+  id: string; poi_id: string; device_id: string;
+  overall: number; dimensions: Record<string, number>;
+  comment: string | null; verified: boolean;
+  helpful_count: number; created_at: string;
+  author?: { display_name?: string; avatar_uri?: string; xp?: number; title?: string; level?: number };
 };

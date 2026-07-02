@@ -14,7 +14,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -23,7 +23,7 @@ load_dotenv(ROOT_DIR / ".env")
 # This avoids opening an idle Mongo connection when DATA_BACKEND=supabase.
 
 import repo  # data-access layer (selects Mongo vs Supabase via DATA_BACKEND env)
-from supabase_client import data_backend
+from supabase_client import data_backend, get_supabase
 from auth import get_current_user, get_optional_user, user_id_of
 
 app = FastAPI(title="CityQuest API")
@@ -1234,9 +1234,6 @@ async def supabase_health():
         return {"configured": True, "data_backend": data_backend(), "error": str(e)[:200]}
 
 
-app.include_router(api_router)
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -1254,7 +1251,163 @@ async def on_startup():
     await seed_extra_assets()
 
 
+# =====================================================================
+# CityQuest Verified Score (CVS) — reviews + eligibility + aggregation
+# =====================================================================
+
+RESTAURANT_DIMS = ["food", "service", "value", "authenticity"]
+OTHER_DIMS      = ["exhibition", "information", "authenticity", "accessibility"]
+VERIFY_WINDOW_HOURS = 24
+CVS_MIN_REVIEWS = 3
+
+class ReviewIn(BaseModel):
+    device_id: str
+    overall: int  # 1..5
+    dimensions: Dict[str, int]  # e.g. {"food":5,"service":4,...}
+    comment: Optional[str] = None
+
+def _dims_for_category(cat: str) -> List[str]:
+    return RESTAURANT_DIMS if cat == "restaurant" else OTHER_DIMS
+
+def _has_recent_checkin(user: dict, poi_id: str) -> bool:
+    now = datetime.now(timezone.utc)
+    for ci in user.get("check_ins") or []:
+        if ci.get("poi_id") != poi_id:
+            continue
+        try:
+            at = datetime.fromisoformat(str(ci.get("at")).replace("Z", "+00:00"))
+        except Exception:
+            continue
+        if now - at <= timedelta(hours=VERIFY_WINDOW_HOURS):
+            return True
+    return False
+
+async def _poi_or_404(poi_id: str) -> Dict[str, Any]:
+    poi = await repo.pois_get(poi_id)
+    if not poi:
+        raise HTTPException(404, "POI not found")
+    return poi
+
+@api_router.get("/pois/{poi_id}/reviews/eligibility")
+async def review_eligibility(poi_id: str, device_id: str = Query(...)):
+    await _poi_or_404(poi_id)
+    user = await repo.progress_get(device_id) or {"check_ins": []}
+    eligible = _has_recent_checkin(user, poi_id)
+    return {"eligible": eligible, "window_hours": VERIFY_WINDOW_HOURS,
+            "reason": None if eligible else "Check-in required within the last 24 h."}
+
+@api_router.get("/pois/{poi_id}/reviews")
+async def list_reviews(poi_id: str, limit: int = Query(50, le=100)):
+    await _poi_or_404(poi_id)
+    sb = get_supabase()
+    try:
+        rows = sb.table("reviews").select("*").eq("poi_id", poi_id).eq("hidden", False) \
+            .order("helpful_count", desc=True).order("created_at", desc=True).limit(limit).execute().data or []
+    except Exception as e:
+        logger.warning("reviews table not ready: %s", e)
+        return []
+    devs = list({r["device_id"] for r in rows})
+    profiles = {p["device_id"]: p for p in
+        (sb.table("progress").select("device_id,display_name,avatar_uri,xp,title,level")
+         .in_("device_id", devs).execute().data or [])}
+    return [{**r, "author": profiles.get(r["device_id"], {})} for r in rows]
+
+@api_router.post("/pois/{poi_id}/reviews")
+async def create_review(poi_id: str, payload: ReviewIn):
+    poi = await _poi_or_404(poi_id)
+    if not (1 <= payload.overall <= 5):
+        raise HTTPException(400, "overall must be 1..5")
+    dims_needed = _dims_for_category(poi.get("category") or "other")
+    dims: Dict[str, int] = {}
+    for k in dims_needed:
+        v = payload.dimensions.get(k)
+        if not isinstance(v, int) or not (1 <= v <= 5):
+            raise HTTPException(400, f"dimension `{k}` must be 1..5")
+        dims[k] = v
+
+    # A short comment is required so reviews carry real signal for other travellers.
+    comment_clean = (payload.comment or "").strip()
+    if len(comment_clean) < 20:
+        raise HTTPException(400, "Comment must be at least 20 characters — tell fellow travellers what you thought.")
+
+    user = await repo.progress_get(payload.device_id) or {"check_ins": []}
+    verified = _has_recent_checkin(user, poi_id)
+    if not verified:
+        raise HTTPException(403, f"Verified visit required within {VERIFY_WINDOW_HOURS}h.")
+
+    sb = get_supabase()
+    row = {
+        "poi_id": poi_id, "device_id": payload.device_id,
+        "overall": payload.overall, "dimensions": dims,
+        "comment": comment_clean[:1000],
+        "verified": verified,
+    }
+    result = sb.table("reviews").upsert(row, on_conflict="poi_id,device_id").execute()
+    return {"ok": True, "review": (result.data or [row])[0]}
+
+@api_router.get("/pois/{poi_id}/cvs")
+async def get_cvs(poi_id: str):
+    """CityQuest Verified Score — weighted 60/20/20 (verified reviews / user
+    trust proxy / google_rating). Falls back to google_rating when we have
+    <3 verified reviews."""
+    poi = await _poi_or_404(poi_id)
+    sb = get_supabase()
+    try:
+        rows = sb.table("reviews").select("overall,dimensions").eq("poi_id", poi_id) \
+            .eq("hidden", False).limit(500).execute().data or []
+    except Exception as e:
+        logger.warning("reviews table not ready: %s", e)
+        rows = []
+    n = len(rows)
+    dims_all = _dims_for_category(poi.get("category") or "other")
+
+    # Google rating from POI metadata or top-level `rating` (1..5 → 0..100)
+    md = (poi.get("metadata") or {})
+    google_raw = md.get("google_rating") or poi.get("rating") or 0
+    google_100 = float(google_raw) * 20 if google_raw and google_raw <= 5 else float(google_raw)
+
+    if n == 0:
+        return {
+            "cvs": round(google_100, 1), "confidence": "low",
+            "review_count": 0, "verified_count": 0,
+            "cq_score": None, "google_score": round(google_100, 1),
+            "user_trust_score": 60, "dimensions": {d: None for d in dims_all},
+            "breakdown_weights": {"cityquest": 0.0, "trust": 0.0, "google": 1.0},
+        }
+
+    cq_avg  = sum(r["overall"] for r in rows) / n              # 1..5
+    cq_100  = cq_avg * 20                                       # 0..100
+    dim_avg = {}
+    for d in dims_all:
+        vals = [r["dimensions"].get(d) for r in rows if r.get("dimensions", {}).get(d)]
+        dim_avg[d] = round(sum(vals) / len(vals), 2) if vals else None
+
+    # v1 trust: constant 60 until Phase 2's User Trust Score lands.
+    trust_100 = 60.0
+    if n >= CVS_MIN_REVIEWS:
+        cvs = 0.60 * cq_100 + 0.20 * trust_100 + 0.20 * google_100
+        conf, weights = "high", {"cityquest": 0.60, "trust": 0.20, "google": 0.20}
+    else:
+        # Blend gently while we still have <3 reviews.
+        blend = n / CVS_MIN_REVIEWS
+        cvs = blend * cq_100 + (1 - blend) * google_100
+        conf, weights = "medium", {"cityquest": round(blend, 2), "trust": 0.0, "google": round(1 - blend, 2)}
+
+    return {
+        "cvs": round(cvs, 1), "confidence": conf,
+        "review_count": n, "verified_count": sum(1 for r in rows if r.get("overall")),
+        "cq_score": round(cq_100, 1), "google_score": round(google_100, 1),
+        "user_trust_score": trust_100, "dimensions": dim_avg,
+        "breakdown_weights": weights,
+    }
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     # Mongo and Supabase clients are managed lazily; nothing to clean up here.
     return
+
+
+# IMPORTANT: include the API router LAST so that all endpoints declared above
+# (including the CVS reviews block) are actually mounted.
+app.include_router(api_router)

@@ -10,6 +10,7 @@ import * as ImagePicker from "expo-image-picker";
 import { api, type POI } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
 import { addPhoto, listPhotos, removePhoto, type PlacePhoto } from "@/src/photos";
+import ReviewsSection from "@/src/components/ReviewsSection";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -342,6 +343,9 @@ export default function POIDetail() {
             onMakePostcard={onMakePostcard}
             onDelete={onDeletePhoto}
           />
+
+          {/* CityQuest Verified Score + latest reviews */}
+          <ReviewsSection poiId={poi.id} poiCategory={poi.category} deviceId={deviceId} />
 
           {isFood ? (
             <ComingSoon icon="restaurant-outline" title="Menu highlights" subtitle="Signature dishes and price range — coming soon." />
