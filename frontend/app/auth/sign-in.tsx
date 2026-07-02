@@ -11,7 +11,7 @@ import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 export default function SignInScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signInWithEmail, getAccessToken } = useAuth();
+  const { signInWithEmail, signInWithGoogle, signInWithApple, getAccessToken } = useAuth();
   const { deviceId, refreshProgress } = useApp();
 
   const [email, setEmail] = useState("");
@@ -96,6 +96,42 @@ export default function SignInScreen() {
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Sign in</Text>}
         </Pressable>
 
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Pressable
+          onPress={async () => {
+            setBusy(true); setErr(null);
+            try { await signInWithGoogle(); }
+            catch (e: any) { setErr(e?.message ?? "Google sign-in failed"); }
+            finally { setBusy(false); }
+          }}
+          disabled={busy}
+          style={[styles.oauthBtn, busy && styles.btnDisabled]}
+          testID="signin-google"
+        >
+          <Ionicons name="logo-google" size={18} color={colors.onSurface} />
+          <Text style={styles.oauthText}>Continue with Google</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={async () => {
+            setBusy(true); setErr(null);
+            try { await signInWithApple(); }
+            catch (e: any) { setErr(e?.message ?? "Apple sign-in failed"); }
+            finally { setBusy(false); }
+          }}
+          disabled={busy}
+          style={[styles.oauthBtn, styles.oauthBtnApple, busy && styles.btnDisabled]}
+          testID="signin-apple"
+        >
+          <Ionicons name="logo-apple" size={20} color="#FFF" />
+          <Text style={[styles.oauthText, { color: "#FFF" }]}>Continue with Apple</Text>
+        </Pressable>
+
         <Pressable onPress={() => router.replace("/auth/sign-up")} style={{ marginTop: spacing.lg }}>
           <Text style={styles.link}>Don&apos;t have an account? <Text style={{ color: colors.brand, fontWeight: "700" }}>Sign up</Text></Text>
         </Pressable>
@@ -135,5 +171,11 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: "#fff", fontWeight: "700", fontSize: 15, letterSpacing: 0.3 },
+  divider: { flexDirection: "row", alignItems: "center", marginVertical: spacing.md, gap: spacing.sm },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.muted, fontSize: 11, letterSpacing: 2, fontWeight: "700" },
+  oauthBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, paddingVertical: 14, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
+  oauthBtnApple: { backgroundColor: "#000", borderColor: "#000" },
+  oauthText: { color: colors.onSurface, fontWeight: "700", fontSize: 15, letterSpacing: 0.2 },
   link: { textAlign: "center", color: colors.muted, fontSize: 13.5 },
 });

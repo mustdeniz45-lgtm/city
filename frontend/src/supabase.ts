@@ -51,6 +51,7 @@ export const supabase = createClient(url ?? "", anonKey ?? "", {
     storage: SecureChunkAdapter as any,
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === "web", // web handles the callback natively
+    flowType: "pkce",                           // required for signInWithOAuth exchange
   },
 });
