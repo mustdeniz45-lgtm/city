@@ -68,6 +68,7 @@ export default function MapScreen() {
 <html><head>
 <meta name="viewport" content="initial-scale=1, width=device-width, maximum-scale=1, user-scalable=no" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <style>
   html,body,#m{margin:0;padding:0;height:100%;background:#F0EFEB;font-family:-apple-system,system-ui,sans-serif}
   .pin{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
@@ -88,9 +89,33 @@ export default function MapScreen() {
   .btn-primary{background:#C85A40;color:#fff}
   .btn-secondary{background:#F0EFEB;color:#1A1816;border:1px solid #E1DED6}
   .btn svg{width:12px;height:12px;flex:0 0 12px}
+
+  /* Custom cluster styling — matches CityQuest palette.
+     Using !important because leaflet.markercluster injects its own
+     .marker-cluster wrapper class that our divIcon inherits. */
+  .marker-cluster{background:transparent !important;}
+  .marker-cluster div{background:transparent !important;margin:0 !important;width:100% !important;height:100% !important;}
+  .cq-cluster{
+    display:flex !important;align-items:center;justify-content:center;flex-direction:column;
+    color:#fff !important;font-weight:800 !important;font-family:-apple-system,system-ui,sans-serif;
+    border-radius:50%;border:3px solid #fff;
+    box-shadow:0 2px 10px rgba(0,0,0,0.28);
+    transition:transform 120ms ease;
+    box-sizing:border-box;
+  }
+  .cq-cluster:hover{transform:scale(1.06)}
+  .cq-cluster-sm{width:38px !important;height:38px !important;font-size:13px !important;background:#C85A40 !important;}
+  .cq-cluster-md{width:46px !important;height:46px !important;font-size:14px !important;background:#B14A32 !important;}
+  .cq-cluster-lg{width:56px !important;height:56px !important;font-size:16px !important;background:#8E3823 !important;box-shadow:0 0 0 6px rgba(200,90,64,0.18),0 2px 10px rgba(0,0,0,0.28);}
+  /* Green ring when the cluster's places are mostly visited */
+  .cq-cluster.done-mostly{background:#2E8B57 !important;box-shadow:0 0 0 5px rgba(46,139,87,0.18),0 2px 10px rgba(0,0,0,0.25);}
+  .cq-cluster.done-all{background:#1E6B42 !important;box-shadow:0 0 0 6px rgba(46,139,87,0.28),0 2px 10px rgba(0,0,0,0.28);}
+  .cq-cluster .cnt{line-height:1;display:block}
+  .cq-cluster .tick{font-size:9px;margin-top:1px;opacity:0.9;letter-spacing:0.4px;display:block}
 </style>
 </head><body><div id="m"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
   const map = L.map('m', { zoomControl: true, attributionControl: false }).setView([${city.lat}, ${city.lng}], 13);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -99,6 +124,37 @@ export default function MapScreen() {
   const KY_COLOR = ${JSON.stringify(KY_COLOR)};
   const VISITED = ${JSON.stringify(VISITED_COLOR)};
   const markers = [];
+
+  // Marker cluster group — auto groups nearby pins into a single badge with
+  // the count of places in that area. At zoom >= 17 (street level) each pin
+  // is shown individually so users can pick specific places.
+  const cluster = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: true,
+    zoomToBoundsOnClick: true,
+    maxClusterRadius: 55,
+    disableClusteringAtZoom: 17,
+    iconCreateFunction: function(c) {
+      const kids = c.getAllChildMarkers();
+      const total = kids.length;
+      let visitedCount = 0;
+      for (let i = 0; i < kids.length; i++) if (kids[i].__visited) visitedCount++;
+      const ratio = visitedCount / total;
+
+      const sizeCls = total < 5 ? 'cq-cluster-sm' : total < 15 ? 'cq-cluster-md' : 'cq-cluster-lg';
+      const dim = total < 5 ? 38 : total < 15 ? 46 : 56;
+      const doneCls = ratio === 1 ? 'done-all' : ratio >= 0.6 ? 'done-mostly' : '';
+      const sub = visitedCount > 0
+        ? '<span class="tick">' + visitedCount + '/' + total + ' &#10003;</span>'
+        : '';
+      return L.divIcon({
+        className: 'cq-cluster-wrap',
+        html: '<div class="cq-cluster ' + sizeCls + ' ' + doneCls + '" aria-label="' + total + ' places in this area">'
+          + '<span class="cnt">' + total + '</span>' + sub + '</div>',
+        iconSize: [dim, dim], iconAnchor: [dim / 2, dim / 2]
+      });
+    }
+  });
 
   // Bridge: send messages back to RN / parent web for nav + directions
   function send(msg) {
@@ -143,9 +199,13 @@ export default function MapScreen() {
         '<button class="btn btn-primary" onclick="openDetails(\\''+jsEscape(p.id)+'\\')">Details</button>'+
       '</div>';
 
-    var m = L.marker([p.lat, p.lng], { icon }).addTo(map).bindPopup(popupHtml, { maxWidth: 280 });
+    var m = L.marker([p.lat, p.lng], { icon }).bindPopup(popupHtml, { maxWidth: 280 });
+    m.__visited = !!p.visited;
+    cluster.addLayer(m);
     markers.push(m);
   });
+
+  map.addLayer(cluster);
 
   if (markers.length){
     const group = L.featureGroup(markers);
@@ -192,6 +252,10 @@ export default function MapScreen() {
           <Legend dot={CAT_COLOR.historic} label="Historic" />
           <Legend dot={CAT_COLOR.restaurant} label="Food" />
         </View>
+        <Text style={styles.hint}>
+          <Ionicons name="information-circle-outline" size={11} color={colors.muted} />
+          {`  Nearby places are grouped — tap a cluster or zoom in to expand.`}
+        </Text>
         {visited.size > 0 && (
           <Text style={styles.progressNote}>
             <Ionicons name="checkmark-circle" size={11} color={VISITED_COLOR} />
@@ -239,5 +303,6 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 11, color: colors.muted, fontWeight: "600" },
   progressNote: { marginTop: spacing.sm, fontSize: 11, color: colors.muted, fontWeight: "600" },
+  hint: { marginTop: spacing.xs, fontSize: 10.5, color: colors.muted, fontStyle: "italic" },
   mapWrap: { flex: 1, paddingBottom: 78 },
 });
