@@ -30,6 +30,7 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [visited, setVisited] = useState<Set<string>>(new Set());
+  const [cvsMap, setCvsMap] = useState<Record<string, number>>({});
   const router = useRouter();
 
   const loadVisited = async () => {
@@ -61,6 +62,13 @@ export default function ExploreScreen() {
   };
 
   useEffect(() => { setLoading(true); load(); }, [activeCityId, category]);
+
+  // Batch-fetch CVS scores for every POI in the city so cards can show the
+  // proprietary CityQuest score instead of the raw Google star rating.
+  useEffect(() => {
+    if (!activeCityId) return;
+    api.cvsSummary(activeCityId).then(setCvsMap).catch(() => setCvsMap({}));
+  }, [activeCityId, progressVersion]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="explore-screen">
@@ -98,7 +106,7 @@ export default function ExploreScreen() {
             </ScrollView>
           </View>
         }
-        renderItem={({ item }) => <POICard poi={item} visited={visited.has(item.id)} />}
+        renderItem={({ item }) => <POICard poi={item} visited={visited.has(item.id)} cvs={cvsMap[item.id]} />}
         contentContainerStyle={{ paddingBottom: 120 }}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
@@ -108,7 +116,7 @@ export default function ExploreScreen() {
   );
 }
 
-function POICard({ poi, visited }: { poi: POI; visited: boolean }) {
+function POICard({ poi, visited, cvs }: { poi: POI; visited: boolean; cvs?: number }) {
   const router = useRouter();
   return (
     <Pressable
@@ -122,10 +130,13 @@ function POICard({ poi, visited }: { poi: POI; visited: boolean }) {
           <Text style={styles.cardCategory}>
             {poi.kultur_yolu ? `KÜLTÜR YOLU · #${poi.ky_seq}` : poi.category.toUpperCase()}
           </Text>
-          <View style={styles.rating}>
-            <Ionicons name="star" size={11} color={colors.brandSecondary} />
-            <Text style={styles.ratingText}>{poi.rating.toFixed(1)}</Text>
-          </View>
+          {cvs != null && (
+            <View style={styles.cvsPill}>
+              <Ionicons name="shield-checkmark" size={10} color="#FFF" />
+              <Text style={styles.cvsPillVal}>{Math.round(cvs)}</Text>
+              <Text style={styles.cvsPillSlash}>/100</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.cardTitle} numberOfLines={1}>{poi.name}</Text>
         {poi.name_tr && poi.name_tr !== poi.name && (
@@ -170,6 +181,9 @@ const styles = StyleSheet.create({
   cardCategory: { fontSize: 10, letterSpacing: 1.5, color: colors.brandTertiary, fontWeight: "700" },
   rating: { flexDirection: "row", alignItems: "center", gap: 3 },
   ratingText: { fontSize: 12, color: colors.onSurfaceTertiary, fontWeight: "600" },
+  cvsPill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: colors.brand, paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: radius.pill },
+  cvsPillVal: { color: "#FFF", fontWeight: "800", fontSize: 11 },
+  cvsPillSlash: { color: "rgba(255,255,255,0.75)", fontWeight: "700", fontSize: 9 },
   cardTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.onSurface, marginBottom: 4 },
   cardSubtitle: { fontStyle: "italic", color: colors.brandTertiary, fontSize: 12, marginBottom: 4 },
   cardDesc: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: spacing.md },

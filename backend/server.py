@@ -1402,6 +1402,59 @@ async def get_cvs(poi_id: str):
     }
 
 
+@app.get("/api/cities/{city_id}/cvs-summary")
+async def get_cvs_summary(city_id: str):
+    """Returns CityQuest Verified Score for every POI in the city as a compact
+    ``{poi_id: score}`` map. Used by list screens (Explore, Food) so we can
+    display a single proprietary score per card instead of the raw Google rating.
+
+    Score is computed with the same 60/20/20 (cq / trust / google) blend as
+    ``/api/pois/{id}/cvs``, but batched: one review-fetch, one poi-fetch.
+    Any POI with no reviews falls back to `google_rating * 20`.
+    """
+    sb = get_supabase()
+    # Fetch all POIs for the city in one round trip (id + rating only).
+    pois = (
+        sb.table("pois").select("id,rating,metadata").eq("city_id", city_id)
+        .limit(2000).execute().data or []
+    )
+    if not pois:
+        return {}
+
+    # Pull all reviews for these POIs in one shot; we compute overall averages
+    # locally to avoid N round-trips.
+    poi_ids = [p["id"] for p in pois]
+    reviews_by_poi: Dict[str, List[Dict[str, Any]]] = {i: [] for i in poi_ids}
+    try:
+        rows = (
+            sb.table("reviews").select("poi_id,overall")
+            .in_("poi_id", poi_ids).eq("hidden", False).limit(5000).execute().data or []
+        )
+        for r in rows:
+            reviews_by_poi.setdefault(r["poi_id"], []).append(r)
+    except Exception as e:
+        logger.warning("cvs-summary: reviews table not ready: %s", e)
+
+    out: Dict[str, float] = {}
+    for p in pois:
+        md = p.get("metadata") or {}
+        google_raw = md.get("google_rating") or p.get("rating") or 0
+        google_100 = float(google_raw) * 20 if google_raw and google_raw <= 5 else float(google_raw)
+        n = len(reviews_by_poi.get(p["id"], []))
+        if n == 0:
+            out[p["id"]] = round(google_100, 1)
+            continue
+        cq_100 = (sum(r["overall"] for r in reviews_by_poi[p["id"]]) / n) * 20
+        trust_100 = 60.0
+        if n >= CVS_MIN_REVIEWS:
+            score = 0.60 * cq_100 + 0.20 * trust_100 + 0.20 * google_100
+        else:
+            blend = n / CVS_MIN_REVIEWS
+            score = blend * cq_100 + (1 - blend) * google_100
+        out[p["id"]] = round(score, 1)
+    return out
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     # Mongo and Supabase clients are managed lazily; nothing to clean up here.

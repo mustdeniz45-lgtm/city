@@ -257,10 +257,6 @@ export default function POIDetail() {
             )}
             <View style={styles.metaRow}>
               <View style={styles.meta}>
-                <Ionicons name="star" size={12} color={colors.brandSecondary} />
-                <Text style={styles.metaText}>{poi.rating.toFixed(1)}</Text>
-              </View>
-              <View style={styles.meta}>
                 <Ionicons name="flash" size={12} color="#FFF" />
                 <Text style={styles.metaText}>+{poi.xp_reward} XP</Text>
               </View>

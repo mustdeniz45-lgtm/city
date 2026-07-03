@@ -21,6 +21,7 @@ export default function FoodScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tried, setTried] = useState<Set<string>>(new Set());
   const [visited, setVisited] = useState<Set<string>>(new Set());
+  const [cvsMap, setCvsMap] = useState<Record<string, number>>({});
 
   const loadProgress = async () => {
     if (!deviceId) return;
@@ -44,6 +45,13 @@ export default function FoodScreen() {
     finally { setLoading(false); setRefreshing(false); }
   };
   useEffect(() => { setLoading(true); setQuery(""); load(); }, [activeCityId]);
+
+  // Batch CVS scores for every POI in the city — shown per restaurant card
+  // in place of the raw Google star rating (proprietary score only).
+  useEffect(() => {
+    if (!activeCityId) return;
+    api.cvsSummary(activeCityId).then(setCvsMap).catch(() => setCvsMap({}));
+  }, [activeCityId, progressVersion]);
 
   const q = query.trim().toLowerCase();
   const filteredFood = useMemo(
@@ -136,7 +144,7 @@ export default function FoodScreen() {
           key="restaurants-list"
           data={filteredFood}
           keyExtractor={(f) => f.id}
-          renderItem={({ item }) => <RestaurantCard f={item} visited={visited.has(item.id)} />}
+          renderItem={({ item }) => <RestaurantCard f={item} visited={visited.has(item.id)} cvs={cvsMap[item.id]} />}
           contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
@@ -209,7 +217,7 @@ function DishRow({ d, tried }: { d: Dish; tried: boolean }) {
   );
 }
 
-function RestaurantCard({ f, visited }: { f: POI; visited: boolean }) {
+function RestaurantCard({ f, visited, cvs }: { f: POI; visited: boolean; cvs?: number }) {
   const router = useRouter();
   return (
     <Pressable
@@ -221,10 +229,13 @@ function RestaurantCard({ f, visited }: { f: POI; visited: boolean }) {
       <View style={styles.cardBody}>
         <View style={styles.row}>
           <Text style={styles.cardTitle} numberOfLines={1}>{f.name}</Text>
-          <View style={styles.rating}>
-            <Ionicons name="star" size={12} color={colors.brandSecondary} />
-            <Text style={styles.ratingText}>{f.rating.toFixed(1)}</Text>
-          </View>
+          {cvs != null && (
+            <View style={styles.cvsPill}>
+              <Ionicons name="shield-checkmark" size={10} color="#FFF" />
+              <Text style={styles.cvsPillVal}>{Math.round(cvs)}</Text>
+              <Text style={styles.cvsPillSlash}>/100</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.cardDesc} numberOfLines={2}>{f.description}</Text>
         <View style={styles.footerRow}>
@@ -295,6 +306,9 @@ const styles = StyleSheet.create({
   cardTitle: { flex: 1, fontFamily: fonts.display, fontSize: 18, color: colors.onSurface, marginRight: spacing.sm },
   rating: { flexDirection: "row", alignItems: "center", gap: 3 },
   ratingText: { fontSize: 12, color: colors.onSurfaceTertiary, fontWeight: "600" },
+  cvsPill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: colors.brand, paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: radius.pill },
+  cvsPillVal: { color: "#FFF", fontWeight: "800", fontSize: 11 },
+  cvsPillSlash: { color: "rgba(255,255,255,0.75)", fontWeight: "700", fontSize: 9 },
   cardDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   xpBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCE9E1", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill, alignSelf: "flex-start" },
   xpText: { color: colors.brand, fontWeight: "700", fontSize: 11 },

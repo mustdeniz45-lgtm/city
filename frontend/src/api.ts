@@ -147,6 +147,7 @@ export const api = {
     }),
   // CityQuest Verified Score (CVS)
   cvs: (poiId: string) => jget<CVSResponse>(`/pois/${poiId}/cvs`),
+  cvsSummary: (cityId: string) => jget<Record<string, number>>(`/cities/${cityId}/cvs-summary`),
   reviewEligibility: (poiId: string, deviceId: string) =>
     jget<{ eligible: boolean; window_hours: number; reason: string | null }>(
       `/pois/${poiId}/reviews/eligibility?device_id=${encodeURIComponent(deviceId)}`
