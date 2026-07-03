@@ -29,6 +29,7 @@ export default function POIDetail() {
   const [busy, setBusy] = useState(false);
   const [photos, setPhotos] = useState<PlacePhoto[]>([]);
   const [visited, setVisited] = useState(false);
+  const [cvsScore, setCvsScore] = useState<number | null>(null);
 
   // Detect if this POI is already checked in by the user
   const checkVisitedStatus = useCallback(async () => {
@@ -44,6 +45,13 @@ export default function POIDetail() {
 
   useEffect(() => {
     api.poi(id).then(setPoi).catch(console.warn);
+  }, [id]);
+
+  // Also fetch the CVS score so it can be shown as a pill in the header
+  // (next to rating + XP). Silent fail so a missing CVS doesn't break the page.
+  useEffect(() => {
+    if (!id) return;
+    api.cvs(id).then((c) => setCvsScore(c?.cvs ?? null)).catch(() => setCvsScore(null));
   }, [id]);
 
   const loadPhotos = useCallback(async () => {
@@ -256,6 +264,15 @@ export default function POIDetail() {
                 <Ionicons name="flash" size={12} color="#FFF" />
                 <Text style={styles.metaText}>+{poi.xp_reward} XP</Text>
               </View>
+              {cvsScore !== null && (
+                <View style={styles.metaCvs} testID="header-cvs-pill">
+                  <Ionicons name="shield-checkmark" size={11} color="#FFF" />
+                  <Text style={styles.metaCvsText}>
+                    <Text style={styles.metaCvsVal}>{Math.round(cvsScore)}</Text>
+                    <Text style={styles.metaCvsSlash}>/100</Text>
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -614,9 +631,15 @@ const styles = StyleSheet.create({
   kyPillText: { color: "#FFF", fontSize: 9, letterSpacing: 1, fontWeight: "800" },
   title: { fontFamily: fonts.display, color: "#FFF", fontSize: 30, letterSpacing: -0.3 },
   subtitleTR: { color: "rgba(255,255,255,0.92)", fontStyle: "italic", fontSize: 13, marginTop: 2 },
-  metaRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  metaRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, flexWrap: "wrap" },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
   metaText: { color: "#FFF", fontSize: 11, fontWeight: "700" },
+  // CityQuest Verified Score pill — visually distinct (terracotta) so users can
+  // spot the proprietary score at a glance next to Google-style star + XP.
+  metaCvs: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.brand, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
+  metaCvsText: { color: "#FFF", fontWeight: "800" },
+  metaCvsVal: { color: "#FFF", fontSize: 12, fontWeight: "800" },
+  metaCvsSlash: { color: "rgba(255,255,255,0.75)", fontSize: 10, fontWeight: "700" },
 
   body: { padding: spacing.lg },
   sectionLabel: { fontSize: 11, letterSpacing: 2, color: colors.brand, fontWeight: "700", marginBottom: spacing.sm },
