@@ -331,7 +331,15 @@ export default function POIDetail() {
             </Text>
           </View>
 
-          <ComingSoon icon="time-outline" title="Opening hours" subtitle="Daily schedule + holiday closures arriving soon." />
+          {/* Status banner (temporarily closed / under construction) */}
+          <StatusBanner poi={poi} />
+
+          {/* Opening hours widget is rendered inside LocationCard when
+              metadata.open_hours is present; otherwise the Coming Soon
+              placeholder stays until real data lands. */}
+          {!hasHours(poi) && (
+            <ComingSoon icon="time-outline" title="Opening hours" subtitle="Daily schedule + holiday closures arriving soon." />
+          )}
 
           {/* Location & access — populated from canonical dataset when available */}
           <LocationCard poi={poi} />
@@ -363,18 +371,55 @@ export default function POIDetail() {
   );
 }
 
+function hasHours(poi: POI): boolean {
+  const md = (poi.metadata ?? {}) as any;
+  return !!(md.open_hours || md.working_hours);
+}
+
+/** Small pill banner shown above the main info when the venue is either
+ *  under construction or temporarily closed — sourced from `metadata.status`. */
+function StatusBanner({ poi }: { poi: POI }) {
+  const status = (poi.metadata as any)?.status as string | undefined;
+  if (!status || status === "open") return null;
+  const isConstr = /construction/i.test(status);
+  const isClosed = /closed/i.test(status);
+  if (!isConstr && !isClosed) return null;
+  const label = isConstr ? "Currently under construction" : "Temporarily closed";
+  const iconName = isConstr ? "construct" : "close-circle";
+  const tint = isConstr ? "#D9953A" : "#B33939";
+  return (
+    <View style={[styles.statusBanner, { backgroundColor: tint + "1A", borderColor: tint }]} testID="poi-status-banner">
+      <Ionicons name={iconName as any} size={16} color={tint} />
+      <Text style={[styles.statusBannerText, { color: tint }]} numberOfLines={2}>
+        {label}. Please verify opening times before visiting.
+      </Text>
+    </View>
+  );
+}
+
 function LocationCard({ poi }: { poi: POI }) {
   const md = (poi.metadata ?? {}) as {
-    address?: string | null; plus_code?: string | null; phone?: string | null;
-    working_hours?: string | null; google_maps_url?: string | null;
-    specialty?: string | null; google_rating?: number | null; review_count?: number | null;
+    address?: string | null; plus_code?: string | null;
+    phone?: string | null; phone_number?: string | null;
+    working_hours?: string | null; open_hours?: string | null;
+    google_maps_url?: string | null; website?: string | null;
+    specialty?: string | null;
+    google_rating?: number | null; review_count?: number | null;
+    google_reviews?: string | null;
+    entry_fee_museum_card_accepted?: string | boolean | null;
   };
   const address = md.address;
   const plusCode = md.plus_code;
-  const phone = md.phone;
-  const hours = md.working_hours;
+  // Accept both the older key (`phone`, `working_hours`) and the JSON one
+  // (`phone_number`, `open_hours`) so newly enriched POIs render immediately.
+  const phone = md.phone_number || md.phone;
+  const hours = md.open_hours || md.working_hours;
+  const website = md.website;
+  const entryFee = md.entry_fee_museum_card_accepted;
   const specialty = md.specialty;
-  const gRating = md.google_rating;
+  // Prefer explicit `google_rating`, fall back to the top-level `rating`
+  // that the migration writes (parsed from `google_reviews`).
+  const gRating = md.google_rating ?? poi.rating;
   const reviews = md.review_count;
 
   // Always-available "Open in Maps" link using the POI coordinates.
@@ -383,7 +428,7 @@ function LocationCard({ poi }: { poi: POI }) {
       ? `https://maps.apple.com/?q=${encodeURIComponent(poi.name)}&ll=${poi.lat},${poi.lng}`
       : `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lng}&query_place_id=${encodeURIComponent(poi.name)}`);
 
-  const hasAny = address || plusCode || phone || hours || specialty || gRating;
+  const hasAny = address || plusCode || phone || hours || specialty || gRating || website || entryFee;
   if (!hasAny) {
     return (
       <ComingSoon
@@ -440,6 +485,31 @@ function LocationCard({ poi }: { poi: POI }) {
           <Ionicons name="call-outline" size={14} color={colors.brand} style={{ marginTop: 2 }} />
           <Text style={[styles.locText, { color: colors.brand, fontWeight: "700" }]}>{phone}</Text>
         </Pressable>
+      )}
+      {!!website && (
+        <Pressable
+          onPress={() => Linking.openURL(website)}
+          style={styles.locRow}
+          testID="poi-website"
+        >
+          <Ionicons name="globe-outline" size={14} color={colors.brand} style={{ marginTop: 2 }} />
+          <Text
+            style={[styles.locText, { color: colors.brand, fontWeight: "700" }]}
+            numberOfLines={1}
+          >
+            {website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+          </Text>
+        </Pressable>
+      )}
+      {entryFee != null && entryFee !== "" && (
+        <View style={styles.locRow}>
+          <Ionicons name="ticket-outline" size={14} color={colors.muted} style={{ marginTop: 2 }} />
+          <Text style={styles.locText}>
+            {typeof entryFee === "boolean"
+              ? (entryFee ? "Museum Card accepted" : "Museum Card not accepted")
+              : String(entryFee)}
+          </Text>
+        </View>
       )}
       {!!plusCode && (
         <View style={styles.locRow}>
@@ -591,6 +661,8 @@ const styles = StyleSheet.create({
   locMono: { fontVariant: ["tabular-nums"], color: colors.muted, fontSize: 12, letterSpacing: 0.3 },
   locBtn: { marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.brand, paddingHorizontal: spacing.md, paddingVertical: 10, borderRadius: radius.pill, alignSelf: "flex-start" },
   locBtnText: { color: colors.surface, fontWeight: "700", fontSize: 13, letterSpacing: 0.3 },
+  statusBanner: { flexDirection: "row", alignItems: "center", gap: 10, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, marginTop: spacing.md },
+  statusBannerText: { flex: 1, fontSize: 12.5, fontWeight: "700", lineHeight: 17 },
 
   // Photos section
   photosCard: { marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },

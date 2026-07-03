@@ -15,7 +15,8 @@
         "NSPhotoLibraryUsageDescription": "Select travel photos for your postcards",
         "NSPhotoLibraryAddUsageDescription": "Save your CityQuest postcards to your gallery",
         "NSLocationWhenInUseUsageDescription": "Verify your quest check-ins by location"
-      }
+      },
+      "bundleIdentifier": "com.emergent.localexplorergame.m0go0p"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +30,8 @@
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
-      ]
+      ],
+      "package": "com.emergent.localexplorergame.m0go0p"
     },
     "web": {
       "bundler": "metro",
