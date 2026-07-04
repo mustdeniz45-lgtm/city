@@ -1,5 +1,21 @@
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL ?? "";
 
+// Lazy import to avoid a circular dep and to keep the API layer usable in
+// pure Node tests. During shadow mode we ATTACH the Supabase JWT if a
+// session exists — the backend logs the (device_id, user_id) pair to catch
+// mismatches — but we don't yet fail requests that lack a token. Phase 2
+// flips this to strict enforcement.
+async function _authHeader(): Promise<Record<string, string>> {
+  try {
+    const { supabase } = await import("./supabase");
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Error carrying the HTTP status + backend-supplied detail message. Callers
  * (e.g. the POI check-in screen) can inspect `err.status === 429` and render
@@ -24,14 +40,14 @@ async function readError(res: Response, verb: string, path: string): Promise<nev
 }
 
 async function jget<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`);
+  const res = await fetch(`${BASE}/api${path}`, { headers: await _authHeader() });
   if (!res.ok) return readError(res, "GET", path);
   return res.json();
 }
 async function jpost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}/api${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await _authHeader()) },
     body: JSON.stringify(body),
   });
   if (!res.ok) return readError(res, "POST", path);

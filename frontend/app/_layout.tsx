@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AppContext, getActiveCity, getDeviceId, setActiveCity } from "@/src/store";
+import { ensureSession } from "@/src/store.v2";
 import { AuthProvider } from "@/src/auth";
 
 // Keep the native splash visible from cold start until icon fonts register.
@@ -20,6 +21,16 @@ export default function RootLayout() {
       const [c, d] = await Promise.all([getActiveCity(), getDeviceId()]);
       setActiveCityIdState(c);
       setDeviceId(d);
+      // SHADOW MODE (Phase 1 of auth cutover):
+      // Kick off a Supabase anonymous sign-in in the background so every
+      // request from here forward carries a real Bearer JWT (attached by
+      // `api.ts`). The device_id path still works — backend enforcement is
+      // flipped on separately after the 48h shadow window.
+      ensureSession().catch((e) => {
+        // Non-fatal: anon sign-in may be disabled in Supabase Dashboard, or
+        // network may be down. Guest device_id path keeps working.
+        console.warn("[auth] anon session bootstrap failed:", e?.message ?? e);
+      });
     })();
   }, []);
 

@@ -152,6 +152,26 @@ def _enforce_device_owner(user_row: Optional[Dict[str, Any]], claims: Optional[D
         detail="This device is linked to a signed-in account. Sign in to continue.",
     )
 
+
+def _auth_shadow_log(endpoint: str, device_id: str, claims: Optional[Dict[str, Any]]) -> None:
+    """Phase-1 shadow logger for the auth cutover.
+
+    Records — but never blocks — the JWT status on every mutation so we can
+    monitor for 48h before flipping to strict enforcement:
+      * ``anon`` — request carried a Supabase anonymous JWT ✓
+      * ``user`` — request carried a permanent-account JWT ✓
+      * ``none`` — request had no JWT (will 401 once strict is enabled)
+
+    Compact JSON-ish log line keeps it grep-friendly.
+    """
+    if not claims:
+        state = "none"
+        who = "-"
+    else:
+        state = "anon" if (claims.get("is_anonymous") or claims.get("role") == "anon") else "user"
+        who = str(claims.get("sub", ""))[:8]
+    logger.info("auth_shadow endpoint=%s device=%s state=%s sub=%s", endpoint, device_id[:12], state, who)
+
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Distance between two lat/lng coords in meters."""
     earth_r = 6371000.0
@@ -376,6 +396,7 @@ async def poi_check_in(
             )
 
     existing_user = await repo.progress_get(payload.device_id)
+    _auth_shadow_log("poi-check-in", payload.device_id, claims)
     # Reject writes to a device that's been claimed by a Supabase user
     # unless the caller presents a matching JWT.
     _enforce_device_owner(existing_user, claims)
@@ -749,6 +770,7 @@ async def check_in(
         raise HTTPException(404, "Quest not found")
 
     existing_user = await repo.progress_get(payload.device_id)
+    _auth_shadow_log("quest-check-in", payload.device_id, claims)
     _enforce_device_owner(existing_user, claims)
 
     user = existing_user or {
@@ -962,7 +984,20 @@ async def update_profile(
     gate = anti_cheat.rate_limit(device_id, request, label="profile update")
     if not gate.ok:
         raise HTTPException(429, gate.reason)
-    _enforce_device_owner(await repo.progress_get(device_id), claims)
+    existing = await repo.progress_get(device_id)
+    _enforce_device_owner(existing, claims)
+
+    # Anti-spam: anonymous users cannot rename themselves — their leaderboard
+    # label is server-generated ("Guest #a1b2 🎭"). They CAN still update their
+    # avatar (from a preset). Once they upgrade to a permanent account
+    # (email/OAuth), full display_name control returns.
+    is_anon = bool(claims and (claims.get("is_anonymous") or claims.get("role") == "anon"))
+    if is_anon and payload.display_name is not None:
+        raise HTTPException(
+            403,
+            "Anonymous accounts can't change their display name. Sign in with email or Google to unlock name changes.",
+        )
+
     updated = await repo.progress_profile_update(
         device_id,
         display_name=payload.display_name,
@@ -974,20 +1009,58 @@ async def update_profile(
 
 @api_router.get("/leaderboard")
 async def leaderboard():
-    docs = await repo.progress_leaderboard(50)
+    """Leaderboard with anonymous-user handling per the ops playbook:
+      * Only accounts active in the last 30 days appear (drop stale anons).
+      * Anonymous users show as ``Guest #a1b2 🎭`` — visually distinct so real
+        accounts are not drowned out by drive-by anon spam.
+      * Anonymous accounts have their `display_name` overridden server-side
+        (frontend can't rename them until they upgrade to a permanent account).
+    """
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
+    docs = await repo.progress_leaderboard(200)  # take 200, filter to top 50 after cull
     out = []
     for d in docs:
+        # Active-recently filter — checks either the row's updated_at or the
+        # last check-in timestamp; if both are missing, we keep the row
+        # (legacy data) so we don't accidentally erase the existing board.
+        last_seen = d.get("updated_at")
+        if not last_seen:
+            ci = d.get("check_ins") or []
+            last_seen = ci[-1]["at"] if ci and isinstance(ci[-1], dict) else None
+        if last_seen and last_seen < cutoff:
+            continue
+
+        is_anon = bool(d.get("is_anonymous") or (not d.get("user_id") and (d.get("display_name") or "").startswith("Guest ")))
+        # Also treat rows whose linked auth user is anonymous as anon here.
+        # If the frontend later sets an is_anonymous flag on the row we prefer that.
+
+        # Build the display label
+        if is_anon:
+            # Suffix from user_id (or device_id) so two guests can be told apart.
+            src = d.get("user_id") or d.get("device_id") or ""
+            suffix = (src.replace("-", "")[:4] or "----").lower()
+            display_name = f"Guest #{suffix} 🎭"
+            avatar_uri = None  # anons can't set avatars
+        else:
+            display_name = d.get("display_name") or "Traveler"
+            avatar_uri = d.get("avatar_uri") or None
+
         lvl = get_level(d.get("xp", 0))
         out.append({
             "device_id": d.get("device_id"),
-            "display_name": d.get("display_name", "Traveler"),
-            "avatar_uri": d.get("avatar_uri") or None,
+            "display_name": display_name,
+            "avatar_uri": avatar_uri,
             "xp": d.get("xp", 0),
             "level": lvl["level"],
             "title": lvl["title"],
             "badges": len(d.get("badges") or []),
             "quests": len(d.get("completed_quests") or []),
+            "is_anonymous": is_anon,
         })
+        if len(out) >= 50:
+            break
     return out
 
 
@@ -1070,6 +1143,7 @@ async def dish_tried(
     if not gate.ok:
         raise HTTPException(429, gate.reason)
     existing = await repo.progress_get(payload.device_id)
+    _auth_shadow_log("dish-tried", payload.device_id, claims)
     _enforce_device_owner(existing, claims)
     user = existing or {
         "device_id": payload.device_id,
