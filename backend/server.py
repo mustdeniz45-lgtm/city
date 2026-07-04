@@ -6,7 +6,6 @@ CityQuest backend — gamified worldwide city guide.
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import math
 import logging
@@ -22,8 +21,8 @@ load_dotenv(ROOT_DIR / ".env")
 # Mongo is only created when actually needed (the `repo` layer requests it lazily).
 # This avoids opening an idle Mongo connection when DATA_BACKEND=supabase.
 
-import repo  # data-access layer (selects Mongo vs Supabase via DATA_BACKEND env)
-from supabase_client import data_backend, get_supabase
+import repo  # data-access layer (Supabase-only as of 2026-07-04)
+from supabase_client import get_supabase
 from auth import get_current_user, get_optional_user, user_id_of
 import anti_cheat
 
@@ -269,193 +268,9 @@ def _load_gaziantep_places(city_id: str) -> List[Dict[str, Any]]:
     return out
 
 
-def build_seed() -> Dict[str, Any]:
-    # Gaziantep POIs
-    gaz = "gaziantep"
-    ist = "istanbul"
-    par = "paris"
-    rom = "rome"
-
-    cities = [
-        {
-            "id": gaz, "name": "Gaziantep", "country": "Türkiye", "country_code": "TR",
-            "tagline": "Cradle of gastronomy & ancient mosaics",
-            "description": "A southeastern Anatolian city where Roman mosaics, Ottoman bazaars, and the world's finest baklava converge.",
-            "hero_image": "https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxHYXppYW50ZXAlMjBaZXVnbWElMjBtdXNldW0lMjBtb3NhaWN8ZW58MHx8fHwxNzgxMTExOTE0fDA&ixlib=rb-4.1.0&q=85",
-            "lat": 37.0660, "lng": 37.3833,
-        },
-        {
-            "id": ist, "name": "Istanbul", "country": "Türkiye", "country_code": "TR",
-            "tagline": "Where two continents meet",
-            "description": "Byzantine domes, Ottoman palaces, and the Bosphorus at sunset.",
-            "hero_image": "https://images.unsplash.com/photo-1582631608254-f75fdf938e19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwxfHxJc3RhbmJ1bCUyMEhhZ2lhJTIwU29waGlhJTIwb3IlMjBHYWxhdGElMjB0b3dlcnxlbnwwfHx8fDE3ODExMTE5MTR8MA&ixlib=rb-4.1.0&q=85",
-            "lat": 41.0082, "lng": 28.9784,
-        },
-        {
-            "id": par, "name": "Paris", "country": "France", "country_code": "FR",
-            "tagline": "The city of light",
-            "description": "Belle Époque boulevards, world-class museums, and cafés that perfected the art of slowing down.",
-            "hero_image": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxQYXJpcyUyMEVpZmZlbCUyMHRvd2VyJTIwc3Vuc2V0fGVufDB8fHx8MTc4MTExMTkxNHww&ixlib=rb-4.1.0&q=85",
-            "lat": 48.8566, "lng": 2.3522,
-        },
-        {
-            "id": rom, "name": "Rome", "country": "Italy", "country_code": "IT",
-            "tagline": "The eternal city",
-            "description": "Ancient ruins, baroque squares, and pasta that has been perfected over two millennia.",
-            "hero_image": "https://images.unsplash.com/photo-1552832230-c0197dd311b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwxfHxSb21lJTIwQ29sb3NzZXVtJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc4MTExMTkxNHww&ixlib=rb-4.1.0&q=85",
-            "lat": 41.9028, "lng": 12.4964,
-        },
-    ]
-
-    pois = []
-    # Gaziantep — loaded from the canonical JSON dataset (single source of truth).
-    pois += _load_gaziantep_places(gaz)
-    # Istanbul
-    pois += [
-        {"id":"poi-ist-1","city_id":ist,"name":"Hagia Sophia","category":"landmark",
-         "description":"A 1,500-year-old marvel that has been church, mosque, museum, and mosque again.","image":"https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800&q=80","lat":41.0086,"lng":28.9802,"rating":4.9,"xp_reward":90},
-        {"id":"poi-ist-2","city_id":ist,"name":"Topkapı Palace","category":"museum",
-         "description":"The opulent primary residence of the Ottoman sultans for 400 years.","image":"https://images.unsplash.com/photo-1604941908760-bf9d3a3f6df5?w=800&q=80","lat":41.0115,"lng":28.9833,"rating":4.7,"xp_reward":80},
-        {"id":"poi-ist-3","city_id":ist,"name":"Grand Bazaar","category":"must-see",
-         "description":"One of the world's oldest and largest covered markets, with 4,000 shops across 61 streets.","image":"https://images.unsplash.com/photo-1545569310-49edaae3fd9d?w=800&q=80","lat":41.0106,"lng":28.9681,"rating":4.6,"xp_reward":55},
-        {"id":"poi-ist-4","city_id":ist,"name":"Karaköy Lokantası","category":"restaurant",
-         "description":"Beloved meyhane serving modern Istanbul mezze in turquoise-tiled rooms.","image":"https://images.unsplash.com/photo-1574484284002-952d92456975?w=800&q=80","lat":41.0258,"lng":28.9744,"rating":4.7,"xp_reward":50},
-    ]
-    # Paris
-    pois += [
-        {"id":"poi-par-1","city_id":par,"name":"Eiffel Tower","category":"landmark",
-         "description":"The 330m wrought-iron icon that defined Paris's skyline in 1889.","image":"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80","lat":48.8584,"lng":2.2945,"rating":4.8,"xp_reward":85},
-        {"id":"poi-par-2","city_id":par,"name":"Louvre Museum","category":"museum",
-         "description":"The world's most-visited museum, home to the Mona Lisa and Venus de Milo.","image":"https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80","lat":48.8606,"lng":2.3376,"rating":4.8,"xp_reward":90},
-        {"id":"poi-par-3","city_id":par,"name":"Notre-Dame Cathedral","category":"historic",
-         "description":"Gothic masterpiece on Île de la Cité, recently reopened after restoration.","image":"https://images.unsplash.com/photo-1478391679764-b2d8b3cd1e94?w=800&q=80","lat":48.8530,"lng":2.3499,"rating":4.7,"xp_reward":70},
-        {"id":"poi-par-4","city_id":par,"name":"Le Comptoir du Relais","category":"restaurant",
-         "description":"Yves Camdeborde's tiny Saint-Germain bistro reinvented French comfort cooking.","image":"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&q=80","lat":48.8531,"lng":2.3387,"rating":4.6,"xp_reward":55},
-    ]
-    # Rome
-    pois += [
-        {"id":"poi-rom-1","city_id":rom,"name":"Colosseum","category":"landmark",
-         "description":"The largest ancient amphitheatre ever built, AD 80, seating 50,000 spectators.","image":"https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80","lat":41.8902,"lng":12.4922,"rating":4.9,"xp_reward":90},
-        {"id":"poi-rom-2","city_id":rom,"name":"Roman Forum","category":"historic",
-         "description":"The political and commercial heart of ancient Rome for over a thousand years.","image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","lat":41.8925,"lng":12.4853,"rating":4.7,"xp_reward":75},
-        {"id":"poi-rom-3","city_id":rom,"name":"Vatican Museums","category":"museum",
-         "description":"7km of galleries culminating in Michelangelo's Sistine Chapel ceiling.","image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","lat":41.9065,"lng":12.4536,"rating":4.8,"xp_reward":85},
-        {"id":"poi-rom-4","city_id":rom,"name":"Roscioli","category":"restaurant",
-         "description":"Salumeria, bakery, and trattoria serving the city's definitive cacio e pepe.","image":"https://images.unsplash.com/photo-1662197480393-2a82030b7b83?w=800&q=80","lat":41.8956,"lng":12.4747,"rating":4.7,"xp_reward":55},
-    ]
-
-    # Quests
-    quests = [
-        # Gaziantep
-        {"id":"q-gaz-1","city_id":gaz,"title":"Mosaic Hunter","description":"Visit the Zeugma Mosaic Museum and find the Gypsy Girl.",
-         "difficulty":"easy","category":"museum","xp_reward":75,"poi_ids":["poi-gaz-054-zeugma-mosaic-museum"],
-         "cover_image":"https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?w=800&q=80","estimated_minutes":60,"badge_name":"Mosaic Eye",
-         "trivia":{"question":"Which iconic mosaic is displayed at the Zeugma Museum?","options":["Gypsy Girl","Alexander Mosaic","Bird & Snake","Hercules"],"correct_index":0}},
-        {"id":"q-gaz-2","city_id":gaz,"title":"Culinary Heritage","description":"Discover Gaziantep's UNESCO-recognized cuisine at Emine Göğüş Mutfak Müzesi.",
-         "difficulty":"easy","category":"museum","xp_reward":60,"poi_ids":["poi-gaz-014-emine-g-culinary-museum"],
-         "cover_image":"https://images.unsplash.com/photo-1598110750624-207050c4f28c?w=800&q=80","estimated_minutes":30,"badge_name":"Cuisine Curator",
-         "trivia":{"question":"Which nut traditionally fills Antep baklava?","options":["Walnut","Almond","Antep Pistachio","Hazelnut"],"correct_index":2}},
-        {"id":"q-gaz-3","city_id":gaz,"title":"Coppersmith Wanderer","description":"Explore the Bakırcılar Bazaar and observe artisans at work.",
-         "difficulty":"medium","category":"must-see","xp_reward":100,"poi_ids":["poi-gaz-029-coppersmiths-bazaar","poi-gaz-037-tahmis-coffee-house"],
-         "cover_image":"https://images.unsplash.com/photo-1574586597013-29bd92dc1617?w=800&q=80","estimated_minutes":90,"badge_name":"Bazaar Explorer",
-         "trivia":{"question":"What metal is the bazaar famous for?","options":["Silver","Copper","Bronze","Gold"],"correct_index":1}},
-        {"id":"q-gaz-4","city_id":gaz,"title":"Castle of Antep","description":"Climb the Gaziantep Castle and discover its Roman roots.",
-         "difficulty":"medium","category":"historic","xp_reward":90,"poi_ids":["poi-gaz-009-gaziantep-castle"],
-         "cover_image":"https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80","estimated_minutes":75,"badge_name":"Castle Climber",
-         "trivia":{"question":"Which empire originally built Gaziantep Castle?","options":["Ottoman","Hittite","Roman","Byzantine"],"correct_index":2}},
-        {"id":"q-gaz-5","city_id":gaz,"title":"Antep Heritage Trail","description":"Complete a full circuit of the old city's castle, culinary museum, and coffee houses.",
-         "difficulty":"hard","category":"historic","xp_reward":150,"poi_ids":["poi-gaz-009-gaziantep-castle","poi-gaz-014-emine-g-culinary-museum","poi-gaz-037-tahmis-coffee-house"],
-         "cover_image":"https://images.unsplash.com/photo-1591019479261-1a103585c559?w=800&q=80","estimated_minutes":180,"badge_name":"Heritage Guardian",
-         "trivia":{"question":"Which UNESCO designation does Gaziantep hold?","options":["Music","Gastronomy","Architecture","Crafts"],"correct_index":1}},
-        # Istanbul
-        {"id":"q-ist-1","city_id":ist,"title":"Domes of the Old City","description":"Stand inside Hagia Sophia and admire the 6th-century dome.",
-         "difficulty":"easy","category":"landmark","xp_reward":75,"poi_ids":["poi-ist-1"],
-         "cover_image":"https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800&q=80","estimated_minutes":60,"badge_name":"Dome Gazer",
-         "trivia":{"question":"In what year was Hagia Sophia completed?","options":["537 AD","850 AD","1204 AD","1453 AD"],"correct_index":0}},
-        {"id":"q-ist-2","city_id":ist,"title":"Sultan's Palace","description":"Walk the corridors of Topkapı and view the Imperial Treasury.",
-         "difficulty":"medium","category":"museum","xp_reward":100,"poi_ids":["poi-ist-2"],
-         "cover_image":"https://images.unsplash.com/photo-1604941908760-bf9d3a3f6df5?w=800&q=80","estimated_minutes":120,"badge_name":"Imperial Visitor",
-         "trivia":{"question":"How many sultans ruled from Topkapı Palace?","options":["12","18","25","31"],"correct_index":2}},
-        {"id":"q-ist-3","city_id":ist,"title":"Bazaar Bargainer","description":"Navigate the Grand Bazaar and try a Turkish coffee.",
-         "difficulty":"hard","category":"must-see","xp_reward":140,"poi_ids":["poi-ist-3","poi-ist-4"],
-         "cover_image":"https://images.unsplash.com/photo-1545569310-49edaae3fd9d?w=800&q=80","estimated_minutes":150,"badge_name":"Master Bargainer",
-         "trivia":{"question":"How many shops does the Grand Bazaar host?","options":["~1,200","~2,500","~4,000","~6,000"],"correct_index":2}},
-        # Paris
-        {"id":"q-par-1","city_id":par,"title":"Iron Lady","description":"Stand at the foot of the Eiffel Tower at golden hour.",
-         "difficulty":"easy","category":"landmark","xp_reward":75,"poi_ids":["poi-par-1"],
-         "cover_image":"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80","estimated_minutes":45,"badge_name":"Iron Lady",
-         "trivia":{"question":"In what year was the Eiffel Tower completed?","options":["1855","1889","1901","1925"],"correct_index":1}},
-        {"id":"q-par-2","city_id":par,"title":"Louvre Marathon","description":"Find the Mona Lisa, Venus de Milo, and Winged Victory.",
-         "difficulty":"hard","category":"museum","xp_reward":150,"poi_ids":["poi-par-2"],
-         "cover_image":"https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80","estimated_minutes":240,"badge_name":"Louvre Scholar",
-         "trivia":{"question":"Who painted the Mona Lisa?","options":["Raphael","Michelangelo","Da Vinci","Botticelli"],"correct_index":2}},
-        {"id":"q-par-3","city_id":par,"title":"Bistro Hunter","description":"Dine at Le Comptoir du Relais.",
-         "difficulty":"medium","category":"food","xp_reward":95,"poi_ids":["poi-par-4"],
-         "cover_image":"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&q=80","estimated_minutes":90,"badge_name":"Bistro Hunter",
-         "trivia":{"question":"In which arrondissement is Saint-Germain-des-Prés?","options":["3rd","6th","10th","18th"],"correct_index":1}},
-        # Rome
-        {"id":"q-rom-1","city_id":rom,"title":"Gladiator's Arena","description":"Step inside the Colosseum and walk the arena floor.",
-         "difficulty":"easy","category":"landmark","xp_reward":80,"poi_ids":["poi-rom-1"],
-         "cover_image":"https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80","estimated_minutes":60,"badge_name":"Gladiator",
-         "trivia":{"question":"How many spectators did the Colosseum hold?","options":["10,000","25,000","50,000","100,000"],"correct_index":2}},
-        {"id":"q-rom-2","city_id":rom,"title":"Forum to Palatine","description":"Cross the Roman Forum and ascend Palatine Hill.",
-         "difficulty":"medium","category":"historic","xp_reward":105,"poi_ids":["poi-rom-2"],
-         "cover_image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","estimated_minutes":120,"badge_name":"Forum Walker",
-         "trivia":{"question":"Which hill is considered Rome's birthplace?","options":["Aventine","Capitoline","Palatine","Esquiline"],"correct_index":2}},
-        {"id":"q-rom-3","city_id":rom,"title":"Sistine Pilgrim","description":"View Michelangelo's frescoes at the Vatican.",
-         "difficulty":"hard","category":"museum","xp_reward":145,"poi_ids":["poi-rom-3"],
-         "cover_image":"https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&q=80","estimated_minutes":180,"badge_name":"Sistine Pilgrim",
-         "trivia":{"question":"How long did Michelangelo take to paint the Sistine ceiling?","options":["1 year","4 years","9 years","15 years"],"correct_index":1}},
-    ]
-
-    return {"cities": cities, "pois": pois, "quests": quests}
-
-async def seed_if_empty():
-    """Legacy Mongo seed. Not used when DATA_BACKEND=supabase (which is now the default).
-
-    Seeds:
-      * 4 cities (Gaziantep + Istanbul/Paris/Rome stubs)
-      * Istanbul/Paris/Rome inline POIs + quests
-      * Gaziantep POIs from `seed_assets/places_gaziantep.json` (canonical 97 places)
-      * Gaziantep dishes from `seed_assets/gaziantep_yemekleri.json`
-      * Gaziantep quests (id-remapped to the canonical place ids)
-    """
-    db = repo._mongo()
-    count = await db.cities.count_documents({})
-    if count == 0:
-        seed = build_seed()
-        if seed["cities"]:
-            await db.cities.insert_many([dict(c) for c in seed["cities"]])
-        if seed["pois"]:
-            await db.pois.insert_many([dict(p) for p in seed["pois"]])
-        if seed["quests"]:
-            await db.quests.insert_many([dict(q) for q in seed["quests"]])
-        logger.info("Base seed (cities + Istanbul/Paris/Rome content) complete.")
-    else:
-        logger.info(f"DB already seeded: {count} cities")
-
-    # Refresh poi/quest counts on every startup
-    for c in await db.cities.find({}, {"_id": 0}).to_list(50):
-        poi_count = await db.pois.count_documents({"city_id": c["id"]})
-        quest_count = await db.quests.count_documents({"city_id": c["id"]})
-        await db.cities.update_one(
-            {"id": c["id"]},
-            {"$set": {"poi_count": poi_count, "quest_count": quest_count}},
-        )
-
-
-async def seed_extra_assets():
-    """Seed dishes (Mongo-only). Gaziantep places are loaded from the canonical
-    `places_gaziantep.json` already during `seed_if_empty()` via `build_seed()`."""
-    from extra_seeds import load_dishes
-    db = repo._mongo()
-    if await db.dishes.count_documents({"city_id": "gaziantep"}) == 0:
-        dishes = load_dishes()
-        if dishes:
-            await db.dishes.insert_many(dishes)
-            logger.info(f"Inserted {len(dishes)} Gaziantep dishes.")
 
 # ---------------- Routes ----------------
+
 
 @api_router.get("/")
 async def root():
@@ -1314,21 +1129,19 @@ async def dish_tried(
 @api_router.get("/supabase/health")
 async def supabase_health():
     """Smoke-test the Supabase service-role connection."""
-    from supabase_client import get_supabase, data_backend
     sb = get_supabase()
     if not sb:
-        return {"configured": False, "data_backend": data_backend(), "message": "Supabase env vars missing"}
+        return {"configured": False, "message": "Supabase env vars missing (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)"}
     try:
         res = sb.table("cities").select("id", count="exact").limit(1).execute()
         n = res.count if res.count is not None else 0
         return {
             "configured": True,
-            "data_backend": data_backend(),
             "cities_rows": n,
             "message": "Connected. Run /app/backend/supabase_schema.sql in the SQL editor next." if n == 0 else "Connected.",
         }
     except Exception as e:
-        return {"configured": True, "data_backend": data_backend(), "error": str(e)[:200]}
+        return {"configured": True, "error": str(e)[:200]}
 
 
 def _cors_allowed_origins() -> List[str]:
@@ -1366,11 +1179,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup():
-    if data_backend() == "supabase":
-        logger.info("DATA_BACKEND=supabase → skipping Mongo seed.")
-        return
-    await seed_if_empty()
-    await seed_extra_assets()
+    # Supabase-only backend as of 2026-07-04 — no local seeding needed.
+    # Content lives in Supabase and is managed via the SQL migrations in
+    # /app/backend/sql/ and the enrichment scripts (migrate_ky_*.py).
+    logger.info("Backend: Supabase (service-role) — startup complete.")
 
 
 # =====================================================================
