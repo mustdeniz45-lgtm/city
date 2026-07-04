@@ -59,6 +59,29 @@ class CheatResult:
 
 # ---- Public API -------------------------------------------------------------
 
+def rate_limit(
+    device_id: str,
+    request: Optional[Request],
+    *,
+    label: str = "request",
+) -> CheatResult:
+    """Standalone rate-limit gate reusable by any mutation endpoint.
+
+    Extracted from :func:`check_pre_gate` so profile updates, review posts,
+    dish "tried" toggles, etc. get the same per-device + per-IP throttle
+    without dragging along the GPS-specific checks.
+
+    ``label`` is embedded in the error message so users can see which
+    action was throttled.
+    """
+    now = time.time()
+    ip = client_ip(request)
+    if _sliding_hit(_device_hits, device_id, now) > RATE_LIMIT_MAX_REQ:
+        return CheatResult(False, f"Too many {label}s — slow down and retry in a minute.", 60)
+    if ip != "unknown" and _sliding_hit(_ip_hits, ip, now) > RATE_LIMIT_MAX_REQ:
+        return CheatResult(False, f"Too many {label}s from this network.", 60)
+    return CheatResult(True)
+
 def client_ip(request: Optional[Request]) -> str:
     """Best-effort client IP (falls back to the socket peer)."""
     if not request:

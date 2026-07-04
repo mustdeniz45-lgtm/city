@@ -124,6 +124,35 @@ class CheckInResult(BaseModel):
 # Anti-cheat: check-ins must be within this radius of the POI.
 CHECKIN_RADIUS_M = 150
 
+
+def _enforce_device_owner(user_row: Optional[Dict[str, Any]], claims: Optional[Dict[str, Any]]):
+    """Reject writes to a claimed device_id from anyone but its owner.
+
+    Once a `progress` row has been linked to a Supabase Auth user (via
+    ``user_id``), subsequent mutations MUST carry a Bearer token whose
+    ``sub`` matches. This closes the trivial impersonation attack where
+    an adversary knows the target's device_id and forges XP/quest
+    completions from curl.
+
+    Anonymous / pre-auth rows (``user_id is None``) still accept
+    unauthenticated writes so guest flows keep working — but rate
+    limiting + per-POI cooldown + speed checks apply.
+    """
+    if not user_row:
+        return  # brand-new device, nothing to protect yet
+    owner = user_row.get("user_id")
+    if not owner:
+        return  # not claimed yet — anonymous writes still allowed
+    caller = user_id_of(claims)
+    if caller and caller == owner:
+        return
+    # Owner set but the caller either omitted the token or presented a
+    # different one → hard 403.
+    raise HTTPException(
+        status_code=403,
+        detail="This device is linked to a signed-in account. Sign in to continue.",
+    )
+
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Distance between two lat/lng coords in meters."""
     earth_r = 6371000.0
@@ -513,7 +542,11 @@ DISH_XP = 25
 
 
 @api_router.post("/progress/poi-check-in", response_model=PoiCheckInResult)
-async def poi_check_in(payload: PoiCheckInPayload, request: Request):
+async def poi_check_in(
+    payload: PoiCheckInPayload,
+    request: Request,
+    claims: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
     poi = await repo.pois_get(payload.poi_id)
     if not poi:
         raise HTTPException(404, "POI not found")
@@ -527,7 +560,12 @@ async def poi_check_in(payload: PoiCheckInPayload, request: Request):
                 message=f"You're {pretty} from {poi['name']}. Walk within {CHECKIN_RADIUS_M} m to check in.",
             )
 
-    user = await repo.progress_get(payload.device_id) or {
+    existing_user = await repo.progress_get(payload.device_id)
+    # Reject writes to a device that's been claimed by a Supabase user
+    # unless the caller presents a matching JWT.
+    _enforce_device_owner(existing_user, claims)
+
+    user = existing_user or {
         "device_id": payload.device_id,
         "display_name": payload.display_name or "Traveler",
         "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
@@ -886,12 +924,19 @@ async def get_progress(device_id: str):
     return doc
 
 @api_router.post("/progress/check-in", response_model=CheckInResult)
-async def check_in(payload: CheckInPayload, request: Request):
+async def check_in(
+    payload: CheckInPayload,
+    request: Request,
+    claims: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
     quest = await repo.quests_get(payload.quest_id)
     if not quest:
         raise HTTPException(404, "Quest not found")
 
-    user = await repo.progress_get(payload.device_id) or {
+    existing_user = await repo.progress_get(payload.device_id)
+    _enforce_device_owner(existing_user, claims)
+
+    user = existing_user or {
         "device_id": payload.device_id,
         "display_name": payload.display_name or "Traveler",
         "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
@@ -1092,7 +1137,17 @@ async def progress_by_city(device_id: str):
 
 
 @api_router.post("/progress/{device_id}/profile")
-async def update_profile(device_id: str, payload: ProfileUpdatePayload):
+async def update_profile(
+    device_id: str,
+    payload: ProfileUpdatePayload,
+    request: Request,
+    claims: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
+    # Same guards as the check-in mutations: rate limit + device-ownership.
+    gate = anti_cheat.rate_limit(device_id, request, label="profile update")
+    if not gate.ok:
+        raise HTTPException(429, gate.reason)
+    _enforce_device_owner(await repo.progress_get(device_id), claims)
     updated = await repo.progress_profile_update(
         device_id,
         display_name=payload.display_name,
@@ -1187,11 +1242,21 @@ async def get_dish(dish_id: str):
 
 
 @api_router.post("/progress/dish-tried", response_model=DishTriedResult)
-async def dish_tried(payload: DishTriedPayload):
+async def dish_tried(
+    payload: DishTriedPayload,
+    request: Request,
+    claims: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
     """Mark a dish as tasted. Awards +25 XP on first try (idempotent).
     Stores tasted dish ids under `quest_progress.__dishes_tried` (a magic key
     on the existing jsonb column so we don't need a schema change)."""
-    user = await repo.progress_get(payload.device_id) or {
+    # Rate limit + device-ownership binding (same protections as check-ins).
+    gate = anti_cheat.rate_limit(payload.device_id, request, label="dish action")
+    if not gate.ok:
+        raise HTTPException(429, gate.reason)
+    existing = await repo.progress_get(payload.device_id)
+    _enforce_device_owner(existing, claims)
+    user = existing or {
         "device_id": payload.device_id,
         "display_name": payload.display_name or "Traveler",
         "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
@@ -1266,12 +1331,37 @@ async def supabase_health():
         return {"configured": True, "data_backend": data_backend(), "error": str(e)[:200]}
 
 
+def _cors_allowed_origins() -> List[str]:
+    """Parse ``CORS_ORIGINS`` env var (comma-separated) into a list.
+
+    Enforces the CORS spec: wildcard ``*`` is only allowed when it's the
+    ONLY entry AND the deployment is not sending credentials — otherwise
+    modern browsers reject the response outright. If nothing is set, we
+    fall back to a conservative allowlist for local dev.
+    """
+    raw = os.environ.get("CORS_ORIGINS", "")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    if origins:
+        return origins
+    # Local dev defaults — expo web + LAN + tunnel previews.
+    return [
+        "http://localhost:3000",
+        "http://localhost:19006",
+        "http://127.0.0.1:3000",
+    ]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # No wildcard: we now enforce an explicit allowlist. Set CORS_ORIGINS
+    # in backend/.env to a comma-separated list of your deployed origins.
+    allow_origins=_cors_allowed_origins(),
+    # We authenticate with Bearer tokens, not cookies, so credentials mode
+    # is off. Keeping this at False also lets us use a specific origin list
+    # without the browser rejecting responses.
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 @app.on_event("startup")
@@ -1345,8 +1435,17 @@ async def list_reviews(poi_id: str, limit: int = Query(50, le=100)):
     return [{**r, "author": profiles.get(r["device_id"], {})} for r in rows]
 
 @api_router.post("/pois/{poi_id}/reviews")
-async def create_review(poi_id: str, payload: ReviewIn):
+async def create_review(
+    poi_id: str,
+    payload: ReviewIn,
+    request: Request,
+    claims: Optional[Dict[str, Any]] = Depends(get_optional_user),
+):
     poi = await _poi_or_404(poi_id)
+    # Rate limit + ownership binding — same pattern as other mutations.
+    gate = anti_cheat.rate_limit(payload.device_id, request, label="review")
+    if not gate.ok:
+        raise HTTPException(429, gate.reason)
     if not (1 <= payload.overall <= 5):
         raise HTTPException(400, "overall must be 1..5")
     dims_needed = _dims_for_category(poi.get("category") or "other")
@@ -1363,6 +1462,7 @@ async def create_review(poi_id: str, payload: ReviewIn):
         raise HTTPException(400, "Comment must be at least 20 characters — tell fellow travellers what you thought.")
 
     user = await repo.progress_get(payload.device_id) or {"check_ins": []}
+    _enforce_device_owner(user, claims)
     verified = _has_recent_checkin(user, poi_id)
     if not verified:
         raise HTTPException(403, f"Verified visit required within {VERIFY_WINDOW_HOURS}h.")
