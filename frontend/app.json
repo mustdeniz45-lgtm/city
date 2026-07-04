@@ -63,7 +63,8 @@
           "photosPermission": "Save your CityQuest postcards to your gallery",
           "savePhotosPermission": "Save your CityQuest postcards to your gallery"
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true
