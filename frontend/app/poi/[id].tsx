@@ -223,7 +223,17 @@ export default function POIDetail() {
             ]
           : [{ text: "Done" }],
       );
-    } catch (e) { console.warn(e); Alert.alert("Couldn't check in", "Please try again."); }
+    } catch (e: any) {
+      console.warn(e);
+      // Anti-cheat rejections come back as HTTP 429 with a human-friendly
+      // reason (cooldown remaining, rate-limit, or impossible-travel).
+      if (e?.status === 429) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert("Check-in blocked", e.message || "Please slow down and try again shortly.");
+      } else {
+        Alert.alert("Couldn't check in", "Please try again.");
+      }
+    }
     finally { setBusy(false); }
   };
 

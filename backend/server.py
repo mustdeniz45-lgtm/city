@@ -3,7 +3,7 @@ CityQuest backend — gamified worldwide city guide.
 - No-auth, device-id based user progress.
 - Seeds 4 cities (Gaziantep deep; Istanbul, Paris, Rome lighter) on startup.
 """
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -25,6 +25,7 @@ load_dotenv(ROOT_DIR / ".env")
 import repo  # data-access layer (selects Mongo vs Supabase via DATA_BACKEND env)
 from supabase_client import data_backend, get_supabase
 from auth import get_current_user, get_optional_user, user_id_of
+import anti_cheat
 
 app = FastAPI(title="CityQuest API")
 api_router = APIRouter(prefix="/api")
@@ -512,7 +513,7 @@ DISH_XP = 25
 
 
 @api_router.post("/progress/poi-check-in", response_model=PoiCheckInResult)
-async def poi_check_in(payload: PoiCheckInPayload):
+async def poi_check_in(payload: PoiCheckInPayload, request: Request):
     poi = await repo.pois_get(payload.poi_id)
     if not poi:
         raise HTTPException(404, "POI not found")
@@ -536,6 +537,19 @@ async def poi_check_in(payload: PoiCheckInPayload):
     user.setdefault("completed_quests", [])
     user.setdefault("badges", [])
     user.setdefault("check_ins", [])
+
+    # Anti-cheat: rate limit, per-POI cooldown, and superhuman-speed detection.
+    # We run this AFTER loading the user's history but BEFORE mutating state so
+    # attackers can't accumulate partial progress from rejected attempts.
+    gate = anti_cheat.check_pre_gate(
+        device_id=payload.device_id,
+        request=request,
+        last_check_ins=user.get("check_ins") or [],
+        poi_id=payload.poi_id,
+        lat=payload.lat, lng=payload.lng,
+    )
+    if not gate.ok:
+        raise HTTPException(status_code=429, detail=gate.reason)
     if user.get("quest_progress") is None:
         user["quest_progress"] = {}
     # Normalize legacy entries that stored visited POIs as a bare list
@@ -576,6 +590,9 @@ async def poi_check_in(payload: PoiCheckInPayload):
         "lat": payload.lat, "lng": payload.lng,
         "at": datetime.now(timezone.utc).isoformat(),
     })
+    # Anti-cheat: cap the persisted list so it can't grow unbounded and DoS
+    # the DB row / clients that fetch the whole progress object.
+    user["check_ins"] = anti_cheat.bound_check_ins(user["check_ins"])
     if payload.display_name:
         user["display_name"] = payload.display_name
     user["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -869,7 +886,7 @@ async def get_progress(device_id: str):
     return doc
 
 @api_router.post("/progress/check-in", response_model=CheckInResult)
-async def check_in(payload: CheckInPayload):
+async def check_in(payload: CheckInPayload, request: Request):
     quest = await repo.quests_get(payload.quest_id)
     if not quest:
         raise HTTPException(404, "Quest not found")
@@ -884,6 +901,20 @@ async def check_in(payload: CheckInPayload):
     user.setdefault("completed_quests", [])
     user.setdefault("badges", [])
     user.setdefault("check_ins", [])
+
+    # Anti-cheat: apply the same rate-limit / cooldown / speed gate as the
+    # standalone POI check-in endpoint. Only guard when a poi_id is supplied,
+    # since some flows (trivia-only completions) don't include one.
+    if payload.poi_id:
+        gate = anti_cheat.check_pre_gate(
+            device_id=payload.device_id,
+            request=request,
+            last_check_ins=user.get("check_ins") or [],
+            poi_id=payload.poi_id,
+            lat=payload.lat, lng=payload.lng,
+        )
+        if not gate.ok:
+            raise HTTPException(status_code=429, detail=gate.reason)
     if user.get("quest_progress") is None:
         user["quest_progress"] = {}
     user.setdefault("quest_progress", {})
@@ -949,6 +980,7 @@ async def check_in(payload: CheckInPayload):
         "lat": payload.lat, "lng": payload.lng,
         "at": datetime.now(timezone.utc).isoformat(),
     })
+    user["check_ins"] = anti_cheat.bound_check_ins(user["check_ins"])
     if payload.display_name:
         user["display_name"] = payload.display_name
     if payload.avatar_uri is not None:

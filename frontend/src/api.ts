@@ -1,8 +1,31 @@
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL ?? "";
 
+/**
+ * Error carrying the HTTP status + backend-supplied detail message. Callers
+ * (e.g. the POI check-in screen) can inspect `err.status === 429` and render
+ * the friendly anti-cheat reason from `err.message`.
+ */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+async function readError(res: Response, verb: string, path: string): Promise<never> {
+  let msg = "";
+  try {
+    const j = await res.json();
+    msg = typeof j?.detail === "string" ? j.detail : (typeof j?.message === "string" ? j.message : "");
+  } catch { /* body not JSON — fall through */ }
+  throw new ApiError(res.status, msg || `${verb} ${path} failed: ${res.status}`);
+}
+
 async function jget<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}/api${path}`);
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+  if (!res.ok) return readError(res, "GET", path);
   return res.json();
 }
 async function jpost<T>(path: string, body: unknown): Promise<T> {
@@ -11,7 +34,7 @@ async function jpost<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+  if (!res.ok) return readError(res, "POST", path);
   return res.json();
 }
 
