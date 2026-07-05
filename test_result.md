@@ -252,13 +252,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Friends: GET /api/friends/lookup/{code}"
-    - "Friends: POST /api/friends/leaderboard (batch)"
-    - "Friends: lazy friend_code generation on GET /api/progress/{device_id}"
-    - "Profile: Friend Code card + Copy button"
-    - "Profile: Add friend by code (with lookup + local storage)"
-    - "Profile: Leaderboard Global | Friends tabs (merged with self)"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -269,6 +263,13 @@ agent_communication:
       Implemented the Friends Leaderboard feature end-to-end (backend +
       frontend). Also fixed a latent NameError on `cutoff` in
       GET /api/leaderboard (uncovered by ruff during this session).
+  - agent: testing
+    message: |
+      All 11 backend pytest cases pass + all 20 frontend acceptance points
+      verified via Playwright (390x844). No bugs found. Non-blocking notes:
+      pre-existing RN-Web `shadow*` / `pointerEvents` deprecation warnings
+      (unrelated to Friends), and Alert.alert on RN-Web doesn't surface as
+      a browser dialog (native OK). Feature ready to ship.
 
       Please test:
         BACKEND
