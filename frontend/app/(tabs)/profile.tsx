@@ -299,9 +299,9 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <StatBox value={`${progress?.completed_quests?.length ?? 0}`} label="Quests" />
-        <StatBox value={`${progress?.badges?.length ?? 0}`} label="Badges" />
-        <StatBox value={`${progress?.xp ?? 0}`} label="Total XP" />
+        <StatBox value={String((progress?.completed_quests ?? []).length)} label="Quests" />
+        <StatBox value={String((progress?.badges ?? []).length)} label="Badges" />
+        <StatBox value={String(progress?.xp ?? 0)} label="Total XP" />
       </View>
 
       <Section title="Account" testIdSuffix="account">
