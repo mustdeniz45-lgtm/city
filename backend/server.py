@@ -743,7 +743,7 @@ async def get_progress(device_id: str):
         empty = {
             "device_id": device_id, "display_name": "Traveler",
             "xp": 0, "completed_quests": [], "badges": [], "check_ins": [],
-            "quest_progress": {}, "avatar_uri": None,
+            "quest_progress": {}, "avatar_uri": None, "friend_code": None,
         }
         empty.update(get_level(0))
         return empty
@@ -756,6 +756,12 @@ async def get_progress(device_id: str):
     if doc.get("quest_progress") is None:
         doc["quest_progress"] = {}
     doc.setdefault("avatar_uri", None)
+    # Lazily provision a friend_code for existing rows that predate the
+    # Friends Leaderboard feature. Safe / idempotent — only runs once per row.
+    if not doc.get("friend_code"):
+        code = await repo.progress_ensure_friend_code(device_id)
+        if code:
+            doc["friend_code"] = code
     doc.update(get_level(doc.get("xp", 0)))
     return doc
 
@@ -1009,17 +1015,11 @@ async def update_profile(
 
 @api_router.get("/leaderboard")
 async def leaderboard():
-    """Leaderboard with anonymous-user handling per the ops playbook:
-      * Only accounts active in the last 30 days appear (drop stale anons).
-      * Anonymous users show as ``Guest #a1b2 🎭`` — visually distinct so real
-        accounts are not drowned out by drive-by anon spam.
-      * Anonymous accounts have their `display_name` overridden server-side
-        (frontend can't rename them until they upgrade to a permanent account).
-    """
-    from datetime import timedelta
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
 
     docs = await repo.progress_leaderboard(200)  # take 200, filter to top 50 after cull
+    # Active-recently filter cut-off (14 days). Rows with no updated_at AND
+    # no check-in timestamp are kept as legacy — see comment inline below.
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
     out = []
     for d in docs:
         # Active-recently filter — checks either the row's updated_at or the
@@ -1062,6 +1062,75 @@ async def leaderboard():
         if len(out) >= 50:
             break
     return out
+
+
+# ---------------- FRIENDS ----------------
+
+class FriendsBatchPayload(BaseModel):
+    codes: List[str]
+
+
+def _public_friend_entry(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Shape a `progress` row into the public payload used by both the
+    single-code lookup and the batch leaderboard endpoint.
+
+    Deliberately omits `device_id`, `user_id`, `check_ins`, `quest_progress`
+    and any raw `friend_code` (the caller already knows it) — friends should
+    only see what you'd share on a leaderboard.
+    """
+    is_anon = bool(
+        row.get("is_anonymous")
+        or (not row.get("user_id") and (row.get("display_name") or "").startswith("Guest "))
+    )
+    if is_anon:
+        src = row.get("user_id") or row.get("device_id") or ""
+        suffix = (src.replace("-", "")[:4] or "----").lower()
+        display_name = f"Guest #{suffix} 🎭"
+        avatar_uri = None
+    else:
+        display_name = row.get("display_name") or "Traveler"
+        avatar_uri = row.get("avatar_uri") or None
+    lvl = get_level(row.get("xp", 0))
+    return {
+        "friend_code": row.get("friend_code"),
+        "display_name": display_name,
+        "avatar_uri": avatar_uri,
+        "xp": row.get("xp", 0),
+        "level": lvl["level"],
+        "title": lvl["title"],
+        "badges": len(row.get("badges") or []),
+        "quests": len(row.get("completed_quests") or []),
+        "is_anonymous": is_anon,
+    }
+
+
+@api_router.get("/friends/lookup/{code}")
+async def friends_lookup(code: str):
+    """Look up a public friend card by their friend code. Used by the
+    ``Add friend`` prompt so users can preview + confirm before saving
+    the code to their on-device friend list.
+    """
+    from repo import normalize_friend_code
+    normalized = normalize_friend_code(code)
+    if not normalized or not (6 <= len(normalized) <= 8):
+        raise HTTPException(400, "Invalid friend code. Codes are 6–8 letters/numbers (e.g. CQ7K4P9X).")
+    row = await repo.progress_by_friend_code(normalized)
+    if not row:
+        raise HTTPException(404, "No traveler found with that code.")
+    return _public_friend_entry(row)
+
+
+@api_router.post("/friends/leaderboard")
+async def friends_leaderboard(payload: FriendsBatchPayload):
+    """Batch-resolve a list of friend codes → sorted leaderboard entries.
+    The client owns the friend list (AsyncStorage); we just enrich."""
+    from repo import normalize_friend_code
+    codes = [normalize_friend_code(c) for c in (payload.codes or [])]
+    codes = [c for c in codes if c and 6 <= len(c) <= 8]
+    if not codes:
+        return []
+    rows = await repo.progress_by_friend_codes(codes)
+    return [_public_friend_entry(r) for r in rows]
 
 
 # ---------------- AUTH ROUTES ----------------

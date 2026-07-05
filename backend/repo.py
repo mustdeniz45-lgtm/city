@@ -15,11 +15,41 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 from typing import Any, Dict, List, Optional
 
 from postgrest.exceptions import APIError
 
 from supabase_client import get_supabase
+
+
+# Friend-code alphabet: uppercase alphanumeric MINUS the visually ambiguous
+# characters 0/O and 1/I so codes can be dictated over voice and typed by
+# hand without triggering "why doesn't it work?" support pings.
+_FRIEND_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+_FRIEND_CODE_PREFIX = "CQ"       # brand prefix (CityQuest)
+_FRIEND_CODE_BODY_LEN = 6         # 6 random chars → ~32^6 ≈ 1B combinations
+
+
+def generate_friend_code() -> str:
+    """Return a fresh candidate code like ``CQ7K4P9X`` (8 chars total).
+
+    Uniqueness is enforced at the DB layer by the ``progress.friend_code``
+    unique index; ``progress_ensure_friend_code`` retries on collision.
+    """
+    body = "".join(
+        secrets.choice(_FRIEND_CODE_ALPHABET) for _ in range(_FRIEND_CODE_BODY_LEN)
+    )
+    return f"{_FRIEND_CODE_PREFIX}{body}"
+
+
+def normalize_friend_code(raw: str) -> str:
+    """Normalize user input: strip spaces/dashes/case. Does **not** force a
+    prefix — legacy rows may hold bare 6-char codes (e.g. ``4B73C0``) while
+    new codes are 8-char with a ``CQ`` prefix (e.g. ``CQ7K4P9X``). Both
+    formats round-trip through this function unchanged.
+    """
+    return "".join(c for c in (raw or "").upper() if c.isalnum())
 
 
 # ---------------- Helpers ----------------
@@ -262,6 +292,66 @@ async def progress_leaderboard(limit: int = 50) -> List[Dict[str, Any]]:
     sb = get_supabase()
     res = await _sb_call(
         lambda: sb.table("progress").select("*").order("xp", desc=True).limit(limit).execute()
+    )
+    return res.data or []
+
+
+# ---------------- FRIEND CODES ----------------
+
+async def progress_ensure_friend_code(device_id: str, max_tries: int = 8) -> Optional[str]:
+    """Return the ``friend_code`` for this device, generating one on the fly
+    if the row doesn't have one yet.
+
+    * Existing row + already has code → return it.
+    * Existing row + no code           → generate & UPDATE (retry on collision).
+    * No row yet                        → return ``None`` (the caller decides
+      whether to seed a row; we don't want to accidentally create ghost rows
+      just because the user opened Profile before any XP action).
+    """
+    sb = get_supabase()
+    existing = await progress_get(device_id)
+    if not existing:
+        return None
+    if existing.get("friend_code"):
+        return existing["friend_code"]
+
+    for _ in range(max_tries):
+        code = generate_friend_code()
+        try:
+            await _sb_call(
+                lambda c=code: sb.table("progress")
+                    .update({"friend_code": c}).eq("device_id", device_id).execute()
+            )
+            # Re-read to confirm it landed (in case another writer raced us).
+            fresh = await progress_get(device_id)
+            if fresh and fresh.get("friend_code"):
+                return fresh["friend_code"]
+        except APIError:
+            # Unique-index collision → try another random code.
+            continue
+    return None
+
+
+async def progress_by_friend_code(code: str) -> Optional[Dict[str, Any]]:
+    sb = get_supabase()
+    res = await _sb_call(
+        lambda: sb.table("progress").select("*").eq("friend_code", code).limit(1).execute()
+    )
+    return (res.data or [None])[0]
+
+
+async def progress_by_friend_codes(codes: List[str]) -> List[Dict[str, Any]]:
+    """Batch-fetch progress rows for the given friend codes. Returns them in
+    XP-descending order so the Friends leaderboard doesn't need to sort."""
+    if not codes:
+        return []
+    # Cap the batch to keep the URL under PostgREST's default limits.
+    codes = list({c for c in codes if c})[:200]
+    sb = get_supabase()
+    res = await _sb_call(
+        lambda: sb.table("progress")
+            .select("*").in_("friend_code", codes)
+            .order("xp", desc=True).execute()
     )
     return res.data or []
 

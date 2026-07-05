@@ -1,0 +1,39 @@
+{
+  "summary": "Friends Leaderboard feature (A2+B1+C3+D1) validated end-to-end. Backend: 11/11 pytest cases passed (progress ghost-row prevention, idempotent friend_code, lookup normalization, batch resolution, empty-payload handling, global leaderboard sanity). Frontend: Profile screen loads on mobile viewport (390x844), Friends section renders below Badges, friend-code card shows correct pending state for fresh device with disabled Copy (opacity 0.5), add panel toggles, adding 4B73C0 creates the Wolfy chip and auto-switches to Friends tab, both Wolfys visible on leaderboard, Global tab still renders correctly after switch, idempotent re-add keeps chip count at 1, and no console errors related to Friends/AsyncStorage/expo-clipboard.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RN-Web deprecation", "issue": "Console warnings on web preview: '\"shadow*\" style props are deprecated. Use boxShadow' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Non-blocking, but flagged for later cleanup across shared components (theme.ts shadow presets)."},
+      {"component": "Alert.alert on RN-Web", "issue": "Alert.alert() from React Native does NOT map to window.alert on web, so validation dialogs (short-code error, Friend added! success, remove-confirm) do not surface as browser dialogs in web preview. Feature still works on native (Expo Go / iOS / Android). Consider a custom cross-platform modal if in-browser feedback is desired for the web build. Reference: /app/frontend/app/(tabs)/profile.tsx (multiple Alert.alert calls in friends handlers)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_friends_leaderboard.py",
+    "/app/test_reports/pytest/friends_results.xml"
+  ],
+  "action_items": [
+    "Optional: replace RN Alert.alert usage in profile.tsx friend flows with a cross-platform in-app toast/modal so users on web preview see feedback (currently silent on web).",
+    "Optional cleanup (later iteration): migrate theme shadow presets to boxShadow and pointerEvents from prop to style to remove RN-Web deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py leaderboard() cutoff computation is fine now (200 fetched, 50 returned after activity filter) — the previously-latent NameError is fixed.",
+    "repo.progress_ensure_friend_code correctly returns None for missing rows so GET /progress/{new_device} does NOT create ghost rows (verified in tests).",
+    "friends_lookup + friends_leaderboard endpoints correctly normalize whitespace/lowercase and filter invalid codes; 400/404 semantics match spec.",
+    "_public_friend_entry omits device_id/user_id/check_ins — good privacy posture for Approach A2 (device-local friend graph)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_friends_leaderboard.py (new file, 11 cases)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "No new seeds. Test uses existing Wolfy row (device_id=dev_1781112526529_iml7ard2, friend_code=4B73C0). Ghost-row tests use random TEST_ghost_* device_ids that are NOT persisted (verified).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend endpoints /api/friends/lookup/{code} and /api/friends/leaderboard are stable. Note: there are TWO 'Wolfy' rows in the progress table — one at 760 XP (the one with friend_code=4B73C0 targeted by Friends feature) and another at 4010 XP (a different device_id) which currently tops the Global leaderboard. This is not a bug — just naming overlap between two users. The Friends leaderboard correctly only pulls the 760 XP Wolfy (the one owning the code). RN Web preview does NOT render Alert.alert as browser dialogs, so if you write Playwright tests that rely on catching dialogs, they will silently fail — verify DOM state changes instead (chip presence, count, tab active state).",
+  "rca_of_issue": "N/A — no bugs found."
+}

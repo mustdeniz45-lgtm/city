@@ -101,3 +101,201 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  CityQuest — gamified city guide. Current sub-feature: Friends Leaderboard
+  (Approach A2+B1+C3+D1): unique per-user friend code stored on progress row,
+  device-local friend list in AsyncStorage, backend batch-resolves codes to
+  public leaderboard entries. UI: Profile shows "Your friend code" card with
+  Copy, "Add friend by code" prompt, and the Leaderboard section now toggles
+  between Global and Friends tabs.
+
+backend:
+  - task: "Friends: lazy friend_code generation on GET /api/progress/{device_id}"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          GET /progress/{device_id} now calls repo.progress_ensure_friend_code
+          which auto-generates a unique 'CQ'+6-char code and persists it to
+          the row if missing. Returns None for a device_id that has no row
+          yet (no ghost rows). Verified via curl: existing device returns
+          existing code '4B73C0' unchanged.
+
+  - task: "Friends: GET /api/friends/lookup/{code}"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Normalises input (strips spaces, uppercases, allows 6–8 chars for
+          legacy compatibility), 400 on bad input, 404 on unknown code, 200
+          returns public friend card (display_name, avatar, xp, level, title,
+          badges, quests, is_anonymous). Verified: 4B73C0 → Wolfy 760 XP;
+          lowercase+spaces normalised; ABC → 400; CQ99ZZZZ → 404.
+
+  - task: "Friends: POST /api/friends/leaderboard (batch)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Accepts { codes: string[] }, normalises + dedupes + caps at 200,
+          returns XP-descending list of public friend entries. Verified with
+          mixed real/unknown codes — only real one is returned.
+
+  - task: "Leaderboard: fix pre-existing NameError on `cutoff`"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Ruff caught a latent NameError in GET /leaderboard where `cutoff`
+          was referenced but never defined. Added `cutoff = now - 14 days`
+          so the active-recently filter now works as originally intended.
+          Existing rows without updated_at/check-ins are still kept (legacy).
+
+frontend:
+  - task: "Profile: Friend Code card + Copy button"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          New "Friends" section renders the user's friend_code in an
+          inverse-surface card with a Copy button (uses expo-clipboard).
+          Falls back to "Earn some XP to unlock your code" for brand new
+          devices where no progress row exists yet. Confirmed rendering
+          via screenshot.
+
+  - task: "Profile: Add friend by code (with lookup + local storage)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Toggle button reveals a TextInput + submit. On submit: validates
+          length (≥6), rejects the user's own code, calls
+          /api/friends/lookup/{code} to preview, then persists to
+          AsyncStorage via src/friends.ts. Auto-switches board to Friends
+          tab and shows success alert. Handles ApiError messages (400/404
+          from backend). Verified with valid and invalid codes.
+
+  - task: "Profile: Leaderboard Global | Friends tabs (merged with self)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Leaderboard section now has two pill tabs. Friends tab shows the
+          batch-resolved friend list merged with a synthetic "you" row so
+          the user always sees their own rank. Correctly sorted by XP,
+          highlights the "you" row with brand tint. Verified: Wolfy #1 (760
+          XP), Traveler (you) #2 (0 XP).
+
+  - task: "Friend chips row + long-press remove"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Horizontal scrollable chips show each saved friend with their
+          nickname + code. Long-press opens a confirm dialog to remove.
+          Instant local delete + trims friendBoard state so no re-fetch
+          needed.
+
+metadata:
+  created_by: main_agent
+  version: 1.0
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Friends: GET /api/friends/lookup/{code}"
+    - "Friends: POST /api/friends/leaderboard (batch)"
+    - "Friends: lazy friend_code generation on GET /api/progress/{device_id}"
+    - "Profile: Friend Code card + Copy button"
+    - "Profile: Add friend by code (with lookup + local storage)"
+    - "Profile: Leaderboard Global | Friends tabs (merged with self)"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: main
+    message: |
+      Implemented the Friends Leaderboard feature end-to-end (backend +
+      frontend). Also fixed a latent NameError on `cutoff` in
+      GET /api/leaderboard (uncovered by ruff during this session).
+
+      Please test:
+        BACKEND
+        1) GET /api/progress/{device_id} for a NEW device_id (should NOT
+           create a row and NOT return a friend_code — should return the
+           empty payload with friend_code:null).
+        2) GET /api/progress/{device_id} for an EXISTING device_id without
+           a friend_code — should lazily provision one and return it in
+           subsequent calls unchanged (idempotent).
+        3) GET /api/friends/lookup/{code} happy path (use `4B73C0` which
+           belongs to device_id `dev_1781112526529_iml7ard2` = Wolfy).
+        4) GET /api/friends/lookup with LOWERCASE input, with SPACES,
+           with 3-char (400), with unknown 8-char (404).
+        5) POST /api/friends/leaderboard with a mix of valid + invalid
+           codes — should return only the valid rows sorted by XP.
+        6) GET /api/leaderboard should still return 200 and not crash.
+
+        FRONTEND (Profile tab)
+        1) Friend Code card renders with a code for a device that has a
+           progress row; Copy button uses expo-clipboard.
+        2) "Add friend by code" toggle opens an input + Add button.
+        3) Submitting an invalid code shows a friendly Alert.
+        4) Submitting `4B73C0` (Wolfy) adds them, closes the panel,
+           switches to Friends tab, and shows Wolfy #1 + "you" #2.
+        5) Long-pressing the friend chip prompts remove.
+        6) Global tab still works and shows the classic device-id list.
+
+      Known device_ids with data (for testing):
+        - `dev_1781112526529_iml7ard2` — Wolfy, 760 XP, friend_code=4B73C0
+        - `dev_1783276978276_3ik0yb77` — TEST_ac, 110 XP

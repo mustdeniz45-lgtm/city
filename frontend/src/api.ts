@@ -113,6 +113,7 @@ export type Progress = {
   quest_progress?: Record<string, { visited: string[] }>;
   level: number; title: string; current_threshold: number; next_threshold: number; progress: number;
   avatar_uri?: string | null;
+  friend_code?: string | null;
 };
 export type CheckInResult = {
   success: boolean; xp_earned: number; total_xp: number; level: number;
@@ -131,6 +132,11 @@ export type LeaderEntry = {
   device_id: string; display_name: string; xp: number; level: number;
   title: string; badges: number; quests: number;
   avatar_uri?: string | null;
+};
+export type FriendEntry = {
+  friend_code: string; display_name: string; xp: number; level: number;
+  title: string; badges: number; quests: number;
+  avatar_uri?: string | null; is_anonymous?: boolean;
 };
 export type CityProgress = {
   city_id: string; name: string; country: string; country_code: string;
@@ -168,6 +174,8 @@ export const api = {
     lat?: number; lng?: number; trivia_answer_index?: number; display_name?: string;
   }) => jpost<CheckInResult>("/progress/check-in", payload),
   leaderboard: () => jget<LeaderEntry[]>("/leaderboard"),
+  friendLookup: (code: string) => jget<FriendEntry>(`/friends/lookup/${encodeURIComponent(code)}`),
+  friendsLeaderboard: (codes: string[]) => jpost<FriendEntry[]>("/friends/leaderboard", { codes }),
   progressByCity: (deviceId: string) => jget<CityProgress[]>(`/progress/${deviceId}/by-city`),
   updateProfile: (deviceId: string, payload: { display_name?: string; avatar_uri?: string | null }) =>
     jpost<{ ok: boolean }>(`/progress/${deviceId}/profile`, payload),

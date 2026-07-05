@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, TextInput } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
-import { api, type LeaderEntry, type Progress, type CityProgress } from "@/src/api";
+import { api, ApiError, type FriendEntry, type LeaderEntry, type Progress, type CityProgress } from "@/src/api";
 import { useApp, getDisplayName, setDisplayName, getAvatarUri, setAvatarUri } from "@/src/store";
 import { listPostcards, removePostcard, type Postcard } from "@/src/postcards";
+import { listFriends, addFriend, removeFriend, normalizeCode, type SavedFriend } from "@/src/friends";
 import { useAuth } from "@/src/auth";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
@@ -26,19 +28,39 @@ export default function ProfileScreen() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Friends state — friend list is device-local; friendBoard is the batched
+  // XP-sorted resolution of those codes served by /api/friends/leaderboard.
+  const [friends, setFriends] = useState<SavedFriend[]>([]);
+  const [friendBoard, setFriendBoard] = useState<FriendEntry[]>([]);
+  const [boardTab, setBoardTab] = useState<"global" | "friends">("global");
+  const [addOpen, setAddOpen] = useState(false);
+  const [addInput, setAddInput] = useState("");
+  const [addBusy, setAddBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!deviceId) return;
     try {
-      const [p, b, n, pc, cp, av] = await Promise.all([
+      const [p, b, n, pc, cp, av, fr] = await Promise.all([
         api.progress(deviceId),
         api.leaderboard(),
         getDisplayName(),
         listPostcards(),
         api.progressByCity(deviceId),
         getAvatarUri(),
+        listFriends(),
       ]);
       setProgress(p); setBoard(b); setName(n); setPostcards(pc); setCityProgress(cp); setAvatar(av);
+      setFriends(fr);
+      // Resolve friend leaderboard in a second, non-blocking step so the
+      // main profile paint isn't gated on it. Skip if there are no friends.
+      if (fr.length > 0) {
+        try {
+          const fb = await api.friendsLeaderboard(fr.map((f) => f.code));
+          setFriendBoard(fb);
+        } catch (e) { console.warn("friend board", e); }
+      } else {
+        setFriendBoard([]);
+      }
     } catch (e) { console.warn(e); }
     finally { setRefreshing(false); }
   }, [deviceId]);
@@ -142,6 +164,88 @@ export default function ProfileScreen() {
     setEditing(false);
     if (deviceId) api.updateProfile(deviceId, { display_name: trimmed }).catch(console.warn);
   };
+
+  // ---- Friends ----
+  const friendCode = progress?.friend_code || null;
+
+  const onCopyCode = async () => {
+    if (!friendCode) return;
+    try {
+      await Clipboard.setStringAsync(friendCode);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Copied!", `Share ${friendCode} with your friends so they can add you.`);
+    } catch (e) { console.warn("clipboard", e); }
+  };
+
+  const onAddFriend = async () => {
+    const raw = normalizeCode(addInput);
+    if (!raw || raw.length < 6) {
+      Alert.alert("Enter a code", "Friend codes are 6–8 letters/numbers, e.g. CQ7K4P9X.");
+      return;
+    }
+    if (friendCode && raw === normalizeCode(friendCode)) {
+      Alert.alert("That's you!", "You can't add your own code as a friend.");
+      return;
+    }
+    setAddBusy(true);
+    try {
+      const preview = await api.friendLookup(raw);
+      const updated = await addFriend(preview.friend_code, preview.display_name);
+      setFriends(updated);
+      // Refresh the friend board immediately.
+      const fb = await api.friendsLeaderboard(updated.map((f) => f.code));
+      setFriendBoard(fb);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setAddInput("");
+      setAddOpen(false);
+      setBoardTab("friends");
+      Alert.alert("Friend added!", `${preview.display_name} is now on your Friends leaderboard.`);
+    } catch (e) {
+      const msg = e instanceof ApiError
+        ? e.message
+        : "Couldn't add that friend. Check the code and try again.";
+      Alert.alert("Add friend failed", msg);
+    } finally {
+      setAddBusy(false);
+    }
+  };
+
+  const onRemoveFriend = (f: SavedFriend) => {
+    Alert.alert(
+      `Remove ${f.nickname}?`,
+      "They won't appear on your Friends leaderboard anymore. You can always re-add them by their code.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove", style: "destructive",
+          onPress: async () => {
+            const updated = await removeFriend(f.code);
+            setFriends(updated);
+            setFriendBoard((prev) => prev.filter((row) => row.friend_code !== f.code));
+          },
+        },
+      ],
+    );
+  };
+
+  // Merged Friends leaderboard: server rows + a synthetic "you" row so the
+  // user can see where they sit against their friends without having to add
+  // themselves. We build it with useMemo to avoid recomputing on every render.
+  const mergedFriendBoard = useMemo<FriendEntry[]>(() => {
+    if (!progress) return friendBoard;
+    const meRow: FriendEntry = {
+      friend_code: friendCode || "__me__",
+      display_name: `${name} (you)`,
+      avatar_uri: avatar ?? null,
+      xp: progress.xp ?? 0,
+      level: progress.level ?? 1,
+      title: progress.title ?? "Newcomer",
+      badges: progress.badges?.length ?? 0,
+      quests: progress.completed_quests?.length ?? 0,
+      is_anonymous: false,
+    };
+    return [...friendBoard, meRow].sort((a, b) => b.xp - a.xp);
+  }, [friendBoard, progress, name, avatar, friendCode]);
 
   return (
     <ScrollView
@@ -337,50 +441,199 @@ export default function ProfileScreen() {
         )}
       </Section>
 
+      <Section title="Friends" testIdSuffix="friends">
+        <View style={styles.friendCodeCard} testID="friend-code-card">
+          <View style={{ flex: 1 }}>
+            <Text style={styles.friendCodeLabel}>Your friend code</Text>
+            {friendCode ? (
+              <Text style={styles.friendCodeText} selectable testID="friend-code-value">{friendCode}</Text>
+            ) : (
+              <Text style={styles.friendCodePending}>Earn some XP to unlock your code</Text>
+            )}
+          </View>
+          <Pressable
+            onPress={onCopyCode}
+            disabled={!friendCode}
+            style={[styles.friendCopyBtn, !friendCode && { opacity: 0.5 }]}
+            testID="friend-code-copy"
+            hitSlop={10}
+          >
+            <Ionicons name="copy-outline" size={16} color="#FFF" />
+            <Text style={styles.friendCopyText}>Copy</Text>
+          </Pressable>
+        </View>
+        <View style={styles.friendActionsRow}>
+          <Pressable
+            onPress={() => setAddOpen((v) => !v)}
+            style={styles.friendAddBtn}
+            testID="friend-add-toggle"
+          >
+            <Ionicons name={addOpen ? "close" : "person-add"} size={14} color={colors.brand} />
+            <Text style={styles.friendAddText}>{addOpen ? "Cancel" : "Add friend by code"}</Text>
+          </Pressable>
+          <Text style={styles.friendCount}>{friends.length} friend{friends.length === 1 ? "" : "s"}</Text>
+        </View>
+        {addOpen && (
+          <View style={styles.addPanel} testID="friend-add-panel">
+            <TextInput
+              value={addInput}
+              onChangeText={(t) => setAddInput(t.toUpperCase())}
+              placeholder="e.g. CQ7K4P9X"
+              placeholderTextColor={colors.muted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={10}
+              style={styles.addInput}
+              testID="friend-add-input"
+            />
+            <Pressable
+              onPress={onAddFriend}
+              disabled={addBusy}
+              style={[styles.addSubmit, addBusy && { opacity: 0.6 }]}
+              testID="friend-add-submit"
+            >
+              <Text style={styles.addSubmitText}>{addBusy ? "Adding…" : "Add"}</Text>
+            </Pressable>
+          </View>
+        )}
+        {friends.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.friendChipsRow}
+            testID="friend-chips-row"
+          >
+            {friends.map((f) => (
+              <Pressable
+                key={f.code}
+                onLongPress={() => onRemoveFriend(f)}
+                style={styles.friendChip}
+                testID={`friend-chip-${f.code}`}
+              >
+                <Text style={styles.friendChipName} numberOfLines={1}>{f.nickname}</Text>
+                <Text style={styles.friendChipCode}>{f.code}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+        {friends.length > 0 && (
+          <Text style={styles.tipText}>Long-press a friend to remove them.</Text>
+        )}
+      </Section>
+
       <Section title="Leaderboard" testIdSuffix="leaderboard">
+        <View style={styles.boardTabsRow} testID="board-tabs">
+          <Pressable
+            onPress={() => setBoardTab("global")}
+            style={[styles.boardTab, boardTab === "global" && styles.boardTabActive]}
+            testID="board-tab-global"
+          >
+            <Ionicons name="earth" size={13} color={boardTab === "global" ? "#FFF" : colors.brand} />
+            <Text style={[styles.boardTabText, boardTab === "global" && styles.boardTabTextActive]}>Global</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setBoardTab("friends")}
+            style={[styles.boardTab, boardTab === "friends" && styles.boardTabActive]}
+            testID="board-tab-friends"
+          >
+            <Ionicons name="people" size={13} color={boardTab === "friends" ? "#FFF" : colors.brand} />
+            <Text style={[styles.boardTabText, boardTab === "friends" && styles.boardTabTextActive]}>
+              Friends{friends.length > 0 ? ` · ${friends.length}` : ""}
+            </Text>
+          </Pressable>
+        </View>
         <View style={styles.boardCard}>
-          {board.length === 0 ? (
-            <Text style={styles.emptyText}>No travelers yet. Be the first!</Text>
-          ) : (
-            board.slice(0, 10).map((e, i) => {
-              const isMe = e.device_id === deviceId;
-              // Pick the best available avatar:
-              //  - For the current user, prefer the local avatar (works even if it's file://).
-              //  - For other rows, only use cross-device URIs (https / data:); skip file:// because
-              //    the file lives on someone else's phone.
-              let renderUri: string | null = null;
-              if (isMe && avatar) renderUri = avatar;
-              else if (e.avatar_uri && !/^file:\/\//i.test(e.avatar_uri)) renderUri = e.avatar_uri;
-              return (
-                <View key={e.device_id} style={[styles.boardRow, i < board.length - 1 && styles.boardDivider, isMe && styles.boardMe]}>
-                  <Text style={[styles.boardRank, i === 0 && { color: "#D9953A" }]}>{i + 1}</Text>
-                  {renderUri ? (
-                    <Image source={renderUri} style={styles.boardAvatar} contentFit="cover" />
-                  ) : (
-                    <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
-                      <Text style={styles.boardAvatarInitial}>
-                        {(e.display_name?.[0] ?? "T").toUpperCase()}
+          {boardTab === "global" ? (
+            board.length === 0 ? (
+              <Text style={styles.emptyText}>No travelers yet. Be the first!</Text>
+            ) : (
+              board.slice(0, 10).map((e, i) => {
+                const isMe = e.device_id === deviceId;
+                let renderUri: string | null = null;
+                if (isMe && avatar) renderUri = avatar;
+                else if (e.avatar_uri && !/^file:\/\//i.test(e.avatar_uri)) renderUri = e.avatar_uri;
+                return (
+                  <View key={e.device_id} style={[styles.boardRow, i < board.length - 1 && styles.boardDivider, isMe && styles.boardMe]}>
+                    <Text style={[styles.boardRank, i === 0 && { color: "#D9953A" }]}>{i + 1}</Text>
+                    {renderUri ? (
+                      <Image source={renderUri} style={styles.boardAvatar} contentFit="cover" />
+                    ) : (
+                      <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
+                        <Text style={styles.boardAvatarInitial}>
+                          {(e.display_name?.[0] ?? "T").toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    {i < 3 && (
+                      <View style={[styles.boardMedal, i === 0 && { backgroundColor: "#D9953A" }, i === 1 && { backgroundColor: "#B6B6B6" }, i === 2 && { backgroundColor: "#CD7F32" }]}>
+                        <Ionicons name="trophy" size={10} color="#FFF" />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.boardName} numberOfLines={1}>
+                        {e.display_name} {isMe ? "(you)" : ""}
                       </Text>
+                      <Text style={styles.boardMeta}>Lvl {e.level} · {e.title}</Text>
                     </View>
-                  )}
-                  {i < 3 && (
-                    <View style={[styles.boardMedal, i === 0 && { backgroundColor: "#D9953A" }, i === 1 && { backgroundColor: "#B6B6B6" }, i === 2 && { backgroundColor: "#CD7F32" }]}>
-                      <Ionicons name="trophy" size={10} color="#FFF" />
+                    <View style={styles.boardXp}>
+                      <Ionicons name="flash" size={12} color={colors.brand} />
+                      <Text style={styles.boardXpText}>{e.xp}</Text>
                     </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.boardName} numberOfLines={1}>
-                      {e.display_name} {isMe ? "(you)" : ""}
-                    </Text>
-                    <Text style={styles.boardMeta}>Lvl {e.level} · {e.title}</Text>
                   </View>
-                  <View style={styles.boardXp}>
-                    <Ionicons name="flash" size={12} color={colors.brand} />
-                    <Text style={styles.boardXpText}>{e.xp}</Text>
+                );
+              })
+            )
+          ) : (
+            // ---- Friends tab ----
+            friends.length === 0 ? (
+              <View style={styles.friendsEmpty} testID="friends-empty">
+                <Ionicons name="people-outline" size={30} color={colors.muted} />
+                <Text style={styles.emptyText}>
+                  Add friends by their code to compare progress.
+                </Text>
+                <Pressable
+                  onPress={() => { setBoardTab("global"); setAddOpen(true); }}
+                  style={styles.emptyCta}
+                  testID="friends-empty-cta"
+                >
+                  <Text style={styles.emptyCtaText}>Add your first friend</Text>
+                </Pressable>
+              </View>
+            ) : (
+              mergedFriendBoard.map((e, i) => {
+                const isMe = e.friend_code === (friendCode || "__me__") || e.friend_code === "__me__";
+                let renderUri: string | null = null;
+                if (isMe && avatar) renderUri = avatar;
+                else if (e.avatar_uri && !/^file:\/\//i.test(e.avatar_uri)) renderUri = e.avatar_uri;
+                return (
+                  <View key={e.friend_code} style={[styles.boardRow, i < mergedFriendBoard.length - 1 && styles.boardDivider, isMe && styles.boardMe]}>
+                    <Text style={[styles.boardRank, i === 0 && { color: "#D9953A" }]}>{i + 1}</Text>
+                    {renderUri ? (
+                      <Image source={renderUri} style={styles.boardAvatar} contentFit="cover" />
+                    ) : (
+                      <View style={[styles.boardAvatar, styles.boardAvatarFallback]}>
+                        <Text style={styles.boardAvatarInitial}>
+                          {(e.display_name?.[0] ?? "T").toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    {i < 3 && (
+                      <View style={[styles.boardMedal, i === 0 && { backgroundColor: "#D9953A" }, i === 1 && { backgroundColor: "#B6B6B6" }, i === 2 && { backgroundColor: "#CD7F32" }]}>
+                        <Ionicons name="trophy" size={10} color="#FFF" />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.boardName} numberOfLines={1}>{e.display_name}</Text>
+                      <Text style={styles.boardMeta}>Lvl {e.level} · {e.title}</Text>
+                    </View>
+                    <View style={styles.boardXp}>
+                      <Ionicons name="flash" size={12} color={colors.brand} />
+                      <Text style={styles.boardXpText}>{e.xp}</Text>
+                    </View>
                   </View>
-                </View>
-              );
-            })
+                );
+              })
+            )
           )}
         </View>
       </Section>
@@ -489,4 +742,38 @@ const styles = StyleSheet.create({
   accountSub: { color: colors.muted, fontSize: 11, marginTop: 2 },
   signOutBtn: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   signOutText: { color: colors.brand, fontWeight: "700", fontSize: 12, letterSpacing: 0.3 },
+
+  // Friends
+  friendCodeCard: {
+    flexDirection: "row", alignItems: "center", gap: spacing.md,
+    backgroundColor: colors.surfaceInverse, padding: spacing.md,
+    borderRadius: radius.md, ...shadow.pill,
+  },
+  friendCodeLabel: { color: "rgba(255,255,255,0.65)", fontSize: 10, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
+  friendCodeText: { fontFamily: fonts.display, color: "#FFF", fontSize: 24, letterSpacing: 3, marginTop: 4 },
+  friendCodePending: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 6 },
+  friendCopyBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.brand, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill },
+  friendCopyText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
+  friendActionsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.md },
+  friendAddBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: "#FCE9E1", borderWidth: 1, borderColor: "#F1C3B0" },
+  friendAddText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
+  friendCount: { color: colors.muted, fontSize: 11, fontWeight: "600" },
+  addPanel: { flexDirection: "row", gap: spacing.sm, alignItems: "center", marginTop: spacing.md, backgroundColor: colors.surfaceSecondary, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  addInput: { flex: 1, fontFamily: fonts.display, fontSize: 16, color: colors.onSurface, paddingHorizontal: spacing.sm, paddingVertical: 6, letterSpacing: 2 },
+  addSubmit: { backgroundColor: colors.brand, paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radius.pill },
+  addSubmitText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
+  friendChipsRow: { gap: spacing.sm, paddingVertical: spacing.sm },
+  friendChip: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, maxWidth: 160 },
+  friendChipName: { fontFamily: fonts.display, fontSize: 13, color: colors.onSurface },
+  friendChipCode: { fontSize: 10, color: colors.muted, letterSpacing: 1, marginTop: 1 },
+
+  // Leaderboard tabs
+  boardTabsRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
+  boardTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border },
+  boardTabActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  boardTabText: { color: colors.brand, fontWeight: "700", fontSize: 12 },
+  boardTabTextActive: { color: "#FFF" },
+  friendsEmpty: { alignItems: "center", padding: spacing.xl, gap: spacing.md },
+  emptyCta: { backgroundColor: colors.brand, paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radius.pill },
+  emptyCtaText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
 });
