@@ -18,6 +18,8 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [busy, setBusy] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [err, setErr] = useState<string | null>(null);
 
   const onSubmit = async () => {
     if (!email || !password) {
