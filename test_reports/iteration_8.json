@@ -1,0 +1,36 @@
+{
+  "summary": "PASS. Expo web preview is stable after the --tunnel flag was removed from supervisord.conf. Preview at http://localhost:3000/ returns HTTP 200, all 5 tab routes (/, /explore, /quest, /(tabs)/food → /food, /profile, /map) render distinct, correct content. Map tab correctly renders the intended 'Native map view' fallback banner (MapLibre RN is native-only). POI detail (/poi/poi-gaz-001-panorama-museum-25-december) renders title, CVS badge 96/100, KÜLTÜR YOLU #1, About, and full Location & access section (rating 4.8 · 4,965 reviews, Mon-Sun 08:30-17:00, address, phone, panorama25aralik.com/tr). Supervisor status is RUNNING with PID 9997 stable across ~4+ minutes of monitoring (uptime 0:53 → 1:10 → 1:55 → 2:50 → 4:03). No new 'ngrok tunnel took too long' errors have been written to expo.err.log since the fix (file mtime 18:29:58 predates current expo start at ~18:30:02; all ngrok lines are historical from before the fix). Backend regression sweep: 7/7 pytest tests pass (supabase health configured=true, cities/gaziantep, 118 POIs, exactly 53 kultur-yolu places, cvs-summary with 118 keys, leaderboard, POI check-in at Panorama Museum coords). Only frontend console noise is React Native web deprecation warnings ('shadow*' → boxShadow, props.pointerEvents → style.pointerEvents) — non-blocking. No red-screen errors, no page errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web style props", "issue": "Deprecation warnings on every render: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Non-blocking noise, but future React Native / RN-web versions may drop support. Grep the frontend for `shadowColor|shadowOffset|shadowOpacity|shadowRadius` and inline `pointerEvents` props to migrate."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_regression_sweep.py",
+    "/app/test_reports/pytest/regression_sweep.xml"
+  ],
+  "action_items": [
+    "None required for the reported bug — preview crash-loop is resolved.",
+    "Optional cleanup: migrate deprecated RN-web style props (shadow*, pointerEvents) to silence console warnings on every mount."
+  ],
+  "critical_code_review_comments": [
+    "/etc/supervisor/conf.d/supervisord.conf line 4 correctly reads `command=yarn expo start --port 3000` (no --tunnel). Emergent's preview URL is served via EXPO_PACKAGER_PROXY_URL, so tunnel mode is unnecessary and was the root cause of the crash-loop.",
+    "expo.err.log still contains historical ngrok errors (~1515 lines) — cosmetic only; a log rotate/truncate is optional."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_regression_sweep.py (new regression sweep; fixed POI id to `poi-gaz-001-panorama-museum-25-december`)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (5/5 routes + POI detail)"},
+  "seed_data_creation": "None. Regression check-in uses a fresh TEST_-prefixed device_id per run against real Supabase POI id.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Public preview URL: https://local-explorer-game.preview.emergentagent.com. Backend base = same host with /api prefix. Panorama Museum POI id in Supabase is `poi-gaz-001-panorama-museum-25-december` (not `panorama-museum`). Map tab intentionally shows 'Native map view' fallback in web preview — do not flag as a bug. Expo supervisor command must remain `yarn expo start --port 3000` — DO NOT re-add --tunnel (causes ngrok crash-loop in Emergent env).",
+  "rca_of_issue": "RCA: A previous deployment_agent fix added `--tunnel` to the Expo supervisor start command. In this environment @expo/ngrok wasn't installed globally and ngrok couldn't establish a tunnel non-interactively, so `expo start --tunnel --port 3000` exited with code 1 repeatedly ('Input is required, but npx expo is in non-interactive mode' then later 'ngrok tunnel took too long to connect'). Supervisor kept restarting expo → crash-loop. Fix (already applied by main agent): reverted line 4 of /etc/supervisor/conf.d/supervisord.conf to `command=yarn expo start --port 3000` and ran supervisorctl reread/update/restart. Verified: PID stable 4+ min, no new ngrok errors since restart, HTTP 200 on /, all 5 tab routes plus POI detail render, backend regression 7/7 pass. Mitigation for future: keep tunnel mode off in Emergent env — EXPO_PACKAGER_PROXY_URL already handles external access."
+}
