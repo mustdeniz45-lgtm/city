@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { api, type City, type POI } from "@/src/api";
+import { api, type City, type CityProgress, type POI } from "@/src/api";
 import { useApp } from "@/src/store";
 import { CityHeader } from "@/src/components/CityHeader";
 import { SkeletonList } from "@/src/components/Skeleton";
@@ -31,7 +31,13 @@ export default function ExploreScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [visited, setVisited] = useState<Set<string>>(new Set());
   const [cvsMap, setCvsMap] = useState<Record<string, number>>({});
+  const [cityProgress, setCityProgress] = useState<CityProgress[]>([]);
   const router = useRouter();
+
+  const currentCityProgress = useMemo(
+    () => cityProgress.find((p) => p.city_id === activeCityId) ?? null,
+    [cityProgress, activeCityId],
+  );
 
   const loadVisited = async () => {
     if (!deviceId) return;
@@ -43,6 +49,14 @@ export default function ExploreScreen() {
     } catch {}
   };
   useEffect(() => { loadVisited(); }, [deviceId, progressVersion]);
+
+  // Load per-city progress so the header can show the "X/Y quests · Z%" bar
+  // that already appears on the city-picker cards. Refresh whenever XP moves
+  // via progressVersion (poi check-in, quest completion, etc.).
+  useEffect(() => {
+    if (!deviceId) return;
+    api.progressByCity(deviceId).then(setCityProgress).catch(console.warn);
+  }, [deviceId, progressVersion]);
 
   const load = async () => {
     try {
@@ -77,7 +91,7 @@ export default function ExploreScreen() {
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View>
-            {city && <CityHeader city={city} />}
+            {city && <CityHeader city={city} progress={currentCityProgress} />}
             <View style={styles.intro}>
               <Text style={styles.kicker}>DISCOVER</Text>
               <Text style={styles.h1}>Places to explore</Text>

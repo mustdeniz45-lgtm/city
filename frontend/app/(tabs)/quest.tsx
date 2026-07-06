@@ -3,7 +3,7 @@ import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { api, type Quest } from "@/src/api";
+import { api, type CityQuestProgress, type Quest } from "@/src/api";
 import { useApp } from "@/src/store";
 import { SkeletonList } from "@/src/components/Skeleton";
 import { colors, difficultyColor, fonts, radius, shadow, spacing } from "@/src/theme";
@@ -20,17 +20,24 @@ export default function QuestScreen() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [difficulty, setDifficulty] = useState("all");
   const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [progressMap, setProgressMap] = useState<Record<string, CityQuestProgress>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     try {
-      const [q, prog] = await Promise.all([
+      const [q, prog, cqp] = await Promise.all([
         api.quests(activeCityId, difficulty),
         deviceId ? api.progress(deviceId) : Promise.resolve({ completed_quests: [] } as any),
+        // Backend batch endpoint — one request returns { quest_id, current,
+        // need, percent, completed } for every quest in the active city.
+        deviceId ? api.cityQuestsProgress(activeCityId, deviceId).catch(() => []) : Promise.resolve([]),
       ]);
       setQuests(q);
       setCompletedIds(prog.completed_quests || []);
+      const map: Record<string, CityQuestProgress> = {};
+      (cqp || []).forEach((r) => { map[r.quest_id] = r; });
+      setProgressMap(map);
     } catch (e) { console.warn(e); }
     finally { setLoading(false); setRefreshing(false); }
   };
@@ -78,7 +85,16 @@ export default function QuestScreen() {
       <FlatList
         data={quests}
         keyExtractor={(q) => q.id}
-        renderItem={({ item }) => <QuestCard quest={item} completed={completedIds.includes(item.id)} />}
+        renderItem={({ item }) => {
+          const done = completedIds.includes(item.id);
+          const p = progressMap[item.id];
+          // Fall back to a 0/0 sentinel when the batch endpoint hasn't
+          // resolved yet — QuestCard hides the bar in that case.
+          const visited = done ? (p?.need ?? 0) : (p?.current ?? 0);
+          const total = p?.need ?? 0;
+          const percent = done ? 100 : (p?.percent ?? 0);
+          return <QuestCard quest={item} completed={done} visited={visited} total={total} percent={percent} />;
+        }}
         contentContainerStyle={{ paddingBottom: 120, paddingTop: spacing.sm }}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
@@ -100,9 +116,13 @@ function Stat({ label, value, icon, tint = colors.onSurface }: { label: string; 
   );
 }
 
-function QuestCard({ quest, completed }: { quest: Quest; completed: boolean }) {
+function QuestCard({ quest, completed, visited, total, percent }: { quest: Quest; completed: boolean; visited: number; total: number; percent: number }) {
   const router = useRouter();
   const diffColor = difficultyColor(quest.difficulty);
+  // Clamp defensively so stale local data never renders "3/2 · 150%".
+  const safeVisited = Math.min(Math.max(visited, 0), Math.max(total, 0));
+  const pct = Math.max(0, Math.min(100, percent));
+  const started = safeVisited > 0 && !completed;
   return (
     <Pressable
       style={styles.qcard}
@@ -115,16 +135,39 @@ function QuestCard({ quest, completed }: { quest: Quest; completed: boolean }) {
         <View style={[styles.diffBadge, { backgroundColor: diffColor }]}>
           <Text style={styles.diffText}>{quest.difficulty.toUpperCase()}</Text>
         </View>
-        {completed && (
+        {completed ? (
           <View style={styles.doneBadge}>
             <Ionicons name="checkmark" size={12} color="#FFF" />
             <Text style={styles.doneText}>Done</Text>
           </View>
-        )}
+        ) : started ? (
+          <View style={styles.inProgressBadge} testID={`quest-inprogress-${quest.id}`}>
+            <Ionicons name="play" size={10} color="#FFF" />
+            <Text style={styles.doneText}>In progress</Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.qcardBody}>
         <Text style={styles.qcardTitle} numberOfLines={2}>{quest.title}</Text>
         <Text style={styles.qcardDesc} numberOfLines={2}>{quest.description}</Text>
+        {total > 0 && (
+          <View style={styles.qProgress} testID={`quest-progress-${quest.id}`}>
+            <View style={styles.qProgressTrack}>
+              <View
+                style={[
+                  styles.qProgressFill,
+                  {
+                    width: `${pct}%`,
+                    backgroundColor: completed ? colors.success : colors.brandSecondary,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.qProgressText} testID={`quest-progress-text-${quest.id}`}>
+              {safeVisited}/{total} steps · {pct}%
+            </Text>
+          </View>
+        )}
         <View style={styles.qcardMeta}>
           <View style={styles.metaItem}>
             <Ionicons name="flash" size={12} color="#FFF" />
@@ -164,10 +207,15 @@ const styles = StyleSheet.create({
   diffBadge: { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
   diffText: { color: "#FFF", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   doneBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.success, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
+  inProgressBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.brandSecondary, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
   doneText: { color: "#FFF", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
   qcardBody: { position: "absolute", left: 0, right: 0, bottom: 0, padding: spacing.lg },
   qcardTitle: { fontFamily: fonts.display, color: "#FFF", fontSize: 22, marginBottom: 4 },
   qcardDesc: { color: "rgba(255,255,255,0.9)", fontSize: 13, lineHeight: 18, marginBottom: spacing.sm },
+  qProgress: { marginBottom: spacing.sm },
+  qProgressTrack: { height: 5, backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 3, overflow: "hidden" },
+  qProgressFill: { height: "100%", borderRadius: 3 },
+  qProgressText: { color: "rgba(255,255,255,0.92)", fontSize: 11, fontWeight: "700", marginTop: 4, letterSpacing: 0.3 },
   qcardMeta: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
   metaText: { color: "#FFF", fontSize: 11, fontWeight: "600" },

@@ -106,6 +106,14 @@ export type QuestProgressResponse = {
   quest_id: string; completed: boolean; satisfied: boolean;
   progress: RequirementItem[];
 };
+export type CityQuestProgress = {
+  quest_id: string;
+  current: number;
+  need: number;
+  percent: number;      // 0..100 integer
+  completed: boolean;
+  satisfied: boolean;
+};
 export type Progress = {
   device_id: string; display_name: string; xp: number;
   completed_quests: string[]; badges: string[];
@@ -162,6 +170,8 @@ export const api = {
   quest: (id: string) => jget<Quest>(`/quests/${id}`),
   questProgress: (id: string, deviceId: string) =>
     jget<QuestProgressResponse>(`/quests/${id}/progress?device_id=${encodeURIComponent(deviceId)}`),
+  cityQuestsProgress: (cityId: string, deviceId: string) =>
+    jget<CityQuestProgress[]>(`/cities/${cityId}/quests/progress?device_id=${encodeURIComponent(deviceId)}`),
   poi: (id: string) => jget<POI>(`/pois/${id}`),
   poiCheckIn: (payload: { device_id: string; poi_id: string; lat?: number; lng?: number; display_name?: string }) =>
     jpost<{ success: boolean; too_far: boolean; distance_m: number | null; quests_credited: string[]; already_visited: boolean; message: string }>(

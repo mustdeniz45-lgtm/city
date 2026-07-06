@@ -736,6 +736,52 @@ async def get_quest_progress(quest_id: str, device_id: str = Query(...)):
         "progress": result["progress"],
     }
 
+
+@api_router.get("/cities/{city_id}/quests/progress")
+async def get_city_quests_progress(city_id: str, device_id: str = Query(...)):
+    """Batch rollup of every quest's progress for the given user in the given
+    city — one Supabase round trip per resource (quests, pois, dishes, user)
+    instead of one HTTP call per quest.
+
+    Response: list of ``{quest_id, current, need, percent, completed,
+    satisfied}`` — `percent` is capped at 100 and lands on an integer for
+    display. Callers use this to render the small progress bar on each
+    Quest card without needing to know the requirement schema client-side.
+    """
+    quests = await repo.quests_list(city_id)
+    if not quests:
+        return []
+    user = await repo.progress_get(device_id) or {
+        "device_id": device_id, "xp": 0, "completed_quests": [], "check_ins": [],
+        "quest_progress": {},
+    }
+    pois = await repo.pois_list(city_id)
+    dishes = await repo.dishes_list(city_id)
+    completed = set(user.get("completed_quests") or [])
+
+    out: List[Dict[str, Any]] = []
+    for q in quests:
+        result = evaluate_quest_progress(q, user, pois, city_dishes=dishes)
+        current = sum(int(item.get("current") or 0) for item in result["progress"])
+        need = sum(int(item.get("need") or 0) for item in result["progress"])
+        is_done = q["id"] in completed
+        # Fully-completed quests always render at 100% even if a data revision
+        # later changes the requirement structure — the reward has been paid.
+        if is_done and need > 0:
+            current = need
+        pct = 100 if (is_done or (need > 0 and current >= need)) else (
+            round((current / need) * 100) if need > 0 else 0
+        )
+        out.append({
+            "quest_id": q["id"],
+            "current": current,
+            "need": need,
+            "percent": pct,
+            "completed": is_done,
+            "satisfied": result["satisfied"],
+        })
+    return out
+
 @api_router.get("/progress/{device_id}")
 async def get_progress(device_id: str):
     doc = await repo.progress_get(device_id)
