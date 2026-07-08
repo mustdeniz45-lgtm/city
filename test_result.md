@@ -270,6 +270,31 @@ agent_communication:
       pre-existing RN-Web `shadow*` / `pointerEvents` deprecation warnings
       (unrelated to Friends), and Alert.alert on RN-Web doesn't surface as
       a browser dialog (native OK). Feature ready to ship.
+  - agent: main
+    message: |
+      New iteration: (1) CityHeader gained a city-progress bar on the
+      Explore hero, mirroring the city-picker style; (2) every Quest card
+      now renders a small "X/Y steps · Z%" progress bar plus an "In
+      progress" pill when partially done. Added new backend endpoint
+      GET /api/cities/{city_id}/quests/progress (batch rollup, reuses
+      evaluate_quest_progress). Also fixed an Expo Go crash by (a) making
+      CityQuestMap a runtime dispatcher that lazily require()s the
+      MapLibre native impl only on real builds, and (b) trimming the
+      Map barrel to stop re-exporting `QuestRouteLine` which was
+      dragging @maplibre/... into module scope.
+  - agent: testing
+    message: |
+      8/8 backend pytest cases pass for the new batch endpoint. Frontend
+      reviewed statically (all testIDs, clamping, and pill logic match
+      spec). Two non-blocking observations:
+        (a) Wolfy's `completed_quests` contains 5 legacy IDs
+            (`q-gaz-1..5`) that no longer exist in the current catalog,
+            so his header will show `1/11` not `6/11` — data drift, not
+            a code bug.
+        (b) Occasional Supabase upstream resets surface as HTTP 500 on
+            `/quests/progress` and `/progress/{id}/by-city`. Frontend
+            already tolerates via `.catch()`. Recommend adding retry-
+            with-backoff in `repo._sb_call` in a later iteration.
 
       Please test:
         BACKEND
