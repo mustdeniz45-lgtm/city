@@ -1,0 +1,1537 @@
+{
+  "places": [
+    {
+      "id": 1,
+      "categories": [
+        "landmarks",
+        "museums"
+      ],
+      "tr_name": "25 Aralık Panorama Müzesi",
+      "en_name": "Panorama Museum 25 December",
+      "latitude": 37.065938,
+      "longitude": 37.379312,
+      "address": "Karagöz, Derekenarı Cd No:39, 27080 Şahinbey/Gaziantep",
+      "plus_code": "398H+9P Şahinbey, Gaziantep",
+      "tr_description": "Eski bir Redif Deposu binasında yer alan müze, Antep Savunması'nı 120 metrelik panoramik tablo ve dioramalarla anlatır. Gaziantep Kalesi'nin hemen yanındadır.",
+      "en_description": "Housed in a former Ottoman army depot next to Gaziantep Castle, this museum depicts the Siege of Antep through a 120-meter panoramic painting and dioramas.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 2,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Ali Nacar Camii",
+      "en_name": "Ali Nacar Mosque",
+      "latitude": 37.067687,
+      "longitude": 37.381187,
+      "address": "Yaprak, Kep Kep Sk. No:1, 27080 Şehitkamil/Gaziantep",
+      "plus_code": "399J+3F Şehitkamil, Gaziantep",
+      "tr_description": "Kale çevresindeki tarihi mahallede yer alan küçük bir Osmanlı dönemi camisidir.",
+      "en_description": "A small Ottoman-era mosque located in the historic neighborhood around the castle.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/ali%20nacar%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 3,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kumandan Çeşmesi",
+      "en_name": "Commander Fountain",
+      "latitude": 37.067062,
+      "longitude": 37.382188,
+      "address": "Karagöz, Köprübaşı Sk. No:4, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398J+RV Şahinbey, Gaziantep",
+      "tr_description": "Kale yakınındaki tarihi sokaklarda bulunan eski bir taş çeşmedir.",
+      "en_description": "An old stone fountain located in the historic streets near the castle.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 4,
+      "categories": [
+        "historic",
+        "restaurant/cafe"
+      ],
+      "tr_name": "Tarihi Kır Kahvesi",
+      "en_name": "Historical Rural Coffee House",
+      "latitude": 37.067062,
+      "longitude": 37.382188,
+      "address": "Karagöz, Köprübaşı Sk. No:4, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398J+RV Şahinbey, Gaziantep",
+      "tr_description": "Kale eteklerinde yer alan, geleneksel mimarisiyle kahve ve nargile içilebilen tarihi bir kahvehanedir.",
+      "en_description": "A historic coffee house at the foot of the castle, known for its traditional architecture, tea and nargile.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 5,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Naib Hamamı",
+      "en_name": "Naib Bath",
+      "latitude": 37.067812,
+      "longitude": 37.383437,
+      "address": "Karagöz, 27240 Şahinbey/Gaziantep",
+      "plus_code": "399M+49 Şahinbey, Gaziantep",
+      "tr_description": "Osmanlı dönemine ait, kale çevresindeki tarihi hamamlardan biridir.",
+      "en_description": "An Ottoman-era bathhouse located in the historic area around the castle.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 6,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "14 Şehit Anıtı",
+      "en_name": "14 Martyrs Monument",
+      "latitude": 37.068938,
+      "longitude": 37.384937,
+      "address": "Yaprak, 27400 Şehitkamil/Gaziantep",
+      "plus_code": "399M+HX Şehitkamil, Gaziantep",
+      "tr_description": "Kurtuluş Savaşı'nda Antep Savunması'nda şehit olan 14 kişiyi anmak için yapılmış anıttır.",
+      "en_description": "A monument commemorating 14 martyrs who died defending Antep during the War of Independence.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/14%20martyrs%20monument.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 7,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Butik Otel",
+      "en_name": "Boutique Hotel",
+      "latitude": 37.066437,
+      "longitude": 37.382062,
+      "address": "Karagöz, Köprübaşı Sk. No:2, 27270 Şahinbey/Gaziantep",
+      "plus_code": "398J+HR Şahinbey, Gaziantep",
+      "tr_description": "Kale çevresindeki tarihi bir konaktan dönüştürülmüş, geleneksel Antep mimarisini yansıtan bir konaklama tesisidir.",
+      "en_description": "A boutique hotel converted from a historic mansion near the castle, reflecting traditional Antep architecture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 8,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Şirvan Camii",
+      "en_name": "Şirvan Mosque",
+      "latitude": 37.065938,
+      "longitude": 37.381812,
+      "address": "Karagöz, 27240 Şahinbey/Gaziantep",
+      "plus_code": "398J+9P Şahinbey, Gaziantep",
+      "tr_description": "Şirvan Mahallesi'nde bulunan, sade taş işçiliğiyle dikkat çeken tarihi bir camidir.",
+      "en_description": "A historic mosque in the Şirvan neighborhood, notable for its plain stonework.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 9,
+      "categories": [
+        "landmarks",
+        "museums"
+      ],
+      "tr_name": "Gaziantep Kalesi",
+      "en_name": "Gaziantep Castle",
+      "latitude": 37.066312,
+      "longitude": 37.383187,
+      "address": "Karagöz, Naip Hamamı Sk. No:1, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398M+G7 Şahinbey, Gaziantep",
+      "tr_description": "Şehrin merkezinde, Roma ve Bizans dönemlerine kadar uzanan tarihiyle Gaziantep'in en önemli simgesidir. Kale içinde Antep Savunması'nı konu alan diorama ve sergiler bulunur.",
+      "en_description": "The most iconic landmark of Gaziantep, with origins dating back to Roman and Byzantine times. The castle interior houses dioramas and exhibits about the Siege of Antep.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 10,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Tarihi Zeytin İşlik Alanı",
+      "en_name": "Historical Olive Workshop Area",
+      "latitude": 37.065438,
+      "longitude": 37.383562,
+      "address": "Karagöz, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398M+5C Şahinbey, Gaziantep",
+      "tr_description": "Kale çevresinde geçmişte zeytinyağı üretiminin yapıldığı tarihi bir alandır.",
+      "en_description": "A historic area near the castle where olive oil was once produced.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 11,
+      "categories": [
+        "landmarks"
+      ],
+      "tr_name": "Turizm Danışma Şube Müdürlüğü",
+      "en_name": "Tourism Info Office",
+      "latitude": 37.064062,
+      "longitude": 37.384937,
+      "address": "Türktepe, Gümrük Cd. No:16, 27400 Şahinbey/Gaziantep",
+      "plus_code": "397M+JX Şahinbey, Gaziantep",
+      "tr_description": "Şehri ziyaret eden turistlere bilgi ve harita sağlayan resmi danışma noktasıdır.",
+      "en_description": "The official tourist information office providing maps and guidance to visitors.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 12,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Handaniye Camii",
+      "en_name": "Handaniye Mosque",
+      "latitude": 37.064812,
+      "longitude": 37.382312,
+      "address": "Karagöz, 27240 Şahinbey/Gaziantep",
+      "plus_code": "397J+WW Şahinbey, Gaziantep",
+      "tr_description": "Tarihi çarşı bölgesinde yer alan, Memluk veya Osmanlı dönemine ait küçük bir camidir.",
+      "en_description": "A small mosque from the Mamluk or Ottoman period, located in the historic bazaar area.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/handaniye%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 13,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Havra",
+      "en_name": "Synagogue",
+      "latitude": 37.064187,
+      "longitude": 37.381812,
+      "address": "No12, Karagöz, Çamurcu Sk., 27400 Şahinbey/Gaziantep",
+      "plus_code": "397J+MP Şahinbey, Gaziantep",
+      "tr_description": "Gaziantep'in çok kültürlü geçmişini yansıtan, tarihi Yahudi mahallesinde bulunan eski bir sinagogdur.",
+      "en_description": "An old synagogue located in the historic Jewish quarter, reflecting the city's multicultural past.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 14,
+      "categories": [
+        "landmarks",
+        "museums"
+      ],
+      "tr_name": "Emine Göğüş Mutfak Müzesi",
+      "en_name": "Emine Göğüş Culinary Museum",
+      "latitude": 37.064563,
+      "longitude": 37.382438,
+      "address": "Karagöz Mh., 27240 Şahinbey/Gaziantep",
+      "plus_code": "397J+RX Şahinbey, Gaziantep",
+      "tr_description": "Geleneksel bir Antep konağında kurulan müze, bölgenin zengin mutfak kültürünü araç-gereçler ve sergilerle tanıtır.",
+      "en_description": "Housed in a traditional Antep mansion, this museum showcases the region's rich culinary culture through utensils and exhibits.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 15,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Paşa Hamamı / Hamam Müzesi",
+      "en_name": "Pasha Bath / Bath Museum",
+      "latitude": 37.065062,
+      "longitude": 37.382687,
+      "address": "Sadık, Karagöz, Mehmet Dai Sk. No:20, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398M+23 Şahinbey, Gaziantep",
+      "tr_description": "16. yüzyıldan kalma tarihi bir Osmanlı hamamı, restore edilerek hamam kültürünü anlatan bir müzeye dönüştürülmüştür.",
+      "en_description": "A 16th-century Ottoman bathhouse, restored and converted into a museum dedicated to bath culture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 16,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Hışva Han",
+      "en_name": "Hışva Inn",
+      "latitude": 37.065062,
+      "longitude": 37.383063,
+      "address": "Karagöz, Handan Bey Sk No:23/1, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398M+26 Şahinbey, Gaziantep",
+      "tr_description": "Tarihi çarşı içinde tüccarların konakladığı, taş kemerli avlusuyla dikkat çeken eski bir kervansaraydır (han).",
+      "en_description": "An old caravanserai (han) in the historic bazaar with a stone-arched courtyard, once used by traveling merchants.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 17,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Millet Hanı",
+      "en_name": "Millet Inn",
+      "latitude": 37.064687,
+      "longitude": 37.384438,
+      "address": "Şekeroğlu, Gümrük Cd. No:1, 27400 Şahinbey/Gaziantep",
+      "plus_code": "397M+VQ Şahinbey, Gaziantep",
+      "tr_description": "İpek Yolu ticaretinin önemli duraklarından biri olan, geniş avlulu tarihi bir handır.",
+      "en_description": "A historic han (caravanserai) with a large courtyard, once an important stop on the Silk Road trade route.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 18,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Büdeyri Han",
+      "en_name": "Büdeyri Inn",
+      "latitude": 37.065438,
+      "longitude": 37.384563,
+      "address": "Türktepe, Gümrük Cd. D:no 32, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398M+5R Şahinbey, Gaziantep",
+      "tr_description": "16. yüzyıldan kalma, iki katlı taş yapısıyla Gaziantep'in en güzel hanlarından biridir.",
+      "en_description": "A 16th-century han, considered one of Gaziantep's finest with its two-story stone structure.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 19,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Tahtani Camii",
+      "en_name": "Tahtani Mosque",
+      "latitude": 37.065062,
+      "longitude": 37.384687,
+      "address": "Türktepe, 27240 Şahinbey/Gaziantep",
+      "plus_code": "398M+2V Şahinbey, Gaziantep",
+      "tr_description": "Tarihi çarşı bölgesinde, sade ve geleneksel taş işçiliğiyle yapılmış küçük bir camidir.",
+      "en_description": "A small mosque in the historic bazaar area, built with simple traditional stonework.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 20,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Göymen Pazar Hamamı",
+      "en_name": "Göymen Bazaar Bath",
+      "latitude": 37.064937,
+      "longitude": 37.384563,
+      "address": "Türktepe, Gümrük Cd., 27400 Şahinbey/Gaziantep",
+      "plus_code": "397M+XR Şahinbey, Gaziantep",
+      "tr_description": "Eski pazar bölgesinde yer alan, Osmanlı dönemine ait tarihi bir hamamdır.",
+      "en_description": "An Ottoman-era bathhouse located in the old bazaar district.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 21,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Yeni Han",
+      "en_name": "New Inn",
+      "latitude": 37.063688,
+      "longitude": 37.385063,
+      "address": "Tarihi Yeni Han, Türktepe, Uzun Çarşı No:15, 27400 Şahinbey/Gaziantep",
+      "plus_code": "397P+F2 Şahinbey, Gaziantep",
+      "tr_description": "Tarihi ticaret bölgesinde, eski tüccarların kullandığı taş kemerli avlulu bir handır.",
+      "en_description": "A stone-arched han (caravanserai) in the historic trade district, once used by merchants.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/yeni%20han.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 22,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Yüzükçü Han",
+      "en_name": "Yüzükçü Inn",
+      "latitude": 37.063812,
+      "longitude": 37.385063,
+      "address": "Türktepe, 27400 Şahinbey/Gaziantep",
+      "plus_code": "397P+G2 Şahinbey, Gaziantep",
+      "tr_description": "Geçmişte yüzük ve takı ticaretiyle anılan, tarihi çarşı içinde küçük bir handır.",
+      "en_description": "A small historic han in the bazaar, traditionally associated with the ring and jewelry trade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 23,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Gümrük Han",
+      "en_name": "Customs Inn",
+      "latitude": 37.063812,
+      "longitude": 37.384438,
+      "address": "Çakmak, Kadı Osman Sk. No:0, 27080 Şehitkamil/Gaziantep",
+      "plus_code": "397M+GQ Şehitkamil, Gaziantep",
+      "tr_description": "Osmanlı döneminde gümrük işlemlerinin yapıldığı, tarihi çarşı bölgesindeki büyük bir handır.",
+      "en_description": "A large historic han in the bazaar district, used for customs operations during the Ottoman period.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 24,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Karagöz Camii",
+      "en_name": "Karagöz Mosque",
+      "latitude": 37.063437,
+      "longitude": 37.383813,
+      "address": "Alaybey, Eski Saray Cd. No:4, 27240 Şahinbey/Gaziantep",
+      "plus_code": "397M+9G Şahinbey, Gaziantep",
+      "tr_description": "Tarihi çarşı çevresinde bulunan, sade mimarisiyle dikkat çeken eski bir camidir.",
+      "en_description": "An old mosque near the historic bazaar, notable for its simple architecture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 25,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Anadolu Han",
+      "en_name": "Anadolu Inn",
+      "latitude": 37.063187,
+      "longitude": 37.384313,
+      "address": "Alaybey, Alaüddevle Sk. No:3, 27400 Şahinbey/Gaziantep",
+      "plus_code": "397M+7P Şahinbey, Gaziantep",
+      "tr_description": "İpek Yolu ticaretinde önemli rol oynamış, geniş avlulu tarihi bir kervansaraydır.",
+      "en_description": "A historic caravanserai with a wide courtyard that played an important role in Silk Road trade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 26,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Alaüddevle Camii",
+      "en_name": "Alaüddevle Mosque",
+      "latitude": 37.063312,
+      "longitude": 37.384937,
+      "address": "Şekeroğlu, 27240 Şahinbey/Gaziantep",
+      "plus_code": "397M+8X Şahinbey, Gaziantep",
+      "tr_description": "Dulkadiroğulları Beyliği döneminden kalma, şehrin en eski camilerinden biridir.",
+      "en_description": "One of the city's oldest mosques, dating back to the Dulkadirid Beylik period.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 27,
+      "categories": [
+        "landmarks",
+        "historic"
+      ],
+      "tr_name": "Zincirli Bedesten",
+      "en_name": "Zincirli Bedesten",
+      "latitude": 37.063063,
+      "longitude": 37.385438,
+      "address": "Alaybey, Alaüddevle Sk. No:30, 27400 Şahinbey/Gaziantep",
+      "plus_code": "397P+65 Şahinbey, Gaziantep",
+      "tr_description": "Zincirli avlu kapısıyla bilinen, tarihi kapalı çarşı (bedesten) yapısıdır; içinde dükkanlar ve atölyeler barındırır.",
+      "en_description": "A historic covered bazaar (bedesten) known for its chained courtyard gate, housing shops and workshops.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/zincirli%20bedesten.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 28,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Emir Ali Han",
+      "en_name": "Emir Ali Inn",
+      "latitude": 37.062687,
+      "longitude": 37.385937,
+      "address": "Alaybey, 27240 Şahinbey/Gaziantep",
+      "plus_code": "397P+39 Şahinbey, Gaziantep",
+      "tr_description": "Tarihi çarşı içinde, dönemin tüccarlarına hizmet eden eski bir handır.",
+      "en_description": "An old han in the historic bazaar that once served local merchants.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 29,
+      "categories": [
+        "landmarks"
+      ],
+      "tr_name": "Bakırcılar Çarşısı",
+      "en_name": "Coppersmiths Bazaar",
+      "latitude": 37.061937,
+      "longitude": 37.386688,
+      "address": "Boyacı, Eskici Çarşısı Sk., 27400 Şahinbey/Gaziantep",
+      "plus_code": "396P+QM Şahinbey, Gaziantep",
+      "tr_description": "Bakır işçiliğiyle ünlü, geleneksel zanaatkarların dükkanlarının sıralandığı canlı bir çarşıdır.",
+      "en_description": "A lively bazaar lined with workshops of traditional coppersmiths, famous for handmade copper goods.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/copper%20crafting.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 30,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Tütün Han",
+      "en_name": "Tobacco Inn",
+      "latitude": 37.061937,
+      "longitude": 37.387187,
+      "address": "Boyacı, Külekçi Çarşısı Sk. Tütün Hanı, 27400 Şahinbey/Gaziantep",
+      "plus_code": "396P+QV Şahinbey, Gaziantep",
+      "tr_description": "Geçmişte tütün ticaretinin yapıldığı, tarihi çarşı bölgesindeki bir handır.",
+      "en_description": "A historic han in the bazaar area, once used for the tobacco trade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 31,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kürkçü Han",
+      "en_name": "Kürkçü Inn",
+      "latitude": 37.061688,
+      "longitude": 37.387438,
+      "address": "Boyacı, 27240 Şahinbey/Gaziantep",
+      "plus_code": "396P+MX Şahinbey, Gaziantep",
+      "tr_description": "Kürk ve deri ticaretiyle anılan, tarihi çarşı içinde eski bir handır.",
+      "en_description": "An old han in the historic bazaar traditionally associated with the fur and leather trade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 32,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Pürsefa Han",
+      "en_name": "Pürsefa Inn",
+      "latitude": 37.061437,
+      "longitude": 37.387937,
+      "address": "Boyacı, 27240 Şahinbey/Gaziantep",
+      "plus_code": "396Q+H5 Şahinbey, Gaziantep",
+      "tr_description": "Tarihi ticaret bölgesinde yer alan, taş avlulu küçük bir handır.",
+      "en_description": "A small han with a stone courtyard, located in the historic trade district.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 33,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Büyük Buğday Pazarı",
+      "en_name": "Grand Wheat Market",
+      "latitude": 37.061563,
+      "longitude": 37.387812,
+      "address": "Suyabatmaz, Buğday Pazarı Sk. No:8, 27400, 27400 Şahinbey/Gaziantep",
+      "plus_code": "396Q+J4 Şahinbey, Gaziantep",
+      "tr_description": "Geçmişte tahıl ticaretinin merkezi olan, geniş ve canlı tarihi bir pazar alanıdır.",
+      "en_description": "A large and lively historic market area that was once the center of the grain trade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 34,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Boyacı Camii",
+      "en_name": "Boyacı Mosque",
+      "latitude": 37.062062,
+      "longitude": 37.388438,
+      "address": "Boyacı, 27240 Şahinbey/Gaziantep",
+      "plus_code": "396Q+R9 Şahinbey, Gaziantep",
+      "tr_description": "Boyacılık zanaatının yapıldığı mahallede bulunan, sade tarihi bir camidir.",
+      "en_description": "A simple historic mosque located in the neighborhood traditionally associated with the dyeing craft.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 35,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Tekke Camii",
+      "en_name": "Tekke Mosque",
+      "latitude": 37.060437,
+      "longitude": 37.387687,
+      "address": "Suyabatmaz, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396Q+53 Şahinbey, Gaziantep",
+      "tr_description": "Mevlevi tarikatına ait bir tekkenin yanında bulunan, dini ve kültürel öneme sahip tarihi bir camidir.",
+      "en_description": "A historically and culturally significant mosque located next to a Mevlevi lodge (tekke).",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 36,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "Mevlevihane Müzesi",
+      "en_name": "Mevlevi Center Museum",
+      "latitude": 37.061187,
+      "longitude": 37.387812,
+      "address": "Suyabatmaz, Küçük Pazar Sk. No:32, 27400 Şahinbey/Gaziantep",
+      "plus_code": "396Q+F4 Şahinbey, Gaziantep",
+      "tr_description": "Eski bir Mevlevihane (Mevlevi dergahı) binasında kurulan müze, sema ayinleri ve tarikat kültürüne ait eserleri sergiler.",
+      "en_description": "Housed in a former Mevlevi lodge, this museum exhibits artifacts related to the Sema ceremony and Mevlevi culture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 37,
+      "categories": [
+        "landmarks",
+        "historic"
+      ],
+      "tr_name": "Tahmis Kahvesi",
+      "en_name": "Tahmis Coffee House",
+      "latitude": 37.061312,
+      "longitude": 37.387812,
+      "address": "Eski, Suyabatmaz, Buğday Pazarı Sk. No:8, 27400 Şahinbey/Gaziantep",
+      "plus_code": "396Q+G4 Şahinbey, Gaziantep",
+      "tr_description": "1635 yılından kalma, Gaziantep'in en ünlü ve en eski kahvehanelerinden biridir; geleneksel menengiç kahvesiyle bilinir.",
+      "en_description": "Dating back to 1635, this is one of Gaziantep's oldest and most famous coffee houses, known for traditional pistachio (menengiç) coffee.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 38,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Küçük Buğday Pazarı",
+      "en_name": "Tiny Wheat Market",
+      "latitude": 37.061312,
+      "longitude": 37.387563,
+      "address": "Suyabatmaz, Buğday Pazarı Sk., 27400 Şahinbey/Gaziantep",
+      "plus_code": "396Q+G2 Şahinbey, Gaziantep",
+      "tr_description": "Büyük Buğday Pazarı'na yakın, daha küçük ölçekli tarihi bir tahıl pazarı alanıdır.",
+      "en_description": "A smaller historic grain market area located near the Grand Wheat Market.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 39,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Mecidiye Han",
+      "en_name": "Mecidiye Inn",
+      "latitude": 37.060688,
+      "longitude": 37.387687,
+      "address": "Suyabatmaz, Şehitler Cd. No:39 D:G, 27400 Şahinbey/Gaziantep",
+      "plus_code": "396Q+73 Şahinbey, Gaziantep",
+      "tr_description": "19. yüzyıla tarihlenen, tarihi çarşı bölgesinde yer alan bir handır.",
+      "en_description": "A han dating to the 19th century, located in the historic bazaar district.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/mecidiye%20han.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 40,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kemikli Bedesten",
+      "en_name": "Kemikli Bazaar",
+      "latitude": 37.060938,
+      "longitude": 37.387313,
+      "address": "Suyabatmaz, Şehitler Cd., 27410 Şahinbey/Gaziantep",
+      "plus_code": "396P+9W Şahinbey, Gaziantep",
+      "tr_description": "Tarihi çarşı içinde kemikli (kasap) esnafının kullandığı eski bir bedesten/pazar yapısıdır.",
+      "en_description": "An old bazaar (bedesten) structure in the historic market traditionally used by butchers.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/kemikli%20bedesten.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 41,
+      "categories": [
+        "landmarks",
+        "historic"
+      ],
+      "tr_name": "Elmacı Pazarı",
+      "en_name": "Elmacı Bazaar",
+      "latitude": 37.061563,
+      "longitude": 37.386813,
+      "address": "Şekeroğlu Mah, Merkez, 27220 Şahinbey/Gaziantep",
+      "plus_code": "396P+JP Şahinbey, Gaziantep",
+      "tr_description": "Yerel ürünlerin ve geleneksel lezzetlerin satıldığı, şehrin en canlı ve renkli pazarlarından biridir.",
+      "en_description": "One of the city's most lively and colorful markets, selling local produce and traditional delicacies.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 42,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Hacı Nasır Camii",
+      "en_name": "Hacı Nasır Mosque",
+      "latitude": 37.061437,
+      "longitude": 37.386562,
+      "address": "Alaybey, Nuhoğlu Sk. No:6, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396P+HJ Şahinbey, Gaziantep",
+      "tr_description": "Tarihi mahalle dokusu içinde yer alan, sade yapısıyla küçük bir camidir.",
+      "en_description": "A small mosque with a simple structure, located within the historic neighborhood fabric.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 43,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Hacı Veli Camii",
+      "en_name": "Hacı Veli Mosque",
+      "latitude": 37.060562,
+      "longitude": 37.386063,
+      "address": "Alaybey, Hacı Veli Cami Cd. No:53, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396P+6C Şahinbey, Gaziantep",
+      "tr_description": "Eski şehir dokusunda bulunan, geleneksel taş işçiliğiyle yapılmış tarihi bir camidir.",
+      "en_description": "A historic mosque built with traditional stonework, located in the old city fabric.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/haci%20veli%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 44,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Güven Han",
+      "en_name": "Güven Inn",
+      "latitude": 37.059438,
+      "longitude": 37.384812,
+      "address": "Alaybey, Samlıoğlu Sk. No:1, 27010 Şahinbey/Gaziantep",
+      "plus_code": "395M+QW Şahinbey, Gaziantep",
+      "tr_description": "Tarihi ticaret bölgesinde yer alan, güvenlik amacıyla kullanılmış olduğu rivayet edilen eski bir handır.",
+      "en_description": "An old han in the historic trade district, said to have once been used for secure storage.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 45,
+      "categories": [
+        "landmarks"
+      ],
+      "tr_name": "Şahinbey Halk Kütüphanesi",
+      "en_name": "Şahinbey Public Library",
+      "latitude": 37.058563,
+      "longitude": 37.384062,
+      "address": "Alaybey, Mehmet Ali Kaya Alp Sk. NO:1, 27220 Şahinbey/Gaziantep",
+      "plus_code": "395M+CJ Şahinbey, Gaziantep",
+      "tr_description": "Şahinbey ilçesine hizmet veren, geniş koleksiyonuyla halkın kullanımına açık bir kütüphanedir.",
+      "en_description": "A public library serving the Şahinbey district with a wide collection open to the community.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 46,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Yemiş Han",
+      "en_name": "Yemiş Inn",
+      "latitude": 37.059562,
+      "longitude": 37.385188,
+      "address": "Alaybey, Belediye Cd. No:48, 27010 Şahinbey/Gaziantep",
+      "plus_code": "395P+R3 Şahinbey, Gaziantep",
+      "tr_description": "Geçmişte kuru yemiş ve meyve ticaretinin yapıldığı tarihi bir handır.",
+      "en_description": "A historic han once used for the trade of dried fruits and nuts.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 47,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Şire Han",
+      "en_name": "Şire Inn",
+      "latitude": 37.059188,
+      "longitude": 37.385312,
+      "address": "Alaybey, Mehmet Ali Kaya Alp Sk. No:27, 27010 Şahinbey/Gaziantep",
+      "plus_code": "395P+M4 Şahinbey, Gaziantep",
+      "tr_description": "Şıra (üzüm suyu) ve bağ ürünleri ticaretiyle anılan, tarihi çarşı içindeki eski bir handır.",
+      "en_description": "An old han in the historic bazaar traditionally associated with grape juice (şıra) and vineyard products.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 48,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Tuz Han",
+      "en_name": "Salt Inn",
+      "latitude": 37.060313,
+      "longitude": 37.386813,
+      "address": "Alaybey, Ali Çavuş Şener Cd. No:4, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396P+4P Şahinbey, Gaziantep",
+      "tr_description": "Geçmişte tuz ticaretinin yapıldığı, tarihi çarşı bölgesindeki bir handır.",
+      "en_description": "A historic han in the bazaar district that was once used for the salt trade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 49,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Pişirici Kasteli",
+      "en_name": "Pişirici Kastel",
+      "latitude": 37.059313,
+      "longitude": 37.389063,
+      "address": "Şahinbey, İncili Pınar, 27090 Şehitkamil/Gaziantep",
+      "plus_code": "395Q+PJ Şehitkamil, Gaziantep",
+      "tr_description": "Su ihtiyacını karşılamak için yapılmış, geleneksel mimarisiyle dikkat çeken tarihi bir kasteldir (su deposu/çeşme yapısı).",
+      "en_description": "A historic kastel (water storage and fountain structure) built to meet the city's water needs, notable for its traditional architecture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 50,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Şehreküstü Konakları",
+      "en_name": "Şehreküstü Mansions",
+      "latitude": 37.058688,
+      "longitude": 37.391063,
+      "address": "Kepenek, Şıh Hamam Sk. No:9, 27400 Şahinbey/Gaziantep",
+      "plus_code": "395R+FC Şahinbey, Gaziantep",
+      "tr_description": "Geleneksel Antep evi mimarisini yansıtan, taş cephe ve avlularıyla tarihi konaklar topluluğudur.",
+      "en_description": "A group of historic mansions reflecting traditional Antep house architecture, with stone facades and courtyards.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 51,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Şeyh Fethullah Camii",
+      "en_name": "Sheikh Fethullah Mosque",
+      "latitude": 37.059438,
+      "longitude": 37.391188,
+      "address": "Kepenek, 27240 Şahinbey/Gaziantep",
+      "plus_code": "395R+QF Şahinbey, Gaziantep",
+      "tr_description": "Tarihi mahalle içinde, bir Mevlevi şeyhinin adıyla anılan tarihi bir camidir.",
+      "en_description": "A historic mosque named after a Mevlevi sheikh, located within the old neighborhood.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 52,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Şeyh Hamamı",
+      "en_name": "Sheikh Bath",
+      "latitude": 37.059188,
+      "longitude": 37.391437,
+      "address": "Kepenek, Kepenek Sk. no2, 27580 Şahinbey/Gaziantep",
+      "plus_code": "395R+MH Şahinbey, Gaziantep",
+      "tr_description": "Tarihi mahallede yer alan, Osmanlı dönemine ait küçük bir hamamdır.",
+      "en_description": "A small Ottoman-era bathhouse located in the historic neighborhood.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 53,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "Milli Mücadele Müzesi",
+      "en_name": "National Resistance Museum",
+      "latitude": 37.057938,
+      "longitude": 37.390937,
+      "address": "Ulucanlar, Ulucanlar Sk. No:10, 27300 Şahinbey/Gaziantep",
+      "plus_code": "395R+59 Şahinbey, Gaziantep",
+      "tr_description": "Milli Mücadele dönemine ait belge, fotoğraf ve eşyaların sergilendiği, Antep Savunması'nın tarihini anlatan bir müzedir.",
+      "en_description": "A museum displaying documents, photographs and artifacts from the National Resistance period, telling the story of the Siege of Antep.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 54,
+      "categories": [
+        "museums",
+        "landmarks"
+      ],
+      "tr_name": "Zeugma Mozaik Müzesi",
+      "en_name": "Zeugma Mosaic Museum",
+      "latitude": 37.075187,
+      "longitude": 37.385188,
+      "address": "Hacı, Hacıbaba, Sani Konukoğlu Blv., 27500 Şehitkamil/Gaziantep",
+      "plus_code": "39GP+33 Şehitkamil, Gaziantep",
+      "tr_description": "Zeugma antik kentinden çıkarılan ünlü mozaikleri ve Çingene Kızı freskini sergileyen, dünyanın en büyük mozaik müzelerinden biridir.",
+      "en_description": "One of the world's largest mosaic museums, displaying famous mosaics and the Gypsy Girl fresco unearthed from ancient Zeugma.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 55,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "Hasan Süzer Etnografya Müzesi",
+      "en_name": "Hasan Süzer Ethnography Museum",
+      "latitude": 37.061437,
+      "longitude": 37.377562,
+      "address": "Bey, Hanifi Oğlu Sk. No:32, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396H+H2 Şahinbey, Gaziantep",
+      "tr_description": "Geleneksel bir Antep konağında kurulan müze, yöresel giysiler ve günlük yaşam objeleriyle yerel kültürü tanıtır.",
+      "en_description": "Housed in a traditional Antep mansion, this museum showcases local culture through traditional clothing and everyday objects.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 56,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Dülük Baba Külliyesi",
+      "en_name": "Dülük Baba Sanctuary",
+      "latitude": 37.125062,
+      "longitude": 37.328688,
+      "address": "Beylerbeyi, 27560 Şehitkamil/Gaziantep",
+      "plus_code": "48GH+2F Şehitkamil, Gaziantep",
+      "tr_description": "Dülük antik kenti yakınında, Hz. Lokman'a atfedilen türbe ve külliyeyi barındıran tarihi bir ziyaret yeridir.",
+      "en_description": "A historic pilgrimage site near ancient Doliche, home to a shrine and complex attributed to Prophet Lokman.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 57,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kendirli Kilisesi",
+      "en_name": "Kendirli Church",
+      "latitude": 37.062938,
+      "longitude": 37.375812,
+      "address": "Bey, Atatürk Blv. No:45, 27010 Şahinbey/Gaziantep",
+      "plus_code": "397G+58 Şahinbey, Gaziantep",
+      "tr_description": "19. yüzyılda Ermeni cemaati tarafından inşa edilen, taş işçiliğiyle dikkat çeken tarihi bir kilisedir.",
+      "en_description": "A 19th-century church built by the Armenian community, notable for its fine stonework.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/surp%20asdvadzadzin%20church.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 59,
+      "categories": [
+        "landmarks",
+        "historic"
+      ],
+      "tr_name": "Rumkale",
+      "en_name": "Rumkale Fortress",
+      "latitude": 37.272188,
+      "longitude": 37.838563,
+      "address": "Kasaba, Kasaba Köyü Yolu, 27970 Yavuzeli/Gaziantep",
+      "plus_code": "7RCQ+VC Yavuzeli, Gaziantep",
+      "tr_description": "Fırat Nehri kıyısında kayalıklar üzerine kurulu, kale kalıntıları ve manastır izleriyle etkileyici bir antik kaledir.",
+      "en_description": "A dramatic ancient fortress perched on cliffs above the Euphrates River, featuring castle ruins and monastery remains.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 60,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Ravanda Kalesi",
+      "en_name": "Ravanda Castle",
+      "latitude": 36.872937,
+      "longitude": 37.054063,
+      "address": "79702 Bektaşoğlu/Polateli/Kilis",
+      "plus_code": "V3F3+5J Bektaşoğlu, Polateli/Kilis",
+      "tr_description": "Yukarı Fırat havzasında, ortaçağdan kalma kale kalıntılarıyla bilinen tarihi bir tepedir.",
+      "en_description": "A historic hilltop in the upper Euphrates basin, known for its medieval castle ruins.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 61,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Karkamış Antik Kenti",
+      "en_name": "Karkamış Ancient City",
+      "latitude": 36.829563,
+      "longitude": 37.016437,
+      "address": "Çarşı, 27880 Karkamış/Gaziantep",
+      "plus_code": "R2H8+RH Karkamış, Gaziantep",
+      "tr_description": "Suriye sınırındaki Fırat kıyısında, Hitit ve Roma dönemlerine ait kalıntılarıyla önemli bir antik kenttir.",
+      "en_description": "A significant ancient city on the Euphrates near the Syrian border, with Hittite and Roman-era ruins.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 62,
+      "categories": [
+        "landmarks"
+      ],
+      "tr_name": "Halfeti Batan Köy",
+      "en_name": "Halfeti Sunken Village",
+      "latitude": 37.279187,
+      "longitude": 37.852937,
+      "address": "Savaşan, 63950 Halfeti/Şanlıurfa",
+      "plus_code": "7VH3+M5 Halfeti, Şanlıurfa",
+      "tr_description": "Birecik Barajı'nın suları altında kalan eski Halfeti yerleşiminin minare ve yapı kalıntılarının görüldüğü ilginç bir nokta.",
+      "en_description": "A striking spot where the minaret and ruins of old Halfeti village remain partly submerged under the waters of the Birecik Dam.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 63,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Habeş Kanyonu",
+      "en_name": "Habeş Canyon",
+      "latitude": 37.423063,
+      "longitude": 36.913688,
+      "address": "Hisar, 27650 Araban/Gaziantep",
+      "plus_code": "CWF7+6F Araban, Gaziantep",
+      "tr_description": "Doğal kaya oluşumları ve yürüyüş parkurlarıyla doğa severlerin uğrak noktası olan bir kanyondur.",
+      "en_description": "A canyon popular with nature lovers for its rock formations and hiking trails.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/habes%20canyon.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 64,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Küklüce Kanyonu",
+      "en_name": "Küklüce Canyon",
+      "latitude": 37.472062,
+      "longitude": 37.617687,
+      "address": "Köklüce, 27650 Araban/Gaziantep",
+      "plus_code": "FJC9+R3 Araban, Gaziantep",
+      "tr_description": "Şehir merkezine yakın, kısa yürüyüş parkurları sunan doğal bir kanyon vadisidir.",
+      "en_description": "A natural canyon valley near the city center, offering short hiking trails.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 65,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Burç Tabiat Parkı",
+      "en_name": "Burç Nature Park",
+      "latitude": 37.030687,
+      "longitude": 37.289938,
+      "address": "Çamtepe, 27410 Şahinbey/Gaziantep",
+      "plus_code": "27JQ+7X Şahinbey, Gaziantep",
+      "tr_description": "Geniş yeşil alanları, göleti ve yürüyüş yollarıyla şehrin önemli doğa parklarından biridir.",
+      "en_description": "One of the city's major nature parks, featuring wide green areas, a pond and walking trails.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 66,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Yeşilvadi Parkı",
+      "en_name": "Yeşilvadi Park",
+      "latitude": 37.035187,
+      "longitude": 37.419688,
+      "address": "Ulucanlar, Yeşilvadi Yolu, 27300 Şahinbey/Gaziantep",
+      "plus_code": "2CP9+3V Şahinbey, Gaziantep",
+      "tr_description": "Vadi içinde yeşillendirilmiş, piknik alanları ve yürüyüş yollarıyla aile gezileri için uygun bir parktır.",
+      "en_description": "A landscaped valley park with picnic areas and walking paths, popular for family outings.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/yesilvadi%20park.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 67,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Vadi Park",
+      "en_name": "Vadi Park",
+      "latitude": 37.024313,
+      "longitude": 37.335437,
+      "address": "Yeditepe Mahallesi No:216, D:91, 27470 Şahinbey/Gaziantep",
+      "plus_code": "28FP+P5 Şahinbey, Gaziantep",
+      "tr_description": "Dere yatağı boyunca uzanan, koşu ve bisiklet yollarıyla şehrin merkezi yeşil koridorlarından biridir.",
+      "en_description": "A park stretching along a stream bed, serving as one of the city's central green corridors with jogging and cycling paths.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/vadi%20park.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 68,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Botanik Bahçesi",
+      "en_name": "Botanical Garden",
+      "latitude": 37.062938,
+      "longitude": 37.350812,
+      "address": "Gazi Mh, Zübeyde Hanım Blv. No:45, 27060 Şehitkamil/Gaziantep",
+      "plus_code": "3972+58 Şehitkamil, Gaziantep",
+      "tr_description": "Çeşitli bitki türlerinin sergilendiği, eğitim ve dinlenme amaçlı düzenlenmiş bir botanik bahçesidir.",
+      "en_description": "A botanical garden displaying various plant species, designed for both education and relaxation.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/botanic%20garden.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 71,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Fıstık Park",
+      "en_name": "Fıstık Park",
+      "latitude": 37.057938,
+      "longitude": 37.344562,
+      "address": "Öğretmenevleri, Ahmet Turan Ertuğ Cd. No:8, 27010 Şahinbey/Gaziantep",
+      "plus_code": "385V+5R Şahinbey, Gaziantep",
+      "tr_description": "Fıstık ağaçları ve yeşil alanlarıyla şehrin sembolik ürünü Antep fıstığına atfen düzenlenmiş bir parktır.",
+      "en_description": "A park dedicated to Antep's signature pistachio, featuring pistachio trees and green spaces.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 72,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Kavaklık Parkı",
+      "en_name": "Kavaklık Park",
+      "latitude": 37.061563,
+      "longitude": 37.352563,
+      "address": "Öğretmenevleri, 27010 Şahinbey/Gaziantep",
+      "plus_code": "3963+J2 Şahinbey, Gaziantep",
+      "tr_description": "Kavak ağaçlarıyla çevrili, gölet ve yürüyüş alanlarına sahip bir mahalle parkıdır.",
+      "en_description": "A neighborhood park surrounded by poplar trees, with a pond and walking areas.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 78,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Engelliler Parkı",
+      "en_name": "Engelliler Park",
+      "latitude": 37.061937,
+      "longitude": 37.348437,
+      "address": "Öğretmenevleri, Engelliler Parkı, 27010 Şahinbey/Gaziantep",
+      "plus_code": "386X+Q9 Şahinbey, Gaziantep",
+      "tr_description": "Engelli bireylerin erişimine uygun olarak tasarlanmış, oyun ve dinlenme alanları bulunan bir parktır.",
+      "en_description": "A park designed for accessibility, featuring play and rest areas for people with disabilities.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/engelliler%20park.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 79,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Festival Park",
+      "en_name": "Festival Park",
+      "latitude": 37.063312,
+      "longitude": 37.348188,
+      "address": "Sarıgüllük, 27060 Şehitkamil/Gaziantep",
+      "plus_code": "387X+87 Şehitkamil, Gaziantep",
+      "tr_description": "Konser ve etkinliklerin düzenlendiği, geniş açık alanlara sahip bir festival parkıdır.",
+      "en_description": "A festival park with large open areas used for concerts and events.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/festival%20park.jpeg",
+      "category_manual": ""
+    },
+    {
+      "id": 81,
+      "categories": [
+        "nature"
+      ],
+      "tr_name": "Uzay Parkı",
+      "en_name": "Uzay Park",
+      "latitude": 37.063562,
+      "longitude": 37.352438,
+      "address": "Uzay Parki, Pancarlı, Zübeyde Hanım Blv., 27060 Şehitkamil/Gaziantep",
+      "plus_code": "3972+CX Şehitkamil, Gaziantep",
+      "tr_description": "Astronomi ve uzay temalı oyun grupları ve sergilerin bulunduğu eğitici bir tema parkıdır.",
+      "en_description": "An educational theme park featuring space-themed play structures and exhibits.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/uzay%20park.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 82,
+      "categories": [
+        "historic",
+        "museums"
+      ],
+      "tr_name": "Zeugma-Belkıs Antik Kenti",
+      "en_name": "Zeugma-Belkıs Ancient City",
+      "latitude": 37.058062,
+      "longitude": 37.869563,
+      "address": "Belkıs Merkez, 27700 Belkıs Köyü/Nizip/Gaziantep",
+      "plus_code": "3V59+6R Nizip, Gaziantep",
+      "tr_description": "UNESCO Dünya Mirası adayı olan Zeugma, Fırat kıyısında Helenistik ve Roma dönemlerine ait kalıntılarıyla önemli bir antik kenttir.",
+      "en_description": "A UNESCO World Heritage candidate, ancient Zeugma on the Euphrates preserves significant Hellenistic and Roman-era ruins.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 83,
+      "categories": [
+        "landmarks",
+        "historic",
+        "museums"
+      ],
+      "tr_name": "Yesemek Açık Hava Müzesi",
+      "en_name": "Yesemek Open Air Museum",
+      "latitude": 36.904438,
+      "longitude": 37.744937,
+      "address": "Yesemek, 27800 İslahiye/Gaziantep",
+      "plus_code": "WP3V+QX İslahiye, Gaziantep",
+      "tr_description": "Hitit dönemine ait taş heykel ve kabartmaların sergilendiği açık hava müzesi, bölgenin en eski taş işçiliği atölyelerinden biridir.",
+      "en_description": "An open-air museum displaying Hittite-era stone sculptures and reliefs, one of the region's oldest stone-carving workshops.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 84,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Dülük Baba / Doliche",
+      "en_name": "Dülük Baba / Doliche",
+      "latitude": 37.116312,
+      "longitude": 37.324687,
+      "address": "Beylerbeyi, Gaziantep Kahramanmaraş Yolu, 27560 Şehitkamil/Gaziantep",
+      "plus_code": "488F+GV Şehitkamil, Gaziantep",
+      "tr_description": "Antik Doliche kentinin kalıntılarını barındıran, Roma dönemi Jupiter Dolichenus tapınağıyla tanınan bir ören yeridir.",
+      "en_description": "An archaeological site preserving the remains of ancient Doliche, known for its Roman-era temple of Jupiter Dolichenus.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 85,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "Medusa Cam Eserler Müzesi",
+      "en_name": "Medusa Glass Museum",
+      "latitude": 37.066938,
+      "longitude": 37.381812,
+      "address": "Karagöz, Şakir Sk. No:9, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398J+QP Şahinbey, Gaziantep",
+      "tr_description": "Osmanlı ve Cumhuriyet dönemine ait cam eserlerin sergilendiği özel bir koleksiyon müzesidir.",
+      "en_description": "A private collection museum exhibiting glass artifacts from the Ottoman and Republican periods.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/medusa%20glass%20museum.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 86,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "İslam Bilim Tarihi Müzesi",
+      "en_name": "Islamic Science History Museum",
+      "latitude": 37.056938,
+      "longitude": 37.363312,
+      "address": "Kolejtepe, Yeşil Cami Cd. No:5, 27070 Şahinbey/Gaziantep",
+      "plus_code": "3947+Q8 Şahinbey, Gaziantep",
+      "tr_description": "İslam dünyasının bilim ve teknoloji tarihindeki başarılarını model ve replikalarla anlatan bir müzedir.",
+      "en_description": "A museum illustrating the scientific and technological achievements of the Islamic world through models and replicas.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/islamic%20science%20history%20museum.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 87,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "15 Temmuz Demokrasi Müzesi",
+      "en_name": "July 15 Democracy Museum",
+      "latitude": 37.073062,
+      "longitude": 37.383938,
+      "address": "Yaprak, Zafer Cd. No:55, 27080 Şehitkamil/Gaziantep",
+      "plus_code": "39FM+6H Şehitkamil, Gaziantep",
+      "tr_description": "15 Temmuz darbe girişimi gecesinde yaşananları belge ve görsellerle anlatan bir anma müzesidir.",
+      "en_description": "A memorial museum recounting the events of the July 15 coup attempt through documents and visuals.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/july%2015%20democracy%20museum.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 88,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "Sabun ve Pekmez Müzesi",
+      "en_name": "Soap & Molasses Museum",
+      "latitude": 37.066312,
+      "longitude": 37.386063,
+      "address": "Türktepe, Karahacı Sk. No:10, 27400 Şahinbey/Gaziantep",
+      "plus_code": "398P+GC Şahinbey, Gaziantep",
+      "tr_description": "Geleneksel sabun ve pekmez üretim yöntemlerini eski aletler ve sergilerle tanıtan küçük bir müzedir.",
+      "en_description": "A small museum showcasing traditional soap and grape molasses production methods through old tools and exhibits.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/soap%20%26%20molasses%20museum.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 89,
+      "categories": [
+        "museums"
+      ],
+      "tr_name": "Devr-i Alem Para Müzesi",
+      "en_name": "Devr-i Alem Money Museum",
+      "latitude": 37.064563,
+      "longitude": 37.382062,
+      "address": "Karagöz, Hasırcı Sk., 27400 Şahinbey/Gaziantep",
+      "plus_code": "397J+RR Şahinbey, Gaziantep",
+      "tr_description": "Osmanlı ve Cumhuriyet dönemine ait paraların sergilendiği, tarihi bir handa kurulu nümizmatik müzesidir.",
+      "en_description": "A numismatic museum housed in a historic han, displaying coins from the Ottoman and Republican eras.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/devri%20alem%20money%20museum.jpeg",
+      "category_manual": ""
+    },
+    {
+      "id": 90,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kurtuluş Camii",
+      "en_name": "Kurtuluş Mosque",
+      "latitude": 37.060313,
+      "longitude": 37.375563,
+      "address": "Akyol, Cami Sk. No:10, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396G+46 Şahinbey, Gaziantep",
+      "tr_description": "Kurtuluş Mahallesi'nde bulunan, sade mimarisiyle yerel halka hizmet veren bir camidir.",
+      "en_description": "A mosque in the Kurtuluş neighborhood, serving the local community with its simple architecture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 91,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Nuri Mehmed Paşa Camii",
+      "en_name": "Nuri Mehmed Paşa Mosque",
+      "latitude": 37.062938,
+      "longitude": 37.381187,
+      "address": "Alaybey, İsmail Say Sk. No:9, 27010 Şahinbey/Gaziantep",
+      "plus_code": "397J+5F Şahinbey, Gaziantep",
+      "tr_description": "Osmanlı dönemi paşalarından adını alan, klasik kubbeli mimarisiyle tarihi bir camidir.",
+      "en_description": "A historic mosque named after an Ottoman-era pasha, featuring classical domed architecture.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/nuri%20mehmed%20pasa%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 92,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Ömeriye Camii",
+      "en_name": "Ömeriye Mosque",
+      "latitude": 37.063812,
+      "longitude": 37.380063,
+      "address": "Karagöz, Suburcu Cd. No:16/A, 27240 Şahinbey/Gaziantep",
+      "plus_code": "397J+G2 Şahinbey, Gaziantep",
+      "tr_description": "Eski şehir dokusunda yer alan, tarihi taş işçiliğiyle yapılmış bir mahalle camisidir.",
+      "en_description": "A neighborhood mosque in the old city fabric, built with historic stonework.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 93,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "İhsanbey (Esenbek) Camii",
+      "en_name": "İhsanbey (Esenbek) Mosque",
+      "latitude": 37.057688,
+      "longitude": 37.391188,
+      "address": "Kepenek, Ulucanlar Sk. No:6, 27300 Şahinbey/Gaziantep",
+      "plus_code": "395R+3F Şahinbey, Gaziantep",
+      "tr_description": "İhsanbey (Esenbek) Mahallesi'nde bulunan, geleneksel mimarisiyle dikkat çeken tarihi bir camidir.",
+      "en_description": "A historic mosque in the İhsanbey (Esenbek) neighborhood, notable for its traditional architecture.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/ihsanbey%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 94,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Eyüpoğlu Camii",
+      "en_name": "Eyüpoğlu Mosque",
+      "latitude": 37.060812,
+      "longitude": 37.378062,
+      "address": "Bey, Eyüboğlu Cami Sk. No:14, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396H+86 Şahinbey, Gaziantep",
+      "tr_description": "Eyüpoğlu Mahallesi'ne adını veren, sade taş yapısıyla tarihi bir camidir.",
+      "en_description": "A historic mosque with a simple stone structure, lending its name to the Eyüpoğlu neighborhood.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/eyupoglu%20mosque.jpeg",
+      "category_manual": ""
+    },
+    {
+      "id": 95,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kılınçoğlu Camii",
+      "en_name": "Kılınçoğlu Mosque",
+      "latitude": 37.054562,
+      "longitude": 37.390687,
+      "address": "Kılınçoğlu, Piroğlu Sk. No:7, 27300 Şahinbey/Gaziantep",
+      "plus_code": "393R+R7 Şahinbey, Gaziantep",
+      "tr_description": "Kılınçoğlu ailesinin adını taşıyan, eski şehir dokusunda yer alan tarihi bir camidir.",
+      "en_description": "A historic mosque bearing the Kılınçoğlu family name, located in the old city fabric.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 96,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Bostancı Camii",
+      "en_name": "Bostancı Mosque",
+      "latitude": 37.067563,
+      "longitude": 37.386938,
+      "address": "Cabi, Bostancı Cami Sk. No:13, 27240 Şahinbey/Gaziantep",
+      "plus_code": "399P+2Q Şahinbey, Gaziantep",
+      "tr_description": "Bostancı Mahallesi'nde yer alan, geleneksel taş işçiliğiyle yapılmış küçük bir camidir.",
+      "en_description": "A small mosque with traditional stonework, located in the Bostancı neighborhood.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 97,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kabasakal Camii",
+      "en_name": "Kabasakal Mosque",
+      "latitude": 37.057812,
+      "longitude": 37.394188,
+      "address": "Kepenek, Kabasakal Paşa Cami Sk. No:28, 27100 Şahinbey/Gaziantep",
+      "plus_code": "395V+4M Şahinbey, Gaziantep",
+      "tr_description": "Kabasakal Mahallesi'nde bulunan, sade mimarisiyle tarihi bir camidir.",
+      "en_description": "A historic mosque with simple architecture, located in the Kabasakal neighborhood.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/kabasakal%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 98,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Ahmet Çelebi Camii",
+      "en_name": "Ahmet Çelebi Mosque",
+      "latitude": 37.056438,
+      "longitude": 37.392812,
+      "address": "Kılınçoğlu, Ulucanlar Cd. No:30, 27300 Şahinbey/Gaziantep",
+      "plus_code": "394V+H4 Şahinbey, Gaziantep",
+      "tr_description": "Ahmet Çelebi adından gelen, eski şehir dokusu içinde yer alan tarihi bir camidir.",
+      "en_description": "A historic mosque named after Ahmet Çelebi, located within the old city fabric.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 99,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Alaybey Camii",
+      "en_name": "Alaybey (Gami Bey) Mosque",
+      "latitude": 37.060812,
+      "longitude": 37.383063,
+      "address": "Camii, Alaybey, Şıhcan Cd. Alay Bey Camii No:6, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396M+86 Şahinbey, Gaziantep",
+      "tr_description": "Alaybey (Gami Bey) Mahallesi'nde bulunan, geleneksel mimarisiyle tarihi bir camidir.",
+      "en_description": "A historic mosque in the Alaybey (Gami Bey) neighborhood, known for its traditional architecture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 100,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Karatarla Camii",
+      "en_name": "Karatarla Mosque",
+      "latitude": 37.061937,
+      "longitude": 37.385937,
+      "address": "Alaybey, Kumruoğlu Sk. Bakır Han No:11, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396P+Q9 Şahinbey, Gaziantep",
+      "tr_description": "Karatarla Mahallesi'nde yer alan, sade taş işçiliğiyle dikkat çeken tarihi bir camidir.",
+      "en_description": "A historic mosque notable for its simple stonework, located in the Karatarla neighborhood.",
+      "image_url": "https://qhnmbctcdetpjsgjkzrw.supabase.co/storage/v1/object/public/places/places/karatarla%20mosque.jpg",
+      "category_manual": ""
+    },
+    {
+      "id": 101,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Kozanlı Camii",
+      "en_name": "Kozanlı Mosque",
+      "latitude": 37.057688,
+      "longitude": 37.376438,
+      "address": "Şahveli, Kastelbaşı Cd. No:50, 27010 Şahinbey/Gaziantep",
+      "plus_code": "395G+3H Şahinbey, Gaziantep",
+      "tr_description": "Kozanlı Mahallesi'nde bulunan, geleneksel mimarisiyle tarihi bir mahalle camisidir.",
+      "en_description": "A historic neighborhood mosque with traditional architecture, located in the Kozanlı district.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 102,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Hüseyin Paşa Camii",
+      "en_name": "Hüseyin Pasha Mosque",
+      "latitude": 37.060313,
+      "longitude": 37.385063,
+      "address": "Alaybey, Hacı Veli Cami Cd. No:39, 27010 Şahinbey/Gaziantep",
+      "plus_code": "396P+42 Şahinbey, Gaziantep",
+      "tr_description": "Osmanlı dönemi paşalarından adını alan, klasik kubbeli mimariye sahip tarihi bir camidir.",
+      "en_description": "A historic mosque named after an Ottoman-era pasha, featuring classical domed architecture.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 103,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Ağa Camii",
+      "en_name": "Ağa (Ferruh Ağa) Mosque",
+      "latitude": 37.059062,
+      "longitude": 37.388813,
+      "address": "Suyabatmaz, Adsız Şehitler Caddesi No:106, 27400 Şahinbey/Gaziantep",
+      "plus_code": "395Q+JG Şahinbey, Gaziantep",
+      "tr_description": "Ferruh Ağa tarafından yaptırılan, sade taş cephesiyle tarihi bir camidir.",
+      "en_description": "A historic mosque commissioned by Ferruh Ağa, featuring a plain stone facade.",
+      "image_url": "",
+      "category_manual": ""
+    },
+    {
+      "id": 104,
+      "categories": [
+        "historic"
+      ],
+      "tr_name": "Çınarlı Camii",
+      "en_name": "Çınarlı Mosque",
+      "latitude": 37.063437,
+      "longitude": 37.377063,
+      "address": "Bey, İlyas Çk. No:1, 27010 Şahinbey/Gaziantep",
+      "plus_code": "397G+9R Şahinbey, Gaziantep",
+      "tr_description": "Adını çevresindeki büyük çınar ağaçlarından alan, tarihi dokuda yer alan bir camidir.",
+      "en_description": "A mosque named after the large plane (çınar) trees around it, located within the historic fabric.",
+      "image_url": "",
+      "category_manual": ""
+    }
+  ],
+  "total": 95
+}

@@ -1,0 +1,107 @@
+[
+    {
+        "isim": "Beyran Çorbası",
+        "aciklama": "Gaziantep's legendary breakfast soup — shredded lamb, rice, garlic, and red pepper butter in a rich bone broth. Traditionally eaten at dawn.",
+        "denendi": false
+    },
+    {
+        "isim": "Yuvarlama",
+        "aciklama": "A festive Gaziantep dish featuring tiny, hand-rolled rice and meat dumplings with chickpeas, simmered in a creamy warm yogurt broth and drizzled with mint oil.",
+        "denendi": false
+    },
+    {
+        "isim": "Ekşili Köfte",
+        "aciklama": "Tangy meatball soup sharpened with pomegranate molasses and lemon — a delicate balance of sour and savory.",
+        "denendi": false
+    },
+    {
+        "isim": "Antep Kebabı",
+        "aciklama": "Hand-minced lamb and tail fat seasoned simply with salt and red capsicum peppers, grilled over charcoal and served on flatbread.",
+        "denendi": true
+    },
+    {
+        "isim": "Ali Nazik Kebabı",
+        "aciklama": "Fire-roasted eggplant blended with garlic yogurt, crowned with sautéed spiced lamb chunks. A dish fit for a sultan.",
+        "denendi": false
+    },
+    {
+        "isim": "Simit Kebabı",
+        "aciklama": "A unique Gaziantep kebab where minced lamb is kneaded with fine bulgur wheat (locally called 'simit'), fresh mint, and spices, then grilled on skewers.",
+        "denendi": false
+    },
+    {
+        "isim": "Ciğer Kebabı",
+        "aciklama": "Small cubes of lamb liver and tail fat seasoned with cumin and chili, quickly grilled on skewers and wrapped in thin lavaş flatbread.",
+        "denendi": false
+    },
+    {
+        "isim": "Patlıcan Kebabı",
+        "aciklama": "Alternating pieces of sliced eggplant and hand-minced lamb meatballs threaded on a skewer and charred over open coals.",
+        "denendi": false
+    },
+    {
+        "isim": "Küşleme",
+        "aciklama": "Gaziantep’s most prized meat delicacy — exceptionally tender lamb tenderloin, lightly seasoned and quickly grilled over charcoal to melt-in-your-mouth perfection.",
+        "denendi": false
+    },
+    {
+        "isim": "İçli Köfte",
+        "aciklama": "Crispy bulgur shell stuffed with spiced ground meat, pine nuts and walnuts — either fried or boiled in broth.",
+        "denendi": false
+    },
+    {
+        "isim": "Lahmacun",
+        "aciklama": "Paper-thin dough spread with a mixture of minced lamb, garlic, tomatoes, and herbs (no onion), baked in a stone oven.",
+        "denendi": true
+    },
+    {
+        "isim": "Katmer",
+        "aciklama": "Gossamer-thin dough layers folded over clotted cream (kaymak) and crushed pistachios, baked until crispy. Antep's most beloved breakfast sweet.",
+        "denendi": false
+    },
+    {
+        "isim": "Fıstıklı Sarma",
+        "aciklama": "Wafer-thin pastry sheets hand-rolled around a filling of ground pistachio and sugar, soaked in light syrup.",
+        "denendi": false
+    },
+    {
+        "isim": "Firik Pilavı",
+        "aciklama": "Pilaf made from fire-dried green wheat (firik) with lamb, giving a distinctive smoky, nutty aroma. A Gaziantep staple.",
+        "denendi": false
+    },
+    {
+        "isim": "Antep Dolması",
+        "aciklama": "Sun-dried vegetables (eggplant and pepper) hollowed and filled with a spiced rice-and-lamb mixture, simmered in a tangy sumac and tomato broth.",
+        "denendi": false
+    },
+    {
+        "isim": "Nohut Dürümü",
+        "aciklama": "A popular Gaziantep street food featuring tender, spiced boiled chickpeas wrapped in warm flatbread with fresh onions, parsley, and lemon.",
+        "denendi": false
+    },
+    {
+        "isim": "Şiveydiz",
+        "aciklama": "A traditional Gaziantep stew made with tender lamb, fresh green garlic, leeks, and chickpeas in a rich, tangy yogurt sauce.",
+        "denendi": false
+    },
+    {
+        "isim": "Baklava",
+        "aciklama": "Dozens of hand-stretched phyllo layers, brushed with clarified butter, packed with fresh Antep pistachios and drenched in light syrup. The world standard.",
+        "denendi": false
+    },
+    {
+        "isim": "Künefe",
+        "aciklama": "Shredded wheat (kadayıf) sandwiching unsalted white cheese, baked in clarified butter until golden, soaked in syrup and topped with crushed pistachio.",
+        "denendi": false
+    },
+    {
+        "isim": "Şöbiyet",
+        "aciklama": "Phyllo pastry triangles filled with a rich milk-and-semolina cream (or kaymak) and pistachios, baked to golden perfection and soaked in sweet syrup.",
+        "denendi": false
+    },
+    {
+        "isim": "Cevizli Sucuk",
+        "aciklama": "Whole walnuts threaded on string, dipped repeatedly in thickened grape must until they form a firm, chewy molasses log.",
+        "denendi": false
+    }
+]

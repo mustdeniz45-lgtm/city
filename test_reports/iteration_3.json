@@ -1,0 +1,52 @@
+{
+  "summary": "Phase A Supabase Auth backend tests: 8/12 PASS, 4/12 FAIL (all link-device write paths return HTTP 500). /api/auth/me works correctly for all three cases (no token, invalid token → lenient {authenticated: false}, valid Supabase ES256 JWT → returns user_id/email/role='authenticated'). /api/auth/link-device without token correctly returns 401. Regression PASSES on /api/cities, /api/cities/gaziantep/pois, /api/cities/gaziantep/quests, /api/leaderboard. CRITICAL BUG: every attempt to link the primary test user (c6d4e174-250d-4ad9-9542-72649c5ce3b9) to ANY new device_id returns 500 because the Supabase progress table has `unique(user_id)` constraint (supabase_schema_clean.sql line 89) and that user is already linked to device E2E_DEVICE_1781344899. Server.py also exposes the raw Postgres `duplicate key value violates unique constraint \"progress_user_id_key\"` as a 500 instead of returning a meaningful 4xx. This blocks the entire link-device feature for any user who has previously signed in once.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/auth/link-device",
+        "issue": "Returns 500 InternalServerError for ANY device_id when the authenticated user already owns another progress row. Root cause: `unique(user_id)` UNIQUE constraint on public.progress (supabase_schema_clean.sql:89) plus repo.progress_link_user() does an INSERT/UPDATE that violates it. Backend log: postgrest.exceptions.APIError {'message': 'duplicate key value violates unique constraint \"progress_user_id_key\"', 'code': '23505', 'details': 'Key (user_id)=(c6d4e174-250d-4ad9-9542-72649c5ce3b9) already exists.'}. Repro: POST /api/auth/link-device with valid JWT for testuser_1781344899@cityquest.app and any new device_id → 500.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "POST /api/auth/link-device",
+        "issue": "Database integrity errors from supabase-py (postgrest.APIError) are not caught in repo.progress_link_user / link_device route — they propagate as raw 500s with no body. Should be caught and returned as 409 (or 422) with a user-readable message.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth.py",
+    "/app/test_reports/pytest/auth_results.xml"
+  ],
+  "action_items": [
+    "DECIDE the data model: should one Supabase user be able to own progress rows for multiple devices (multi-device sync), or strictly one? The current schema enforces 1:1 (user_id UNIQUE), but the link-device contract in the review request (brand-new device → status='created') implies many devices per user.",
+    "If multi-device is intended: drop the `unique(user_id)` constraint on public.progress (ALTER TABLE public.progress DROP CONSTRAINT progress_user_id_key;) and re-run /app/backend/tests/test_auth.py. All 4 failing tests should then pass.",
+    "If strictly 1:1 is intended: rework repo.progress_link_user() — when the user already owns a different device row, EITHER merge XP/badges/check_ins into the new device row and null out the old row's user_id, OR refuse with a clear 409 like the existing 'conflict' branch. Either way, server.py must catch postgrest.exceptions.APIError and translate to HTTPException (not let it become a generic 500).",
+    "Add a `try/except postgrest.exceptions.APIError` in repo.progress_link_user() (both UPDATE and progress_upsert paths) so future constraint violations come back as 409/422, not 500.",
+    "Optional cleanup: the existing primary-user link row `device_id=E2E_DEVICE_1781344899` (created during prior E1 manual testing) is what's blocking re-tests. After the schema fix, the tests are idempotent (each uses a fresh AUTO_TEST_ device_id)."
+  ],
+  "critical_code_review_comments": [
+    "auth.py: JWKS caching via @lru_cache + 'refresh once on miss' is solid; ES256/RS256/HS256 all handled.",
+    "auth.py verify_token sets options={'verify_aud': False} then passes audience=AUDIENCE — the audience param is ignored when verify_aud is False, so this is dead code. Not a bug, just confusing.",
+    "get_optional_user swallows ALL HTTPException — including 'Unknown signing key' which can mask real JWKS issues. Today this matches the review request ('invalid token → {authenticated: false}') but worth logging at WARN level for ops.",
+    "server.py link_device endpoint relies on repo.progress_link_user returning {'status': 'conflict'} to map to 409, but the Postgres unique violation happens BEFORE that branch is reached (UPDATE on the existing row tries to set the new device's user_id while another row already has it) — so the conflict branch is never taken in the failing path.",
+    "repo.progress_link_user 'No row yet — seed one' path calls progress_upsert which does an upsert on device_id; this also hits the user_id UNIQUE constraint when the user already owns a different row → 500. The function's docstring (`If no row yet → create a fresh one`) doesn't account for the per-user uniqueness.",
+    "test_credentials.md says 'Email confirmation is ON' — admin-API created users are auto-confirmed (`email_confirm: true`), which we verified works for password login on /auth/v1/token."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_auth.py (new — 12 tests, 8 pass / 4 fail)"
+  ],
+  "success_rate": {"backend": "67% (8/12)", "frontend": "not tested (testing_type=backend only)"},
+  "seed_data_creation": "Auth tests create one secondary Supabase user per run (admin API, prefix TEST_link_<ts>@cityquest.app, password 'pwd12345'). They are confirmed users in auth.users and accumulate; consider periodic cleanup via /auth/v1/admin/users. Each test uses fresh AUTO_TEST_link_* device_ids; ~3 progress rows created per failing run with user_id=NULL because the upsert failed mid-way.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After main agent decides multi-vs-single device policy and applies schema/code change, simply re-run: `cd /app && EXPO_PUBLIC_BACKEND_URL=https://local-explorer-game.preview.emergentagent.com python -m pytest /app/backend/tests/test_auth.py -v`. Expected: 12/12 pass. The primary test user (testuser_1781344899@cityquest.app / testpass1234 / user_id c6d4e174-250d-4ad9-9542-72649c5ce3b9) currently owns one row on device E2E_DEVICE_1781344899; the conflict test creates its own secondary user via admin API and does NOT depend on cleaning that up. To get a fresh JWT: POST https://qhnmbctcdetpjsgjkzrw.supabase.co/auth/v1/token?grant_type=password with header `apikey: sb_publishable_sHIGuXIEqJVxfFjqK_s0Ow_HjmyHKPr`.",
+  "rca_of_issue": "Supabase progress table schema declares `unique(user_id)` (supabase_schema_clean.sql:89). repo.progress_link_user() attempts to set user_id on a new device row but Postgres rejects with 23505 because user_id already exists on another row (E2E_DEVICE_1781344899 for the primary test user). The exception bubbles up past FastAPI's exception handlers because nothing in repo.py or server.py catches postgrest.exceptions.APIError → client sees plain 500. Fix path: (1) decide single-vs-multi device per user; (2) if multi: drop the UNIQUE constraint; (3) if single: implement migrate/merge inside progress_link_user and catch APIError to return 409 instead of 500."
+}

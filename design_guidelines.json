@@ -1,0 +1,193 @@
+{
+  "app_name": "CityQuest",
+  "personality": "3 Editorial Mobile LIGHT with Tactile gamification elements",
+  "personality_one_liner": "A premium, travel-magazine editorial aesthetic grounded in warm, historic earth tones, blended with playful, touchable gamification mechanics.",
+  "color": {
+    "surface": "#F9F8F6",
+    "onSurface": "#1A1816",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1A1816",
+    "surfaceTertiary": "#F0EFEB",
+    "onSurfaceTertiary": "#302D29",
+    "surfaceInverse": "#1C1A17",
+    "onSurfaceInverse": "#F9F8F6",
+    "brand": "#C85A40",
+    "brandPrimary": "#C85A40",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#D9953A",
+    "onBrandSecondary": "#1A1816",
+    "brandTertiary": "#6B705C",
+    "onBrandTertiary": "#FFFFFF",
+    "success": "#4D7C5F",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D9953A",
+    "onWarning": "#1A1816",
+    "error": "#B33939",
+    "onError": "#FFFFFF",
+    "info": "#6B705C",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E2DC",
+    "borderStrong": "#CFCAC2",
+    "divider": "#E5E2DC"
+  },
+  "typography": {
+    "displayFontFamily": "Fraunces",
+    "textFontFamily": "DM Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous editorial spacing for breathing room, combined with intentional padding inside chunky gamification cards.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use frosted glass on the bottom tab bar and sticky headers over scrolling maps and imagery.",
+      "Use glass overlays on hero cards with gradient-to-dark scrims to ensure readability."
+    ],
+    "dont's": [
+      "Do not use glass on regular quest list rows or form inputs.",
+      "Do not skip the dark gradient scrim behind text on glass over bright images."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "haptics": {
+    "events": {
+      "tab_press": "light",
+      "quest_start": "medium",
+      "quest_complete": "success",
+      "badge_unlock": "success",
+      "level_up": "heavy"
+    }
+  },
+  "screens": [
+    {
+      "name": "Explore",
+      "purpose": "A visually rich, magazine-style feed of cities and landmarks to inspire exploration.",
+      "states": {
+        "loading": "Skeleton cards with subtle shimmer on surfaceSecondary.",
+        "empty": "Illustration of a map and compass, 'No destinations found nearby.'",
+        "error": "Error message with 'Reload Map' button."
+      },
+      "layout": "Editorial layout: Large full-bleed or wide featured hero image with a gradient-to-dark scrim and Fraunces title (e.g., 'Discover Rome'). Horizontal scrolling category tabs (Historic, Museums, Must-See). Vertical list of large cards for landmarks below."
+    },
+    {
+      "name": "Map",
+      "purpose": "Interactive map showing user location, POIs, and active quests.",
+      "states": {
+        "loading": "Spinner over map base layer.",
+        "empty": "N/A - map always has base layer.",
+        "error": "Error message overlay if GPS fails."
+      },
+      "layout": "Full-screen map view with custom styled markers. Floating glassmorphism search bar at top. Bottom sheet for selected POI details. Floating Action Button for 'Recenter' or 'Current Quest'."
+    },
+    {
+      "name": "Quest",
+      "purpose": "The gamified core: browse and track easy, medium, and hard location-based challenges.",
+      "states": {
+        "loading": "Skeleton rows of quests.",
+        "empty": "Illustration of an open treasure map, 'No active quests. Go explore!'",
+        "error": "Error message with 'Retry' button."
+      },
+      "layout": "Tactile module layout: A sticky glass header with 'Active Quests' and filter chips (Easy, Med, Hard). Below, chunky rounded cards with progress bars, XP rewards, and clear CTA buttons ('Start', 'Check-in')."
+    },
+    {
+      "name": "Food",
+      "purpose": "A curated gastronomy guide emphasizing high-quality food photography and iconic local dishes.",
+      "states": {
+        "loading": "Skeleton grid.",
+        "empty": "Illustration of a covered plate, 'No culinary spots found.'",
+        "error": "Error message with 'Refresh' button."
+      },
+      "layout": "Search-first, browse-fast pattern. Sticky search bar. Horizontal category tabs (Street Food, Fine Dining). Grid of cards with strong imagery, short descriptions, and 'Save' bookmark icons."
+    },
+    {
+      "name": "Profile",
+      "purpose": "User's travel passport: tracking XP, levels, badges, and completed quests.",
+      "states": {
+        "loading": "Spinner.",
+        "empty": "N/A",
+        "error": "Error message."
+      },
+      "layout": "Magazine-like header with avatar, name, and current Level (e.g., 'Level 3: Explorer'). Prominent XP progress bar. A grid section for unlocked Badges, and a list of 'Recently Completed' quests below."
+    }
+  ],
+  "images": {
+    "hero_rome": {
+      "url": "https://images.unsplash.com/photo-1552832230-c0197dd311b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwxfHxSb21lJTIwQ29sb3NzZXVtJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc4MTExMTkxNHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Rome Colosseum architecture"
+    },
+    "hero_paris": {
+      "url": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxQYXJpcyUyMEVpZmZlbCUyMHRvd2VyJTIwc3Vuc2V0fGVufDB8fHx8MTc4MTExMTkxNHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Paris Eiffel tower sunset"
+    },
+    "hero_istanbul": {
+      "url": "https://images.unsplash.com/photo-1582631608254-f75fdf938e19?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwxfHxJc3RhbmJ1bCUyMEhhZ2lhJTIwU29waGlhJTIwb3IlMjBHYWxhdGElMjB0b3dlcnxlbnwwfHx8fDE3ODExMTE5MTR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Istanbul Galata tower"
+    },
+    "hero_gaziantep": {
+      "url": "https://images.unsplash.com/photo-1712263806377-beac33b9ae3a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxHYXppYW50ZXAlMjBaZXVnbWElMjBtdXNldW0lMjBtb3NhaWN8ZW58MHx8fHwxNzgxMTExOTE0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Gaziantep Zeugma museum mosaic"
+    },
+    "food_baklava": {
+      "url": "https://images.unsplash.com/photo-1598110750624-207050c4f28c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwxfHx0dXJraXNoJTIwYmFrbGF2YSUyMGRlc3NlcnQlMjBjbG9zZSUyMHVwfGVufDB8fHx8MTc4MTExMTkxNXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Turkish baklava dessert close up"
+    },
+    "food_pasta": {
+      "url": "https://images.unsplash.com/photo-1662197480393-2a82030b7b83?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwxfHxpdGFsaWFuJTIwcGFzdGElMjBwbGF0ZSUyMHJlc3RhdXJhbnR8ZW58MHx8fHwxNzgxMTExOTIwfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Italian pasta plate restaurant"
+    },
+    "profile_avatar": {
+      "url": "https://images.unsplash.com/photo-1598966739654-5e9a252d8c32?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHNtaWxpbmclMjBiYWNrcGFja2VyJTIwdG91cmlzdHxlbnwwfHx8fDE3ODExMTE5MjF8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Smiling backpacker tourist"
+    },
+    "empty_quest": {
+      "url": "https://images.pexels.com/photos/12940795/pexels-photo-12940795.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Vintage map and compass"
+    },
+    "explore_banner": {
+      "url": "https://images.unsplash.com/photo-1776945140669-f2308276ca10?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHx0cmF2ZWxlciUyMHdhbGtpbmclMjBpbiUyMGhpc3RvcmljJTIwY2l0eXxlbnwwfHx8fDE3ODExMTE5MTR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Traveler walking in historic city"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Follow the '3 Editorial Mobile LIGHT' base aesthetic: use elegant Fraunces serif for display typography to give a travel magazine feel, and DM Sans for clean body text.",
+    "The color palette strictly avoids AI-default blues and purples. Use the defined warm earth tones (Terracotta, Ochre, Olive) for a historic, premium, adventurous vibe.",
+    "Incorporate Tactile gamification elements: the Quest and Profile tabs should feature chunky rounded cards (`md` or `lg` radius), prominent progress bars, and touchable CTA buttons to make the gamification mechanics satisfying.",
+    "For the Food section, follow the search-first, browse-fast UX pattern found in research: implement a sticky search bar, horizontal category filters, and visually dominant image cards for dishes.",
+    "Implement Glassmorphism on the bottom tab bar and sticky headers. Always pair image overlays with a gradient-to-dark scrim (top-to-bottom, transitioning to surfaceInverse) to guarantee text contrast against photography.",
+    "Include subtle haptics on tab presses, quest interactions, and level-ups to enhance the gamified experience."
+  ]
+}
