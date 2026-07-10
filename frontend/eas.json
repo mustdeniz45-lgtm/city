@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 20.5.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MAPTILER_KEY": "m6nMUuSC9UzLD6CdsdlC",
+        "EXPO_PUBLIC_BACKEND_URL": "https://cityquest-irdr.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qhnmbctcdetpjsgjkzrw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_sHIGuXIEqJVxfFjqK_s0Ow_HjmyHKPr"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MAPTILER_KEY": "m6nMUuSC9UzLD6CdsdlC",
+        "EXPO_PUBLIC_BACKEND_URL": "https://cityquest-irdr.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qhnmbctcdetpjsgjkzrw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_sHIGuXIEqJVxfFjqK_s0Ow_HjmyHKPr"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_MAPTILER_KEY": "m6nMUuSC9UzLD6CdsdlC",
+        "EXPO_PUBLIC_BACKEND_URL": "https://cityquest-irdr.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qhnmbctcdetpjsgjkzrw.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_sHIGuXIEqJVxfFjqK_s0Ow_HjmyHKPr"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
