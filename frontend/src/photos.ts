@@ -51,13 +51,14 @@ export async function addPhoto({
       const ext = (sourceUri.split(".").pop() || "jpg").split("?")[0].slice(0, 4) || "jpg";
       const dest = `${dir}${id}.${ext}`;
       await FileSystem.copyAsync({ from: sourceUri, to: dest });
-      uri = dest;
+      // Store as a RELATIVE path — the app container UUID in documentDirectory
+      // changes on every reinstall/build on iOS, so absolute file:// paths saved
+      // to AsyncStorage go stale. We reconstruct the full path at read time.
+      uri = `cityquest_photos/${id}.${ext}`;
     } catch (e) {
       // Fallback to base64 if we can't copy the file
       if (base64) uri = `data:image/jpeg;base64,${base64}`;
     }
-  } else if (base64) {
-    uri = `data:image/jpeg;base64,${base64}`;
   }
 
   const item: PlacePhoto = {
@@ -72,16 +73,35 @@ export async function addPhoto({
 
 export async function listPhotos(poi_id?: string): Promise<PlacePhoto[]> {
   const all = await readAll();
-  return poi_id ? all.filter((p) => p.poi_id === poi_id) : all;
+  const filtered = poi_id ? all.filter((p) => p.poi_id === poi_id) : all;
+  // Re-hydrate relative paths saved by the new addPhoto into absolute file://
+  // URIs against the CURRENT documentDirectory. Legacy absolute/data URIs are
+  // returned as-is (may be stale on iOS after a reinstall; users can re-add).
+  if (Platform.OS === "web") return filtered;
+  return filtered.map((p) => {
+    if (p.uri.startsWith("file:") || p.uri.startsWith("data:") || p.uri.startsWith("http")) {
+      return p; // legacy or non-native
+    }
+    // Relative path from the new format
+    return { ...p, uri: `${FileSystem.documentDirectory}${p.uri}` };
+  });
 }
+
 
 export async function removePhoto(id: string): Promise<void> {
   const all = await readAll();
   const target = all.find((x) => x.id === id);
   const next = all.filter((x) => x.id !== id);
   await writeAll(next);
-  if (target && Platform.OS !== "web" && target.uri.startsWith("file:")) {
-    try { await FileSystem.deleteAsync(target.uri, { idempotent: true }); } catch {}
+  if (target && Platform.OS !== "web") {
+    const fullPath = target.uri.startsWith("file:")
+      ? target.uri
+      : target.uri.startsWith("cityquest_photos/")
+        ? `${FileSystem.documentDirectory}${target.uri}`
+        : null;
+    if (fullPath) {
+      try { await FileSystem.deleteAsync(fullPath, { idempotent: true }); } catch {}
+    }
   }
 }
 
