@@ -146,6 +146,11 @@ export default function CollageScreen() {
   const capture = async (): Promise<string | null> => {
     if (!shotRef.current?.capture) return null;
     try {
+      // iOS view-shot race: first capture often returns black because RN
+      // <Image> textures aren't uploaded yet. Warm-up capture + short delay
+      // gives Image a chance to decode file:// URIs before the real snapshot.
+      await shotRef.current.capture();
+      await new Promise((r) => setTimeout(r, 400));
       const uri = await shotRef.current.capture();
       return uri;
     } catch (e) { console.warn(e); return null; }
