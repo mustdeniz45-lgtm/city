@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text,
   TextInput, View, KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import ViewShot from "react-native-view-shot";
 import { api, type City, type Progress } from "@/src/api";
 import { useApp, getAvatarUri } from "@/src/store";
 import { addPostcard, type Postcard } from "@/src/postcards";
+import MyPlacesPhotoPicker from "@/src/components/MyPlacesPhotoPicker";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 type Frame = "postcard" | "polaroid" | "magazine" | "xp";
@@ -39,7 +40,17 @@ export default function CollageScreen() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const shotRef = useRef<ViewShot>(null);
+
+  // Set of POI ids the user has actually checked in to — this is what the
+  // "From places you've visited" picker filters against so a user can't
+  // accidentally see (or delete) photos of places they never visited.
+  const visitedPoiIds = useMemo(() => {
+    const s = new Set<string>();
+    (progress?.check_ins || []).forEach((ci) => { if (ci.poi_id) s.add(ci.poi_id); });
+    return s;
+  }, [progress]);
 
   // Preload photo + caption when launched from a POI's "Make postcard" action.
   useEffect(() => {
@@ -82,33 +93,10 @@ export default function CollageScreen() {
 
   const remaining = () => Math.max(0, MAX_PHOTOS - photoUris.length);
 
-  const takePhoto = async () => {
-    if (remaining() === 0) {
-      Alert.alert("Max reached", `You can add up to ${MAX_PHOTOS} photos. Remove one to add a new shot.`);
-      return;
-    }
-    const { status, canAskAgain } = await ImagePicker.getCameraPermissionsAsync();
-    let ok = status === "granted";
-    if (!ok && canAskAgain) {
-      const r = await ImagePicker.requestCameraPermissionsAsync();
-      ok = r.status === "granted";
-    }
-    if (!ok) {
-      Alert.alert("Camera disabled", "Enable camera access to capture postcard photos.", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Open Settings", onPress: () => Linking.openSettings() },
-      ]);
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 0.9,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUris((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
+  // Camera capture removed per product change: postcard photos now come
+  // strictly from "My places" (POI check-in photos) or from the device
+  // gallery. Users who still want to shoot a fresh photo can do so via
+  // the POI detail screen's "Add photo" button and then reuse it here.
 
   const pickFromLibrary = async () => {
     if (remaining() === 0) {
@@ -292,6 +280,15 @@ export default function CollageScreen() {
               {remaining() > 0 && (
                 <>
                   <Pressable
+                    onPress={() => setPickerOpen(true)}
+                    style={[styles.stripAddTile, styles.stripAddTileAlt]}
+                    testID="strip-add-my-places"
+                  >
+                    <Ionicons name="location" size={22} color={colors.brand} />
+                    <Text style={[styles.stripAddText, { color: colors.brand }]}>My places</Text>
+                    <Text style={[styles.stripAddHint, { color: colors.brand, opacity: 0.7 }]}>from check-ins</Text>
+                  </Pressable>
+                  <Pressable
                     onPress={pickFromLibrary}
                     style={styles.stripAddTile}
                     testID="strip-add-library"
@@ -299,15 +296,6 @@ export default function CollageScreen() {
                     <Ionicons name="images" size={22} color="#FFF" />
                     <Text style={styles.stripAddText}>From library</Text>
                     <Text style={styles.stripAddHint}>up to {remaining()} more</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={takePhoto}
-                    style={[styles.stripAddTile, styles.stripAddTileAlt]}
-                    testID="strip-add-camera"
-                  >
-                    <Ionicons name="camera" size={22} color={colors.brand} />
-                    <Text style={[styles.stripAddText, { color: colors.brand }]}>Take photo</Text>
-                    <Text style={[styles.stripAddHint, { color: colors.brand, opacity: 0.7 }]}>camera</Text>
                   </Pressable>
                 </>
               )}
@@ -395,6 +383,20 @@ export default function CollageScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <MyPlacesPhotoPicker
+        visible={pickerOpen}
+        max={remaining()}
+        visitedPoiIds={visitedPoiIds}
+        onCancel={() => setPickerOpen(false)}
+        onConfirm={(uris) => {
+          setPickerOpen(false);
+          if (uris.length > 0) {
+            setPhotoUris((prev) => [...prev, ...uris].slice(0, MAX_PHOTOS));
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        }}
+      />
     </View>
   );
 }
