@@ -4,6 +4,7 @@ import {
   TextInput, View, KeyboardAvoidingView,
 } from "react-native";
 import { Image } from "expo-image";
+import { Image as RNImage } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -455,7 +456,7 @@ function PhotoMontage({ uris, gap = 4 }: { uris: string[]; gap?: number }) {
   }
   const Img = ({ uri, style }: { uri: string; style?: any }) => (
     <View style={[{ overflow: "hidden", backgroundColor: "#1A1816" }, style]}>
-      <Image source={uri} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+      <RNImage source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
     </View>
   );
 
