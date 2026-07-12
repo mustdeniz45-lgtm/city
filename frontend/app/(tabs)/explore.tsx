@@ -25,6 +25,17 @@ const CATEGORIES = [
   { id: "restaurant", label: "Food", icon: "restaurant-outline" as const },
 ];
 
+// Kicker text shown on POI cards — maps stored `category` values to
+// human-readable labels. Anything not listed falls back to
+// `category.toUpperCase()` which already reads fine for single-word
+// values like LANDMARK, MUSEUM, HISTORIC.
+const CARD_CATEGORY_LABEL: Record<string, string> = {
+  parking: "PARKING",
+  drinking_fountain: "DRINKING FOUNTAIN",
+  public_toilet: "PUBLIC TOILET",
+  "must-see": "NATURE",
+};
+
 export default function ExploreScreen() {
   const { activeCityId, deviceId, progressVersion } = useApp();
   const [city, setCity] = useState<City | null>(null);
@@ -145,7 +156,9 @@ function POICard({ poi, visited, cvs }: { poi: POI; visited: boolean; cvs?: numb
       <View style={styles.cardBody}>
         <View style={styles.cardCategoryRow}>
           <Text style={styles.cardCategory}>
-            {poi.kultur_yolu ? `KÜLTÜR YOLU · #${poi.ky_seq}` : poi.category.toUpperCase()}
+            {poi.kultur_yolu
+              ? `KÜLTÜR YOLU · #${poi.ky_seq}`
+              : (CARD_CATEGORY_LABEL[poi.category] ?? poi.category.toUpperCase())}
           </Text>
           {cvs != null && (
             <View style={styles.cvsPill}>

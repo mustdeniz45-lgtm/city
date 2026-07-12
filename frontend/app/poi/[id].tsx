@@ -17,8 +17,11 @@ const CATEGORY_LABEL: Record<string, string> = {
   landmark: "Landmark",
   museum: "Museum",
   historic: "Historic Site",
-  "must-see": "Must See",
+  "must-see": "Nature",
   restaurant: "Restaurant",
+  parking: "Parking",
+  drinking_fountain: "Drinking Fountain",
+  public_toilet: "Public Toilet",
 };
 
 export default function POIDetail() {
