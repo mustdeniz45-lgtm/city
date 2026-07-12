@@ -62,7 +62,11 @@ async def _sb_call(fn):
 # Maps a single-category filter to the raw category names used in the source
 # JSON (`metadata.raw_categories`). Lets a single POI surface under multiple
 # filters (e.g. Gaziantep Castle in BOTH Landmarks & Museums).
-_FILTER_TO_RAW = {
+#
+# A value can be either a single raw-category string OR a list of them (the
+# POI matches if any raw category is present) — used for umbrella filters
+# like "services" that group tourist info, parking, WCs, etc.
+_FILTER_TO_RAW: Dict[str, Any] = {
     "landmark":   "landmarks",
     "museum":     "museums",
     "historic":   "historic",
@@ -72,6 +76,16 @@ _FILTER_TO_RAW = {
     "han":        "hans",
     "bath":       "bath",
     "open-air":   "open air museum",
+    # "Services" umbrella — traveler-facing amenities (not sights). These raw
+    # categories are what the data-entry team should tag in POI metadata so
+    # tourist info centres, parking lots, WCs and fountains all fall under
+    # this single filter.
+    "services":   [
+        "info", "tourist_info", "tourism_info", "tourist_information",
+        "parking", "car_park", "car park",
+        "toilet", "toilets", "wc", "public_toilet", "public toilet",
+        "drinking_fountain", "drinking fountain", "fountain",
+    ],
 }
 
 
@@ -81,8 +95,13 @@ def _matches_category(row: Dict[str, Any], category: str) -> bool:
     raw_needle = _FILTER_TO_RAW.get(category)
     if raw_needle:
         raw_list = ((row.get("metadata") or {}).get("raw_categories")) or []
-        if raw_needle in raw_list:
-            return True
+        if isinstance(raw_needle, str):
+            if raw_needle in raw_list:
+                return True
+        else:  # list — match ANY
+            for needle in raw_needle:
+                if needle in raw_list:
+                    return True
     return False
 
 

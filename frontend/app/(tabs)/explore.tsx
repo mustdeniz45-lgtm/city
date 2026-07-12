@@ -18,7 +18,10 @@ const CATEGORIES = [
   { id: "han", label: "Hans", icon: "business-outline" as const },
   { id: "bath", label: "Hamams", icon: "water-outline" as const },
   { id: "historic", label: "Historic", icon: "time-outline" as const },
-  { id: "must-see", label: "Must-See", icon: "star-outline" as const },
+  // `must-see` remains the backend filter id (unchanged data mapping to
+  // raw "nature"). We only relabel the chip so users see the natural word.
+  { id: "must-see", label: "Nature", icon: "leaf-outline" as const },
+  { id: "services", label: "Services", icon: "help-buoy-outline" as const },
   { id: "restaurant", label: "Food", icon: "restaurant-outline" as const },
 ];
 
