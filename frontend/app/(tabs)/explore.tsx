@@ -18,9 +18,23 @@ const CATEGORIES = [
   { id: "han", label: "Hans", icon: "business-outline" as const },
   { id: "bath", label: "Hamams", icon: "water-outline" as const },
   { id: "historic", label: "Historic", icon: "time-outline" as const },
-  { id: "must-see", label: "Must-See", icon: "star-outline" as const },
+  // `must-see` remains the backend filter id (unchanged data mapping to
+  // raw "nature"). We only relabel the chip so users see the natural word.
+  { id: "must-see", label: "Nature", icon: "leaf-outline" as const },
+  { id: "services", label: "Services", icon: "help-buoy-outline" as const },
   { id: "restaurant", label: "Food", icon: "restaurant-outline" as const },
 ];
+
+// Kicker text shown on POI cards — maps stored `category` values to
+// human-readable labels. Anything not listed falls back to
+// `category.toUpperCase()` which already reads fine for single-word
+// values like LANDMARK, MUSEUM, HISTORIC.
+const CARD_CATEGORY_LABEL: Record<string, string> = {
+  parking: "PARKING",
+  drinking_fountain: "DRINKING FOUNTAIN",
+  public_toilet: "PUBLIC TOILET",
+  "must-see": "NATURE",
+};
 
 export default function ExploreScreen() {
   const { activeCityId, deviceId, progressVersion } = useApp();
@@ -142,7 +156,9 @@ function POICard({ poi, visited, cvs }: { poi: POI; visited: boolean; cvs?: numb
       <View style={styles.cardBody}>
         <View style={styles.cardCategoryRow}>
           <Text style={styles.cardCategory}>
-            {poi.kultur_yolu ? `KÜLTÜR YOLU · #${poi.ky_seq}` : poi.category.toUpperCase()}
+            {poi.kultur_yolu
+              ? `KÜLTÜR YOLU · #${poi.ky_seq}`
+              : (CARD_CATEGORY_LABEL[poi.category] ?? poi.category.toUpperCase())}
           </Text>
           {cvs != null && (
             <View style={styles.cvsPill}>

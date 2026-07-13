@@ -460,5 +460,27 @@
     "google_plus_code": "398M+36 Şehitkamil, Gaziantep",
     "google_maps_url": "https://maps.google.com/?cid=ChIJ12MpNFbhMRURbFAB0o_EwkU",
     "specialty": "Ekşi maya ekmek, el yapımı sandviç, artisan kahve"
+  },
+  {
+    "n": 22,
+    "categories": [
+      "restaurant/cafe"
+    ],
+    "tr_name": "UDMA Müzesi Kafe",
+    "en_name": "UDMA Museum Café",
+    "latitude": 37.0639,
+    "longitude": 37.3674,
+    "tr_description": "UDMA Müzesi içerisinde yer alan kafe, müze gezisinin ardından dinlenmek isteyen ziyaretçilere modern ve şık bir ortam sunar. Kahve çeşitleri, tatlılar ve hafif atıştırmalıkların yanı sıra Gaziantep'e özgü lezzetleri de deneyimleyebilirsiniz.",
+    "en_description": "Located inside UDMA Museum, this café offers a modern and relaxing atmosphere for visitors after exploring the museum. Guests can enjoy specialty coffees, desserts, light snacks and selected local Gaziantep flavours.",
+    "image_url": "",
+    "category_manual": "restaurant",
+    "address": "Kozluca, 396Q+HC, Şahinbey/Gaziantep",
+    "phone": "+90 850 242 86 32",
+    "google_rating": 4.8,
+    "review_count": 180,
+    "working_hours": "Her gün 09:00–18:00",
+    "google_plus_code": "396Q+HC Şahinbey, Gaziantep",
+    "google_maps_url": "",
+    "specialty": "Specialty kahve, tatlılar, hafif atıştırmalıklar, müze konsepti"
   }
 ]
