@@ -61,6 +61,10 @@ class POI(BaseModel):
     kultur_yolu: Optional[bool] = False
     ky_seq: Optional[int] = None
     name_tr: Optional[str] = None
+    # Additional curated photos surfaced on the POI detail gallery. Persisted
+    # in `metadata.gallery` so no schema migration is needed; the API mirrors
+    # them out as a top-level list for clients.
+    gallery: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
 
 class TriviaQuestion(BaseModel):
@@ -333,6 +337,15 @@ async def get_poi(poi_id: str):
     doc = await repo.pois_get(poi_id)
     if not doc:
         raise HTTPException(404, "POI not found")
+    # Hoist metadata.gallery → top-level `gallery` so mobile clients can
+    # render the photo strip without digging into metadata. Filters out
+    # non-http entries defensively so a bad row can't crash the app.
+    md = doc.get("metadata") or {}
+    raw = md.get("gallery") or []
+    if isinstance(raw, list):
+        doc["gallery"] = [u for u in raw if isinstance(u, str) and u.strip()]
+    else:
+        doc["gallery"] = []
     return POI(**doc)
 
 

@@ -11,6 +11,7 @@ import { api, type POI } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
 import { addPhoto, listPhotos, removePhoto, type PlacePhoto } from "@/src/photos";
 import ReviewsSection from "@/src/components/ReviewsSection";
+import PoiGallery from "@/src/components/PoiGallery";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -285,6 +286,13 @@ export default function POIDetail() {
             </View>
           </View>
         </View>
+
+        {/* Curated photo gallery — only renders when `metadata.gallery` in
+            Supabase has at least one entry. Backend hoists the list to the
+            top-level `poi.gallery` field. */}
+        {poi.gallery && poi.gallery.length > 0 && (
+          <PoiGallery images={poi.gallery} heroImage={poi.image} />
+        )}
 
         <View style={styles.body}>
           <Text style={styles.sectionLabel}>ABOUT</Text>

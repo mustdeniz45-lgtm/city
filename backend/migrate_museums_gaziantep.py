@@ -65,6 +65,17 @@ def build_row(item: dict) -> dict:
     n = int(item.get("number") or item.get("n") or 0)
     en = (item.get("eng_name") or item.get("en_name") or item.get("tr_name") or "Museum").strip()
     image = (item.get("image_url") or "").strip() or FALLBACK_IMG
+    # Optional extra gallery images. Accept either `image_urls` (list) or
+    # `gallery` (also a list) — both are stripped, deduped, and filter out
+    # empty strings so the client never has to defend against them.
+    raw_gallery = item.get("image_urls") or item.get("gallery") or []
+    gallery: list[str] = []
+    seen = set()
+    for u in raw_gallery:
+        u2 = (u or "").strip()
+        if u2 and u2 not in seen:
+            gallery.append(u2)
+            seen.add(u2)
     rating, review_count = parse_reviews(item.get("google_reviews"))
     xp = parse_xp(item.get("xp_reward"), default=40)
     return {
@@ -95,6 +106,10 @@ def build_row(item: dict) -> dict:
             "website": (item.get("website") or "").strip() or None,
             "entry_fee": item.get("entry_fee_museum_card_accepted"),
             "status": item.get("status") or "open",
+            # `gallery` is the source of truth for extra POI photos; the
+            # backend hoists it to a top-level `gallery` field in the API
+            # response so the mobile UI can render a strip.
+            "gallery": gallery,
         },
     }
 
