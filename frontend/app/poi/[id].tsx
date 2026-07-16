@@ -250,7 +250,7 @@ export default function POIDetail() {
     if (!poi) return [];
     const out: string[] = [];
     if (poi.image) out.push(poi.image);
-    (poi.gallery || []).forEach((u) => { if (u && !out.includes(u)) out.push(u); });
+    (poi.images || []).forEach((u) => { if (u && !out.includes(u)) out.push(u); });
     return out;
   }, [poi?.image, poi?.gallery]);
   const [heroIndex, setHeroIndex] = useState(0);
