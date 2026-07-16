@@ -1,9 +1,9 @@
-const BASE = process.env.EXPO_PUBLIC_BACKEND_URL ?? "";
+﻿const BASE = process.env.EXPO_PUBLIC_BACKEND_URL ?? "";
 
 // Lazy import to avoid a circular dep and to keep the API layer usable in
 // pure Node tests. During shadow mode we ATTACH the Supabase JWT if a
-// session exists — the backend logs the (device_id, user_id) pair to catch
-// mismatches — but we don't yet fail requests that lack a token. Phase 2
+// session exists â€” the backend logs the (device_id, user_id) pair to catch
+// mismatches â€” but we don't yet fail requests that lack a token. Phase 2
 // flips this to strict enforcement.
 async function _authHeader(): Promise<Record<string, string>> {
   try {
@@ -35,7 +35,7 @@ async function readError(res: Response, verb: string, path: string): Promise<nev
   try {
     const j = await res.json();
     msg = typeof j?.detail === "string" ? j.detail : (typeof j?.message === "string" ? j.message : "");
-  } catch { /* body not JSON — fall through */ }
+  } catch { /* body not JSON â€” fall through */ }
   throw new ApiError(res.status, msg || `${verb} ${path} failed: ${res.status}`);
 }
 
@@ -76,6 +76,7 @@ export type POI = {
     google_maps_url?: string | null;
     specialty?: string | null;
   } | null;
+  images?: string[];
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };
 export type CandidateSummary = {
