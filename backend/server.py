@@ -66,6 +66,7 @@ class POI(BaseModel):
     # them out as a top-level list for clients.
     gallery: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
+    images: Optional[List[str]] = []
 
 class TriviaQuestion(BaseModel):
     question: str
