@@ -252,7 +252,7 @@ export default function POIDetail() {
     if (poi.image) out.push(poi.image);
     (poi.images || []).forEach((u) => { if (u && !out.includes(u)) out.push(u); });
     return out;
-  }, [poi?.image, poi?.gallery]);
+  }, [poi?.image, poi?.images]);
   const [heroIndex, setHeroIndex] = useState(0);
   const screenWidth = Dimensions.get("window").width;
 
