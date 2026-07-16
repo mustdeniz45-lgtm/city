@@ -281,11 +281,11 @@ export default function POIDetail() {
               <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "700" }}>{heroIndex + 1} / {heroImages.length}</Text>
             </View>
           )}
-          <LinearGradient colors={["rgba(28,26,23,0.1)", "rgba(28,26,23,0.85)"]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={["rgba(28,26,23,0.1)", "rgba(28,26,23,0.85)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
           <Pressable onPress={() => router.back()} style={styles.backBtn} testID="poi-back">
             <Ionicons name="chevron-back" size={22} color="#FFF" />
           </Pressable>
-          <View style={styles.heroBody}>
+          <View style={styles.heroBody} pointerEvents="box-none">
             <View style={styles.kickerRow}>
               <Text style={styles.kicker}>{CATEGORY_LABEL[poi.category] ?? poi.category.toUpperCase()}</Text>
               {poi.kultur_yolu && (
