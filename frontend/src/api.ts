@@ -80,6 +80,7 @@ export type POI = {
     google_maps_url?: string | null;
     specialty?: string | null;
   } | null;
+  images?: string[];
 };
 export type Trivia = { question: string; options: string[]; correct_index: number };
 export type CandidateSummary = {
