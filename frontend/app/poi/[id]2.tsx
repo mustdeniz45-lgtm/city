@@ -425,52 +425,6 @@ export default function POIDetail() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Fullscreen lightbox — tap any hero photo to inspect it full-size.
-          Reuses `heroIndex` so the modal opens on the photo you tapped and
-          scrolling inside the modal keeps the hero carousel in sync. */}
-      <Modal
-        visible={lightboxOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLightboxOpen(false)}
-      >
-        <View style={styles.lightboxRoot}>
-          <FlatList
-            data={heroImages}
-            horizontal
-            pagingEnabled
-            initialScrollIndex={heroIndex}
-            getItemLayout={(_, i) => ({ length: screenWidth, offset: screenWidth * i, index: i })}
-            keyExtractor={(u, i) => `lb-${i}`}
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const next = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-              if (!Number.isNaN(next)) setHeroIndex(next);
-            }}
-            renderItem={({ item }) => (
-              <View style={[styles.lightboxSlide, { width: screenWidth }]}>
-                <Image source={item} style={styles.lightboxImg} contentFit="contain" transition={150} />
-              </View>
-            )}
-          />
-          <Pressable
-            onPress={() => setLightboxOpen(false)}
-            style={styles.lightboxClose}
-            hitSlop={10}
-            testID="lightbox-close"
-          >
-            <Ionicons name="close" size={22} color="#FFF" />
-          </Pressable>
-          {heroImages.length > 1 && (
-            <View style={styles.lightboxCounter} pointerEvents="none">
-              <Text style={styles.lightboxCounterText}>
-                {heroIndex + 1} / {heroImages.length}
-              </Text>
-            </View>
-          )}
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -788,17 +742,4 @@ const styles = StyleSheet.create({
   photoActionPrimary: { backgroundColor: colors.brand },
   photoActionText: { color: colors.surface, fontWeight: "700", fontSize: 10, letterSpacing: 0.2 },
   photoDeleteBtn: { backgroundColor: "rgba(0,0,0,0.55)", width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-
-  // Fullscreen lightbox
-  lightboxRoot: { flex: 1, backgroundColor: "#000" },
-  lightboxSlide: { flex: 1, alignItems: "center", justifyContent: "center" },
-  lightboxImg: { width: "100%", height: "80%" },
-  lightboxClose: {
-    position: "absolute", top: 54, right: 20,
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center", justifyContent: "center",
-  },
-  lightboxCounter: { position: "absolute", bottom: 50, left: 0, right: 0, alignItems: "center" },
-  lightboxCounterText: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600", letterSpacing: 0.5 },
 });
