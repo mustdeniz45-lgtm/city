@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { Alert, Dimensions, FlatList, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,7 +11,6 @@ import { api, type POI } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
 import { addPhoto, listPhotos, removePhoto, type PlacePhoto } from "@/src/photos";
 import ReviewsSection from "@/src/components/ReviewsSection";
-import PoiGallery from "@/src/components/PoiGallery";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -241,6 +240,22 @@ export default function POIDetail() {
     finally { setBusy(false); }
   };
 
+  // ---- Header images (hero + gallery, deduped) ----
+  // Composes the swipeable header carousel: the primary hero first, then
+  // every curated gallery URL from Supabase. If the hero URL happens to
+  // appear again in `metadata.gallery`, dedupe so we don't render it twice.
+  // Hooks MUST run on every render (no early returns above this point) —
+  // React tracks them by call-order, not by name.
+  const heroImages = useMemo<string[]>(() => {
+    if (!poi) return [];
+    const out: string[] = [];
+    if (poi.image) out.push(poi.image);
+    (poi.gallery || []).forEach((u) => { if (u && !out.includes(u)) out.push(u); });
+    return out;
+  }, [poi?.image, poi?.gallery]);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const screenWidth = Dimensions.get("window").width;
+
   if (!poi) return <View style={{ flex: 1, backgroundColor: colors.surface }} />;
 
   const isFood = poi.category === "restaurant";
@@ -250,11 +265,46 @@ export default function POIDetail() {
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="poi-detail">
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.hero}>
-          <Image source={poi.image} style={StyleSheet.absoluteFill} contentFit="cover" />
-          <LinearGradient colors={["rgba(28,26,23,0.1)", "rgba(28,26,23,0.85)"]} style={StyleSheet.absoluteFill} />
+          {/* Swipeable images. Falls back gracefully to a single slide when
+              the POI has no gallery. Gradient + overlays sit ABOVE the list
+              so title/back-button stay put during the swipe. */}
+          <FlatList
+            data={heroImages}
+            horizontal
+            pagingEnabled
+            keyExtractor={(u, i) => `hero-${i}-${u}`}
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            scrollEnabled={heroImages.length > 1}
+            onMomentumScrollEnd={(e) => {
+              const next = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+              if (!Number.isNaN(next)) setHeroIndex(next);
+            }}
+            renderItem={({ item }) => (
+              <Image
+                source={item}
+                style={{ width: screenWidth, height: "100%" }}
+                contentFit="cover"
+                transition={200}
+              />
+            )}
+          />
+          <LinearGradient
+            colors={["rgba(28,26,23,0.1)", "rgba(28,26,23,0.85)"]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
           <Pressable onPress={() => router.back()} style={styles.backBtn} testID="poi-back">
             <Ionicons name="chevron-back" size={22} color="#FFF" />
           </Pressable>
+          {/* Image-count pill top-right — only when >1 photo. Reassures the
+              user there's more to swipe through even before they scroll. */}
+          {heroImages.length > 1 && (
+            <View style={styles.heroCountPill} testID="hero-count-pill">
+              <Ionicons name="images" size={12} color="#FFF" />
+              <Text style={styles.heroCountText}>{heroIndex + 1} / {heroImages.length}</Text>
+            </View>
+          )}
           <View style={styles.heroBody}>
             <View style={styles.kickerRow}>
               <Text style={styles.kicker}>{CATEGORY_LABEL[poi.category] ?? poi.category.toUpperCase()}</Text>
@@ -284,15 +334,20 @@ export default function POIDetail() {
                 </View>
               )}
             </View>
+            {/* Page dots — only when >1 photo. Sit above the CTA row so they
+                don't compete with the title / meta stack. */}
+            {heroImages.length > 1 && (
+              <View style={styles.heroDotsRow} testID="hero-dots">
+                {heroImages.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[styles.heroDot, i === heroIndex && styles.heroDotActive]}
+                  />
+                ))}
+              </View>
+            )}
           </View>
         </View>
-
-        {/* Curated photo gallery — only renders when `metadata.gallery` in
-            Supabase has at least one entry. Backend hoists the list to the
-            top-level `poi.gallery` field. */}
-        {poi.gallery && poi.gallery.length > 0 && (
-          <PoiGallery images={poi.gallery} heroImage={poi.image} />
-        )}
 
         <View style={styles.body}>
           <Text style={styles.sectionLabel}>ABOUT</Text>
@@ -639,8 +694,24 @@ function ComingSoon({ icon, title, subtitle }: { icon: any; title: string; subti
 }
 
 const styles = StyleSheet.create({
-  hero: { height: 320 },
+  hero: { height: 320, overflow: "hidden" },
   backBtn: { position: "absolute", top: spacing.xxxl + spacing.xs, left: spacing.lg, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  heroCountPill: {
+    position: "absolute", top: spacing.xxxl + spacing.xs + 6, right: spacing.lg,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+  },
+  heroCountText: { color: "#FFF", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  heroDotsRow: { flexDirection: "row", gap: 6, marginTop: spacing.sm, justifyContent: "center" },
+  heroDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+  heroDotActive: {
+    backgroundColor: "#FFF",
+    // Slight elongation on the active dot for a modern carousel feel.
+    width: 18,
+  },
   heroBody: { position: "absolute", left: 0, right: 0, bottom: 0, padding: spacing.lg },
   kickerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm, flexWrap: "wrap" },
   kicker: { color: colors.brandSecondary, fontSize: 11, letterSpacing: 2.5, fontWeight: "800" },
