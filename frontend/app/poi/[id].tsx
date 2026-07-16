@@ -240,19 +240,19 @@ export default function POIDetail() {
     finally { setBusy(false); }
   };
 
-  // ---- Header images (hero + gallery, deduped) ----
+  // ---- Header images (hero + extras, deduped) ----
   // Composes the swipeable header carousel: the primary hero first, then
-  // every curated gallery URL from Supabase. If the hero URL happens to
-  // appear again in `metadata.gallery`, dedupe so we don't render it twice.
-  // Hooks MUST run on every render (no early returns above this point) —
-  // React tracks them by call-order, not by name.
+  // every URL from the Supabase `pois.images` column (aliased as
+  // `poi.images` in the API response). Dedupes if the hero URL happens to
+  // also appear in `images`. Hooks MUST run on every render — no early
+  // returns allowed above this point.
   const heroImages = useMemo<string[]>(() => {
     if (!poi) return [];
     const out: string[] = [];
     if (poi.image) out.push(poi.image);
-    (poi.gallery || []).forEach((u) => { if (u && !out.includes(u)) out.push(u); });
+    (poi.images || []).forEach((u) => { if (u && !out.includes(u)) out.push(u); });
     return out;
-  }, [poi?.image, poi?.gallery]);
+  }, [poi?.image, poi?.images]);
   const [heroIndex, setHeroIndex] = useState(0);
   const screenWidth = Dimensions.get("window").width;
 

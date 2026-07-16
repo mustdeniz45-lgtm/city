@@ -64,10 +64,9 @@ export type POI = {
   description: string; image: string; lat: number; lng: number;
   rating: number; xp_reward: number;
   kultur_yolu?: boolean; ky_seq?: number | null; name_tr?: string | null;
-  // Curated photo gallery — extra images beyond the hero. Rendered as a
-  // horizontal strip below the hero on POI detail; tap to open the
-  // full-screen swipeable viewer.
-  gallery?: string[] | null;
+  // Extra photos (Supabase `pois.images` column). Rendered as a
+  // swipeable carousel in the POI detail header alongside `image`.
+  images?: string[] | null;
   metadata?: {
     address?: string | null;
     plus_code?: string | null;

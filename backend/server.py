@@ -61,10 +61,11 @@ class POI(BaseModel):
     kultur_yolu: Optional[bool] = False
     ky_seq: Optional[int] = None
     name_tr: Optional[str] = None
-    # Additional curated photos surfaced on the POI detail gallery. Persisted
-    # in `metadata.gallery` so no schema migration is needed; the API mirrors
-    # them out as a top-level list for clients.
-    gallery: Optional[List[str]] = None
+    # First-class list of extra photos (Supabase `pois.images` column).
+    # The primary hero stays in `image`; `images` is everything else the
+    # POI detail carousel can swipe through. Defaults to an empty list so
+    # the client can safely `images.map(...)`.
+    images: Optional[List[str]] = []
     metadata: Optional[Dict[str, Any]] = None
 
 class TriviaQuestion(BaseModel):
@@ -337,15 +338,19 @@ async def get_poi(poi_id: str):
     doc = await repo.pois_get(poi_id)
     if not doc:
         raise HTTPException(404, "POI not found")
-    # Hoist metadata.gallery → top-level `gallery` so mobile clients can
-    # render the photo strip without digging into metadata. Filters out
-    # non-http entries defensively so a bad row can't crash the app.
-    md = doc.get("metadata") or {}
-    raw = md.get("gallery") or []
-    if isinstance(raw, list):
-        doc["gallery"] = [u for u in raw if isinstance(u, str) and u.strip()]
+    # Normalize `images`:
+    #  * Primary source is the `pois.images` column (added on GitHub branch).
+    #  * Fall back to any legacy `metadata.gallery` list so older data
+    #    seeded before the column existed still renders correctly.
+    #  * Filter out empty / non-string entries defensively.
+    imgs = doc.get("images")
+    if not imgs:
+        md = doc.get("metadata") or {}
+        imgs = md.get("gallery") or []
+    if isinstance(imgs, list):
+        doc["images"] = [u for u in imgs if isinstance(u, str) and u.strip()]
     else:
-        doc["gallery"] = []
+        doc["images"] = []
     return POI(**doc)
 
 

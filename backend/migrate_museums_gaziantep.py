@@ -87,6 +87,9 @@ def build_row(item: dict) -> dict:
         "description": (item.get("eng_description") or item.get("en_description")
                         or item.get("tr_description") or "").strip(),
         "image": image,
+        # Extra swipeable photos land in the first-class `images` column so
+        # they render immediately without touching metadata.
+        "images": gallery,
         "lat": float(item["latitude"]),
         "lng": float(item["longitude"]),
         "rating": rating if rating is not None else 4.5,
@@ -106,10 +109,6 @@ def build_row(item: dict) -> dict:
             "website": (item.get("website") or "").strip() or None,
             "entry_fee": item.get("entry_fee_museum_card_accepted"),
             "status": item.get("status") or "open",
-            # `gallery` is the source of truth for extra POI photos; the
-            # backend hoists it to a top-level `gallery` field in the API
-            # response so the mobile UI can render a strip.
-            "gallery": gallery,
         },
     }
 
