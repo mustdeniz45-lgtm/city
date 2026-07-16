@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { Alert, Dimensions, FlatList, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -240,6 +240,16 @@ export default function POIDetail() {
     finally { setBusy(false); }
   };
 
+  const heroImages = useMemo<string[]>(() => {
+    if (!poi) return [];
+    const out: string[] = [];
+    if (poi.image) out.push(poi.image);
+    (poi.images || []).forEach((u: string) => { if (u && !out.includes(u)) out.push(u); });
+    return out;
+  }, [poi?.image, poi?.images]);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const screenWidth = Dimensions.get("window").width;
+
   if (!poi) return <View style={{ flex: 1, backgroundColor: colors.surface }} />;
 
   const isFood = poi.category === "restaurant";
@@ -249,7 +259,28 @@ export default function POIDetail() {
     <View style={{ flex: 1, backgroundColor: colors.surface }} testID="poi-detail">
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.hero}>
-          <Image source={poi.image} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <FlatList
+            data={heroImages}
+            horizontal
+            pagingEnabled
+            keyExtractor={(u, i) => `hero-${i}`}
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            scrollEnabled={heroImages.length > 1}
+            onMomentumScrollEnd={(e) => {
+              const next = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+              if (!Number.isNaN(next)) setHeroIndex(next);
+            }}
+            renderItem={({ item }) => (
+              <Image source={item} style={{ width: screenWidth, height: 320 }} contentFit="cover" />
+            )}
+          />
+          {heroImages.length > 1 && (
+            <View style={{ position: "absolute", top: 54, right: 16, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 }}>
+              <Ionicons name="images" size={12} color="#FFF" />
+              <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "700" }}>{heroIndex + 1} / {heroImages.length}</Text>
+            </View>
+          )}
           <LinearGradient colors={["rgba(28,26,23,0.1)", "rgba(28,26,23,0.85)"]} style={StyleSheet.absoluteFill} />
           <Pressable onPress={() => router.back()} style={styles.backBtn} testID="poi-back">
             <Ionicons name="chevron-back" size={22} color="#FFF" />
