@@ -7,10 +7,11 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { api, type POI } from "@/src/api";
+import { api, type POI, type StampTier } from "@/src/api";
 import { useApp, getDisplayName } from "@/src/store";
 import { addPhoto, listPhotos, removePhoto, type PlacePhoto } from "@/src/photos";
 import ReviewsSection from "@/src/components/ReviewsSection";
+import StampCelebrationModal from "@/src/components/StampCelebrationModal";
 import { colors, fonts, radius, shadow, spacing } from "@/src/theme";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -33,6 +34,12 @@ export default function POIDetail() {
   const [photos, setPhotos] = useState<PlacePhoto[]>([]);
   const [visited, setVisited] = useState(false);
   const [cvsScore, setCvsScore] = useState<number | null>(null);
+  // Passport-tier celebration payload — set when a check-in bumps the
+  // tier for this POI's city. Cleared by user dismissing the modal.
+  const [stampCelebration, setStampCelebration] = useState<{
+    tier: StampTier;
+    bonusXp: number;
+  } | null>(null);
 
   // Detect if this POI is already checked in by the user
   const checkVisitedStatus = useCallback(async () => {
@@ -215,6 +222,15 @@ export default function POIDetail() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setVisited(true);
       refreshProgress();
+      // If the check-in bumped the passport tier, prefer the celebration
+      // modal over the standard Alert — it's more rewarding and clearer.
+      if (r.stamp_upgraded && r.new_stamp_tier) {
+        setStampCelebration({
+          tier: r.new_stamp_tier,
+          bonusXp: r.stamp_bonus_xp ?? 0,
+        });
+        return;
+      }
       const credited = r.quests_credited?.length ?? 0;
       Alert.alert(
         credited > 0 ? "Checked in!" : "Visit recorded",
@@ -456,6 +472,14 @@ export default function POIDetail() {
           </View>
         </View>
       </ScrollView>
+
+      <StampCelebrationModal
+        visible={!!stampCelebration}
+        tier={stampCelebration?.tier ?? null}
+        bonusXp={stampCelebration?.bonusXp ?? 0}
+        cityName={poi.city_id}
+        onDismiss={() => setStampCelebration(null)}
+      />
     </View>
   );
 }

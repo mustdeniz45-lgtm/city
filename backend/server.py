@@ -25,6 +25,35 @@ import repo  # data-access layer (Supabase-only as of 2026-07-04)
 from supabase_client import get_supabase
 from auth import get_current_user, get_optional_user, user_id_of
 import anti_cheat
+import stamps
+
+
+# Detected once at first check-in. Set to False if the `stamps` column is
+# missing from the `progress` table (i.e. SQL migration not yet run), in
+# which case we skip stamp logic entirely to avoid double-awarding XP —
+# without persistence, `old_tier` would always come back None and every
+# check-in would re-grant a Bronze bonus.
+_STAMPS_COLUMN_AVAILABLE: Optional[bool] = None
+
+
+async def _stamps_column_ok() -> bool:
+    """Lazy one-shot probe: does the `progress` table have a `stamps`
+    column? Cached; safe to call in hot paths."""
+    global _STAMPS_COLUMN_AVAILABLE
+    if _STAMPS_COLUMN_AVAILABLE is not None:
+        return _STAMPS_COLUMN_AVAILABLE
+    try:
+        sb = get_supabase()
+        # `select stamps limit 0` returns 400 if column doesn't exist, 200 if it does.
+        sb.table("progress").select("stamps").limit(0).execute()
+        _STAMPS_COLUMN_AVAILABLE = True
+    except Exception:
+        _STAMPS_COLUMN_AVAILABLE = False
+        logging.getLogger("server").warning(
+            "stamps column missing on progress table — passport tiers disabled. "
+            "Run sql/2026-07-16_stamps.sql to enable."
+        )
+    return _STAMPS_COLUMN_AVAILABLE
 
 app = FastAPI(title="CityQuest API")
 api_router = APIRouter(prefix="/api")
@@ -122,6 +151,12 @@ class CheckInResult(BaseModel):
     awaiting_trivia: bool = False
     too_far: bool = False
     distance_m: Optional[int] = None
+    # Passport-tier upgrade celebration payload. Set only when this
+    # check-in bumped the user's tier for the current city; the client
+    # uses these to show the Bronze/Silver/Gold/Diamond modal + XP burst.
+    stamp_upgraded: bool = False
+    new_stamp_tier: Optional[str] = None
+    stamp_bonus_xp: int = 0
     message: str
 
 
@@ -493,6 +528,30 @@ async def poi_check_in(
     new_quest_ids, quest_xp = await _recompute_quest_completion(user, poi["city_id"])
     credited.extend(new_quest_ids)
 
+    # ---- Passport stamps (Bronze / Silver / Gold / Diamond) ----
+    # Recompute the tier from scratch every check-in — cheap (one repo
+    # call, then pure logic) and immune to bookkeeping bugs. Skipped
+    # entirely if the `stamps` column hasn't been added yet, to avoid
+    # double-awarding XP due to non-persisted state.
+    stamp_upgraded = False
+    stamp_bonus = 0
+    new_tier: Optional[str] = None
+    if await _stamps_column_ok():
+        stamps_map = user.get("stamps") or {}
+        if not isinstance(stamps_map, dict):
+            stamps_map = {}
+        old_tier = stamps_map.get(poi["city_id"])
+        city_pois_for_stamps = await repo.pois_list(poi["city_id"])
+        visited_ids_after = [ci.get("poi_id") for ci in user["check_ins"] if ci.get("poi_id")]
+        stamp_result = stamps.compute_stamp_level(city_pois_for_stamps, visited_ids_after)
+        new_tier = stamp_result["tier"]
+        if stamps.tier_rank(new_tier) > stamps.tier_rank(old_tier):
+            stamps_map[poi["city_id"]] = new_tier
+            stamp_bonus = stamps.tier_bonus_xp(new_tier)
+            user["xp"] = user.get("xp", 0) + stamp_bonus
+            stamp_upgraded = True
+        user["stamps"] = stamps_map
+
     await repo.progress_upsert(payload.device_id, user)
 
     new_level = get_level(user["xp"])["level"]
@@ -513,14 +572,19 @@ async def poi_check_in(
     msg = " — ".join(parts) if parts else "Visit recorded."
     if leveled_up:
         msg += f" 🎉 Leveled up to {get_level(user['xp'])['title']}!"
+    if stamp_upgraded and new_tier:
+        msg += f" 🏅 New passport tier: {new_tier.title()} (+{stamp_bonus} XP)."
 
     return PoiCheckInResult(
         success=True, too_far=False,
         quests_credited=credited, already_visited=already and n == 0,
         message=msg,
-        xp_earned=poi_xp,
+        xp_earned=poi_xp + stamp_bonus,
         total_xp=user["xp"],
         leveled_up=leveled_up,
+        stamp_upgraded=stamp_upgraded,
+        new_stamp_tier=new_tier if stamp_upgraded else None,
+        stamp_bonus_xp=stamp_bonus,
     )
 
 
@@ -1040,6 +1104,65 @@ async def progress_by_city(device_id: str):
             "completed": is_complete,
             "stamped_at": stamped_at,
         })
+    return out
+
+
+@api_router.get("/progress/{device_id}/passport")
+async def progress_passport(device_id: str):
+    """Per-city passport rollup for the traveler. For every city the user
+    has at least one check-in in, returns the earned stamp tier plus a
+    rich progress payload the client can render (next-tier count,
+    diversity requirement, per-category tallies).
+
+    Cities the user has never visited are omitted so the screen stays
+    focused — the city picker is the discoverability surface for new
+    destinations.
+    """
+    user = await repo.progress_get(device_id) or {}
+    stamps_map = user.get("stamps") or {}
+    if not isinstance(stamps_map, dict):
+        stamps_map = {}
+    check_ins = user.get("check_ins") or []
+    # Group check-ins by city via a single POI fetch per unique POI id.
+    visited_ids: set = set()
+    for ci in check_ins:
+        pid = ci.get("poi_id")
+        if pid:
+            visited_ids.add(pid)
+
+    cities = await repo.cities_list()
+    out: List[Dict[str, Any]] = []
+    for c in cities:
+        city_pois = await repo.pois_list(c["id"])
+        city_poi_ids = {p["id"] for p in city_pois}
+        user_ids_in_city = list(visited_ids & city_poi_ids)
+        if not user_ids_in_city:
+            continue
+        computed = stamps.compute_stamp_level(city_pois, user_ids_in_city)
+        # Trust the persisted tier over the freshly-computed one if it's
+        # higher — a completed tier stays "earned" for the user even if
+        # the catalog changes underneath (e.g. new POIs added to the city).
+        persisted = stamps_map.get(c["id"])
+        effective_tier = computed["tier"]
+        if stamps.tier_rank(persisted) > stamps.tier_rank(effective_tier):
+            effective_tier = persisted
+        out.append({
+            "city_id": c["id"],
+            "name": c["name"],
+            "country": c["country"],
+            "country_code": c["country_code"],
+            "hero_image": c["hero_image"],
+            "tier": effective_tier,
+            "check_ins": computed["check_ins"],
+            "total_pois": computed["total_pois"],
+            "categories": computed["categories"],
+            "per_category": computed["per_category"],
+            "next_tier": computed["next_tier"],
+            "next_tier_needed": computed["next_tier_needed"],
+        })
+    # Sort by tier rank desc, then by check-in count desc — feels natural
+    # on a scroll screen (best trophies first).
+    out.sort(key=lambda r: (stamps.tier_rank(r["tier"]), r["check_ins"]), reverse=True)
     return out
 
 

@@ -137,6 +137,11 @@ export type CheckInResult = {
   awaiting_trivia?: boolean;
   too_far?: boolean;
   distance_m?: number | null;
+  // Passport-tier upgrade celebration. Present when the check-in bumped
+  // the user's tier for the current city.
+  stamp_upgraded?: boolean;
+  new_stamp_tier?: StampTier | null;
+  stamp_bonus_xp?: number;
   message: string;
 };
 export type LeaderEntry = {
@@ -157,6 +162,7 @@ export type CityProgress = {
 
 export const api = {
   cities: () => jget<City[]>("/cities"),
+  progressPassport: (deviceId: string) => jget<PassportEntry[]>(`/progress/${deviceId}/passport`),
   city: (id: string) => jget<City>(`/cities/${id}`),
   pois: (id: string, category?: string, kulturYolu?: boolean) => {
     const params: string[] = [];
@@ -233,4 +239,25 @@ export type ReviewRow = {
   comment: string | null; verified: boolean;
   helpful_count: number; created_at: string;
   author?: { display_name?: string; avatar_uri?: string; xp?: number; title?: string; level?: number };
+};
+
+// ---- Passport / Stamps ----
+export type StampTier = "bronze" | "silver" | "gold" | "diamond";
+export type PassportEntry = {
+  city_id: string;
+  name: string;
+  country: string;
+  country_code: string;
+  hero_image: string;
+  tier: StampTier | null;
+  check_ins: number;
+  total_pois: number;
+  categories: string[];
+  per_category: Record<string, number>;
+  next_tier: StampTier | null;
+  next_tier_needed: {
+    count: number;
+    categories_min: number;
+    categories_missing: string[];
+  } | null;
 };
