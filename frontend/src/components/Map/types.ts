@@ -21,6 +21,11 @@ export type PoiProperties = {
   id: string;
   name: string;
   kind: MarkerKind;
+  // Raw backend category string (landmark / museum / restaurant / parking
+  // / drinking_fountain / public_toilet / …). The unified `CategoryMarker`
+  // uses this to look up the correct icon + color.
+  category: string;
+  kultur_yolu: boolean;
   visited: boolean;
   ky_seq?: number | null;
 };
@@ -67,6 +72,8 @@ export function poisToFeatureCollection(pois: MapPOI[]) {
           id: p.id,
           name: p.name,
           kind: mapPoiKind(p),
+          category: (p.category || "").toLowerCase(),
+          kultur_yolu: !!p.kultur_yolu,
           visited: !!p.visited,
           ky_seq: p.ky_seq ?? null,
         },

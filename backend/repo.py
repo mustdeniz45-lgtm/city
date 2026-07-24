@@ -258,6 +258,10 @@ async def progress_upsert(device_id: str, data: Dict[str, Any]) -> None:
 
     Strips ``None`` values so Supabase preserves DB defaults / existing
     values (a common footgun with the PostgREST upsert semantics).
+
+    If the `stamps` column hasn't been added yet (migration
+    `2026-07-16_stamps.sql` not run), the write auto-retries WITHOUT that
+    key so this feature can ship gradually without downtime.
     """
     sb = get_supabase()
     data = {k: v for k, v in data.items() if k != "_id"}
@@ -272,9 +276,21 @@ async def progress_upsert(device_id: str, data: Dict[str, Any]) -> None:
     }
     merged = {**defaults, **data}
     merged = {k: v for k, v in merged.items() if v is not None}
-    await _sb_call(
-        lambda: sb.table("progress").upsert(merged, on_conflict="device_id").execute()
-    )
+    try:
+        await _sb_call(
+            lambda: sb.table("progress").upsert(merged, on_conflict="device_id").execute()
+        )
+    except APIError as e:
+        # PGRST204 = "Could not find the 'stamps' column …". Retry without
+        # any keys that aren't part of the current schema.
+        msg = str(e)
+        if "stamps" in msg and "column" in msg.lower():
+            merged.pop("stamps", None)
+            await _sb_call(
+                lambda: sb.table("progress").upsert(merged, on_conflict="device_id").execute()
+            )
+            return
+        raise
 
 
 async def progress_profile_update(
