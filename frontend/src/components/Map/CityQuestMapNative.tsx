@@ -20,15 +20,14 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import MapLibreGL, { Camera, MapView, MarkerView } from "@maplibre/maplibre-react-native";
+import { Ionicons } from "@expo/vector-icons";
+import MapLibreGL, { Camera, MapView, MarkerView, UserLocation } from "@maplibre/maplibre-react-native";
 import type { CameraRef } from "@maplibre/maplibre-react-native";
 
 import { useMapStyleUrl } from "./hooks/useMapStyle";
 import { useCluster } from "./hooks/useCluster";
 import { useUserLocation } from "./hooks/useUserLocation";
-import { QuestMarker } from "./QuestMarker";
-import { RestaurantMarker } from "./RestaurantMarker";
-import { MuseumMarker } from "./MuseumMarker";
+import { CategoryMarker } from "./CategoryMarker";
 import { ClusterMarker } from "./ClusterMarker";
 import { QuestRouteLine } from "./QuestRouteLine";
 import type { CityQuestMapProps, PoiProperties } from "./types";
@@ -44,7 +43,12 @@ export default function CityQuestMap({
 }: CityQuestMapProps) {
   const styleURL = useMapStyleUrl(theme);
   const cluster = useCluster(pois);
-  const { coords: userCoords } = useUserLocation(followUser);
+  // Always active while the map is mounted so we can show the user's
+  // position AND drive the "recenter on me" floating button. The hook
+  // handles the permission dance gracefully — coords stays null if the
+  // user hasn't granted foreground location.
+  const { state: locState, coords: userCoords } = useUserLocation(true);
+  const locationGranted = locState === "granted" && !!userCoords;
 
   const cameraRef = useRef<CameraRef>(null);
   const [zoom, setZoom] = useState<number>(city.zoom ?? DEFAULT_ZOOM);
@@ -101,12 +105,21 @@ export default function CityQuestMap({
     onPoiPress?.({
       id: poi.id, name: poi.name,
       lat, lng,
-      kultur_yolu: poi.kind === "kultur-yolu",
+      kultur_yolu: poi.kultur_yolu,
       ky_seq: poi.ky_seq ?? null,
       visited: poi.visited,
-      category: poi.kind === "kultur-yolu" ? "kultur-yolu" : poi.kind,
+      category: poi.category,
     });
   }, [onPoiPress]);
+
+  const recenterOnUser = useCallback(() => {
+    if (!userCoords || !cameraRef.current) return;
+    cameraRef.current.setCamera({
+      centerCoordinate: [userCoords.lng, userCoords.lat],
+      zoomLevel: 15,
+      animationDuration: 700,
+    });
+  }, [userCoords]);
 
   return (
     <View style={styles.container} testID="cityquest-map-native">
@@ -150,34 +163,57 @@ export default function CityQuestMap({
           return (
             <MarkerView key={`pt-${props.id}`} coordinate={[lng, lat]} anchor={{ x: 0.5, y: 0.5 }}>
               <Pressable onPress={() => handleMarkerPress(props, lng, lat)} hitSlop={4}>
-                {renderMarker(props)}
+                <CategoryMarker
+                  category={props.category}
+                  visited={props.visited}
+                  kulturYolu={props.kultur_yolu}
+                  kySeq={props.ky_seq ?? null}
+                />
               </Pressable>
             </MarkerView>
           );
         })}
 
-        {userCoords && (
-          <MarkerView coordinate={[userCoords.lng, userCoords.lat]} anchor={{ x: 0.5, y: 0.5 }}>
-            <View style={styles.userDot} />
-          </MarkerView>
+        {/* Native user-location dot + accuracy ring + heading arrow. When
+            permission is denied this simply doesn't render — no crash,
+            no alert loop (the hook already handled the prompt lifecycle). */}
+        {locationGranted && (
+          <UserLocation
+            visible
+            showsUserHeadingIndicator
+            androidRenderMode="compass"
+          />
         )}
       </MapView>
+
+      {/* "Recenter on me" floating button. Hidden when we don't have a
+          fresh position — no point exposing an action we can't fulfill. */}
+      {locationGranted && (
+        <Pressable
+          onPress={recenterOnUser}
+          style={styles.recenterBtn}
+          testID="map-recenter-btn"
+          hitSlop={8}
+        >
+          <Ionicons name="locate" size={22} color="#111" />
+        </Pressable>
+      )}
     </View>
   );
 }
 
-function renderMarker(props: PoiProperties) {
-  const { kind, visited, ky_seq } = props;
-  if (kind === "kultur-yolu" || kind === "quest") return <QuestMarker seq={ky_seq} visited={visited} />;
-  if (kind === "restaurant") return <RestaurantMarker visited={visited} />;
-  return <MuseumMarker kind={kind} visited={visited} />;
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: "hidden", backgroundColor: "#DEDBD5" },
-  userDot: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: "#2A7CFF", borderWidth: 3, borderColor: "#fff",
-    shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+  recenterBtn: {
+    position: "absolute", bottom: 20, right: 16,
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: "#FFF",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(0,0,0,0.08)",
+    // Match Android elevation with iOS shadow so the button sits above
+    // the map tiles on both platforms.
+    shadowColor: "#000", shadowOpacity: 0.2,
+    shadowRadius: 5, shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
 });
