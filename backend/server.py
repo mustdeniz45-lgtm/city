@@ -1621,9 +1621,8 @@ async def create_review(
 
 @api_router.get("/pois/{poi_id}/cvs")
 async def get_cvs(poi_id: str):
-    """CityQuest Verified Score — weighted 60/20/20 (verified reviews / user
-    trust proxy / google_rating). Falls back to google_rating when we have
-    <3 verified reviews."""
+    """CityQuest Verified Score — weighted 70/30 (verified reviews / google_rating).
+    Falls back to google_rating when we have <3 verified reviews."""
     poi = await _poi_or_404(poi_id)
     sb = get_supabase()
     try:
@@ -1645,8 +1644,8 @@ async def get_cvs(poi_id: str):
             "cvs": round(google_100, 1), "confidence": "low",
             "review_count": 0, "verified_count": 0,
             "cq_score": None, "google_score": round(google_100, 1),
-            "user_trust_score": 60, "dimensions": {d: None for d in dims_all},
-            "breakdown_weights": {"cityquest": 0.0, "trust": 0.0, "google": 1.0},
+            "dimensions": {d: None for d in dims_all},
+            "breakdown_weights": {"cityquest": 0.0, "google": 1.0},
         }
 
     cq_avg  = sum(r["overall"] for r in rows) / n              # 1..5
@@ -1656,22 +1655,20 @@ async def get_cvs(poi_id: str):
         vals = [r["dimensions"].get(d) for r in rows if r.get("dimensions", {}).get(d)]
         dim_avg[d] = round(sum(vals) / len(vals), 2) if vals else None
 
-    # v1 trust: constant 60 until Phase 2's User Trust Score lands.
-    trust_100 = 60.0
     if n >= CVS_MIN_REVIEWS:
-        cvs = 0.60 * cq_100 + 0.20 * trust_100 + 0.20 * google_100
-        conf, weights = "high", {"cityquest": 0.60, "trust": 0.20, "google": 0.20}
+        cvs = 0.70 * cq_100 + 0.30 * google_100
+        conf, weights = "high", {"cityquest": 0.70, "google": 0.30}
     else:
         # Blend gently while we still have <3 reviews.
         blend = n / CVS_MIN_REVIEWS
         cvs = blend * cq_100 + (1 - blend) * google_100
-        conf, weights = "medium", {"cityquest": round(blend, 2), "trust": 0.0, "google": round(1 - blend, 2)}
+        conf, weights = "medium", {"cityquest": round(blend, 2), "google": round(1 - blend, 2)}
 
     return {
         "cvs": round(cvs, 1), "confidence": conf,
         "review_count": n, "verified_count": sum(1 for r in rows if r.get("overall")),
         "cq_score": round(cq_100, 1), "google_score": round(google_100, 1),
-        "user_trust_score": trust_100, "dimensions": dim_avg,
+        "dimensions": dim_avg,
         "breakdown_weights": weights,
     }
 
@@ -1682,7 +1679,7 @@ async def get_cvs_summary(city_id: str):
     ``{poi_id: score}`` map. Used by list screens (Explore, Food) so we can
     display a single proprietary score per card instead of the raw Google rating.
 
-    Score is computed with the same 60/20/20 (cq / trust / google) blend as
+    Score is computed with the same 70/30 (cq / google) blend as
     ``/api/pois/{id}/cvs``, but batched: one review-fetch, one poi-fetch.
     Any POI with no reviews falls back to `google_rating * 20`.
     """
@@ -1719,9 +1716,8 @@ async def get_cvs_summary(city_id: str):
             out[p["id"]] = round(google_100, 1)
             continue
         cq_100 = (sum(r["overall"] for r in reviews_by_poi[p["id"]]) / n) * 20
-        trust_100 = 60.0
         if n >= CVS_MIN_REVIEWS:
-            score = 0.60 * cq_100 + 0.20 * trust_100 + 0.20 * google_100
+            score = 0.70 * cq_100 + 0.30 * google_100
         else:
             blend = n / CVS_MIN_REVIEWS
             score = blend * cq_100 + (1 - blend) * google_100

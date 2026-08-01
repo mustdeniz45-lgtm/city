@@ -95,7 +95,6 @@ export default function ReviewsSection({ poiId, poiCategory, deviceId, previewCo
           </View>
           <View style={styles.breakdown}>
             <BreakdownRow label="CityQuest reviews" value={cvs.cq_score} weight={cvs.breakdown_weights.cityquest} />
-            <BreakdownRow label="User trust" value={cvs.user_trust_score} weight={cvs.breakdown_weights.trust} />
             <BreakdownRow label="Google rating" value={cvs.google_score} weight={cvs.breakdown_weights.google} />
           </View>
         </View>

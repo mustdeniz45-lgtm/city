@@ -221,9 +221,8 @@ export type CVSResponse = {
   cvs: number; confidence: "high" | "medium" | "low";
   review_count: number; verified_count: number;
   cq_score: number | null; google_score: number;
-  user_trust_score: number;
   dimensions: Record<string, number | null>;
-  breakdown_weights: { cityquest: number; trust: number; google: number };
+  breakdown_weights: { cityquest: number; google: number };
 };
 export type ReviewRow = {
   id: string; poi_id: string; device_id: string;
