@@ -49,7 +49,12 @@ export default function CityQuestMap({
 
   const cameraRef = useRef<CameraRef>(null);
   const [zoom, setZoom] = useState<number>(city.zoom ?? DEFAULT_ZOOM);
-  const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
+  // Seed the bbox around the city center so markers render immediately on
+  // first load — before any pan/zoom fires onRegionDidChange. ~0.25° covers
+  // an entire metro area at the default zoom.
+  const [bbox, setBbox] = useState<[number, number, number, number] | null>([
+    city.lng - 0.25, city.lat - 0.25, city.lng + 0.25, city.lat + 0.25,
+  ]);
 
   // Kick the camera to the user when "follow me" is on.
   useEffect(() => {
@@ -67,10 +72,10 @@ export default function CityQuestMap({
       const vs = e.nativeEvent;
       if (!vs) return;
       if (vs.zoom !== zoom) setZoom(vs.zoom);
-      const b = vs.bounds as unknown as { ne: [number, number]; sw: [number, number] } | undefined;
-      if (b?.ne && b?.sw) {
-        // Normalize to [W, S, E, N] for supercluster.
-        setBbox([b.sw[0], b.sw[1], b.ne[0], b.ne[1]]);
+      // v11 LngLatBounds is a flat [west, south, east, north] tuple —
+      // exactly the shape supercluster expects, no conversion needed.
+      if (Array.isArray(vs.bounds) && vs.bounds.length === 4) {
+        setBbox(vs.bounds as [number, number, number, number]);
       }
     },
     [zoom],
